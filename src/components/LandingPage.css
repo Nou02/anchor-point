@@ -1,0 +1,181 @@
+.landing-page {
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background-image: 
+    radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    /* Ship silhouette */
+    linear-gradient(45deg, transparent 30%, rgba(0, 0, 0, 0.3) 30%, rgba(0, 0, 0, 0.3) 35%, transparent 35%),
+    /* Port structures */
+    linear-gradient(90deg, transparent 60%, rgba(0, 0, 0, 0.2) 60%, rgba(0, 0, 0, 0.2) 65%, transparent 65%),
+    linear-gradient(90deg, transparent 70%, rgba(0, 0, 0, 0.15) 70%, rgba(0, 0, 0, 0.15) 75%, transparent 75%);
+  background-size: 100% 100%, 100% 100%, 100% 100%;
+  z-index: 1;
+}
+
+.landing-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: white;
+  max-width: 600px;
+  padding: 2rem;
+  animation: fadeInUp 1s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logo-section {
+  margin-bottom: 2rem;
+}
+
+.anchor-icon {
+  font-size: 4rem;
+  color: #ff4444;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.logo-text {
+  font-size: 2.5rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.anchor-text {
+  color: #ff4444;
+}
+
+.point-text {
+  color: white;
+}
+
+.taglines {
+  margin-bottom: 3rem;
+}
+
+.tagline-1 {
+  font-size: 1.5rem;
+  font-weight: 300;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+.tagline-2 {
+  font-size: 1.2rem;
+  font-weight: 300;
+  opacity: 0.8;
+  line-height: 1.4;
+}
+
+.click-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.6;
+  font-size: 0.9rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Hover effects */
+.landing-page:hover {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+.landing-page:hover .anchor-icon {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+
+.landing-page:hover .click-hint {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .landing-content {
+    padding: 1rem;
+    max-width: 90%;
+  }
+  
+  .logo-text {
+    font-size: 2rem;
+  }
+  
+  .anchor-icon {
+    font-size: 3rem;
+  }
+  
+  .tagline-1 {
+    font-size: 1.3rem;
+  }
+  
+  .tagline-2 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-text {
+    font-size: 1.8rem;
+  }
+  
+  .anchor-icon {
+    font-size: 2.5rem;
+  }
+  
+  .tagline-1 {
+    font-size: 1.1rem;
+  }
+  
+  .tagline-2 {
+    font-size: 0.9rem;
+  }
+} 
