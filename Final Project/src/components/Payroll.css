@@ -1,0 +1,64 @@
+
+.payroll-center-content {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f7f3fa;
+}
+
+.payroll-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.payroll-avatar {
+  width: 64px;
+  height: 64px;
+  background: #ffe6f6;
+  color: #ff3399;
+  font-size: 2.2rem;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.payroll-name {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+.payroll-email {
+  color: #888;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+.payroll-date {
+  color: #666;
+  font-size: 1.05rem;
+  margin-bottom: 18px;
+}
+
+.payroll-table-container {
+  padding: 18px 0 18px 0;
+  width: 350px;
+}
+.payroll-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1.08rem;
+  table-layout: fixed;
+}
+.payroll-table td {
+  border: 1.5px solid #444;
+  padding: 10px 0 10px 10px;
+  height: 38px;
+}
+.payroll-table tr td:first-child {
+  font-weight: 500;
+}
