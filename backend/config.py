@@ -9,7 +9,7 @@ class Config:
     FIREBASE_CREDENTIALS_PATH = os.environ.get('FIREBASE_CREDENTIALS_PATH') or 'path/to/your/serviceAccountKey.json'
     
     # API Configuration
-    API_TITLE = "Shipping Login API"
+    API_TITLE = "Anchor Point API"
     API_VERSION = "1.0.0"
     
     # CORS Configuration

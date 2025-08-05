@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import './LoginSignUp.css';
 import { auth, db } from '../firebase/config';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
 const LoginSignUp = ({ onLogin, onSignUp }) => {
@@ -27,7 +27,7 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
     { name: 'PJ, Cusi', type: 'Dock Worker', age: 25, info: 'PJ is a team player who always supports his fellow workers.', phone: '0917-123-4567' }
   ];
   const [isLogin, setIsLogin] = useState(true);
-  const [loginData, setLoginData] = useState({ username: '', password: '' });
+  const [loginData, setLoginData] = useState({ usernameOrEmail: '', password: '' });
   // ...existing code...
   const [signUpData, setSignUpData] = useState({ username: '', email: '', phone: '', password: '', confirmPassword: '' });
 
@@ -39,9 +39,26 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
     setSignUpData({ ...signUpData, [e.target.name]: e.target.value });
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (onLogin) onLogin(loginData);
+    try {
+      // Use provided email, or fallback to username as dummy email
+      let email = loginData.usernameOrEmail;
+      if (!email.includes('@')) {
+        email = `${loginData.usernameOrEmail}@dummy.com`;
+      }
+      
+      // Sign in with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, loginData.password);
+      const user = userCredential.user;
+      
+      console.log('Debug - Login successful:', user);
+      alert('Login successful!');
+      if (onLogin) onLogin(loginData);
+    } catch (error) {
+      console.error('Debug - Login error:', error);
+      alert('Login failed: ' + error.message);
+    }
   };
 
 
@@ -60,6 +77,7 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
       // Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, signUpData.password);
       const user = userCredential.user;
+      
       // Try to match the username to a worker (by full name or first name)
       const getFirstName = name => name.split(/\s|,/)[0].toLowerCase();
       const inputFirstName = getFirstName(signUpData.username);
@@ -67,18 +85,31 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
         worker.name.toLowerCase() === signUpData.username.toLowerCase() ||
         getFirstName(worker.name) === inputFirstName
       );
-      // Save user info in Firestore, including all fields and worker info if matched
-      await setDoc(doc(db, 'users', user.uid), {
+      
+      // Prepare user data for Firestore
+      const userData = {
         username: signUpData.username,
         email: signUpData.email,
         phone: signUpData.phone,
         createdAt: new Date(),
         uid: user.uid,
-        ...(matchedWorker ? matchedWorker : {})
-      });
+        fullName: matchedWorker ? matchedWorker.name : signUpData.username,
+        role: matchedWorker ? matchedWorker.type : 'Worker'
+      };
+      
+      // Add matched worker data if found
+      if (matchedWorker) {
+        Object.assign(userData, matchedWorker);
+      }
+      
+      // Save user info in Firestore
+      await setDoc(doc(db, 'users', user.uid), userData);
+      
+      console.log('Debug - User registration successful:', userData);
       alert('Account created successfully!');
       if (onSignUp) onSignUp(signUpData);
     } catch (error) {
+      console.error('Debug - Registration error:', error);
       alert(error.message);
     }
   };
@@ -90,8 +121,7 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
           {isLogin ? (
             <form className="form-section" onSubmit={handleLogin}>
               <h2 className="login-title">Log in to your account</h2>
-              <input name="username" type="text" placeholder="Username" value={loginData.username} onChange={handleLoginChange} required className="input-field" />
-              <input name="email" type="email" placeholder="Email" value={loginData.email || ''} onChange={handleLoginChange} className="input-field" />
+              <input name="usernameOrEmail" type="text" placeholder="Username or Email" value={loginData.usernameOrEmail} onChange={handleLoginChange} required className="input-field" />
               <div className="password-input-wrapper">
                 <input name="password" type="password" placeholder="Password" value={loginData.password} onChange={handleLoginChange} required className="input-field" />
                 <span className="eye-icon">👁️</span>
@@ -116,7 +146,7 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
         <div className="login-right-panel">
           <div className="right-content">
             <div className="right-logo">{/* You can add a logo here if needed */}</div>
-            <div className="right-title">Idea to app, fast</div>
+            <div className="right-title">TITE</div>
             {/* Optionally add more content here */}
           </div>
         </div>

@@ -1,24 +1,43 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import LandingPage from './components/LandingPage';
 import Homepage from './components/Homepage';
 import LoginSignUp from './components/LoginSignUp';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import './firebase/config';
 
 function App() {
   const [page, setPage] = useState('landing'); // 'landing', 'auth', 'home'
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        setPage('home');
+      } else {
+        setUser(null);
+        setPage('landing');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleEnter = () => {
     setPage('auth');
   };
 
   const handleLogin = (loginData) => {
-    // TODO: Add real authentication logic
+    // Authentication is handled in LoginSignUp component
+    // This will be called after successful login
     setPage('home');
   };
 
   const handleSignUp = (signUpData) => {
-    // TODO: Add real sign-up logic
+    // Authentication is handled in LoginSignUp component
+    // This will be called after successful signup
     setPage('home');
   };
 

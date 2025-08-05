@@ -1,66 +1,109 @@
 .crew-availability-table-wrapper {
-  margin-left: 0;
+  margin: 0 auto;
   min-width: 400px;
-  max-width: 900px;
+  max-width: 1100px;
   width: 100%;
   display: flex;
   align-items: stretch;
   justify-content: center;
-  height: 600px;
-  background: #c7d6f7;
-  border-radius: 0;
+  height: auto;
+  background: #ffffff;
+  border-radius: 12px;
   padding: 24px;
-  box-shadow: none;
-  border: 3px solid #4156a1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid #e0e0e0;
+  flex: 1 1 0%;
+  max-height: 70vh;      /* Added: limit height to viewport */
+  overflow-y: auto;      /* Added: enable vertical scroll */
 }
 
 .crew-availability-table {
   width: 100%;
   border-collapse: collapse;
-  background: #a3b3e0;
+  background: #ffffff;
   font-family: inherit;
   font-size: 1.1rem;
   color: #222;
   height: 100%;
   table-layout: auto;
   box-shadow: 0 2px 8px rgba(47, 59, 112, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
 }
 .crew-availability-table th, .crew-availability-table td {
-  border: 2px solid #4156a1;
+  border: 1px solid #e0e0e0;
   padding: 1rem 0.7rem;
   text-align: center;
-  background: #a3b3e0;
+  background: #ffffff;
   vertical-align: middle;
   font-size: 1.1rem;
 }
 .crew-availability-table th {
-  background: #8d9ed6;
-  color: #222;
+  background: #e6f3ff;
+  color: #2d3e5e;
   font-weight: bold;
   font-size: 1.1rem;
+  border-bottom: 2px solid #4156a1;
 }
 .crew-availability-table td {
   font-size: 1.1rem;
-  background: #e6f3ff;
+  background: #ffffff;
 }
 .crew-availability-table td.available {
-  background: #ffe14d !important;
-  color: #222;
+  background: #ffe066 !important;
+  color: #2d3e5e;
   font-weight: bold;
-  border: 2px solid #ffe14d;
-  border-radius: 2px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+/* New styles for clickable availability */
+.clickable-availability {
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.clickable-availability:hover {
+  transform: scale(1.05) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.non-clickable {
+  cursor: default !important;
+}
+
+/* Availability status styles */
+.availability-available {
+  background: #ffe066 !important;
+  color: #2d3e5e !important;
+  font-weight: bold !important;
+}
+
+.availability-unavailable {
+  background: #ffcccc !important;
+  color: #d32f2f !important;
+  font-weight: bold !important;
+}
+
+/* Today indicator */
+.today-indicator {
+  font-size: 10px;
+  margin-top: 2px;
+  font-weight: normal;
 }
 .crew-availability-table tr:nth-child(even) td:not(.available) {
-  background: #a3b3e0;
+  background: #f8f9fa;
 }
 .scheduling-container {
-  flex: 1;
   background-color: #e6f3ff;
   padding: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  height: auto;      /* Changed from min-height: 100vh */
+  width: 100%;       /* Changed from width: 100vw */
+  box-sizing: border-box;
+  overflow: visible; /* Ensure content is not clipped */
 }
 
 .calendar-wrapper {
@@ -288,4 +331,4 @@
     font-size: 0.7rem;
     padding: 0.6rem 0.2rem;
   }
-} 
+}

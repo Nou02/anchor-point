@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-console.log('🚢 Shipping Login Application Setup');
+console.log('⚓ Anchor Point Application Setup');
 console.log('=====================================\n');
 
 // Check if Node.js is installed

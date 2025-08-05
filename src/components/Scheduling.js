@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Scheduling.css';
-import { getFirestore, collection, addDoc, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import '../firebase/config'; // Make sure this imports your firebase config
 
@@ -13,6 +13,9 @@ const Scheduling = () => {
   const [savedEntries, setSavedEntries] = useState([]);
   const [userName, setUserName] = useState('');
   const [userFullName, setUserFullName] = useState('');
+  const [crewAvailability, setCrewAvailability] = useState({}); // Track availability for each worker
+  const [savedAvailability, setSavedAvailability] = useState({}); // Track saved availability from Firestore
+  const [isSaving, setIsSaving] = useState(false); // Track save button state
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();
@@ -167,6 +170,62 @@ const Scheduling = () => {
     });
     setSavedEntries(entries);
   };
+
+  // Fetch saved availability from Firestore
+  const fetchSavedAvailability = async () => {
+    const db = getFirestore();
+    try {
+      const today = new Date();
+      const month = today.getMonth() + 1; // getMonth() returns 0-11, so add 1
+      const day = today.getDate();
+      const year = today.getFullYear();
+      const availabilityDocName = `availability (${month}, ${day}, ${year})`;
+      
+      const docRef = doc(db, 'availability', availabilityDocName);
+      const docSnap = await getDocs(query(collection(db, 'availability'), where('__name__', '==', availabilityDocName)));
+      
+      if (!docSnap.empty) {
+        const data = docSnap.docs[0].data();
+        setSavedAvailability(data);
+        // Also update local crew availability with saved data
+        setCrewAvailability(data);
+      }
+    } catch (err) {
+      console.log('Error fetching saved availability:', err);
+    }
+  };
+
+  // Save availability to Firestore
+  const handleSaveAvailability = async () => {
+    setIsSaving(true);
+    const db = getFirestore();
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    try {
+      const today = new Date();
+      const month = today.getMonth() + 1; // getMonth() returns 0-11, so add 1
+      const day = today.getDate();
+      const year = today.getFullYear();
+      const availabilityDocName = `availability (${month}, ${day}, ${year})`;
+      
+      const data = {
+        ...crewAvailability,
+        savedBy: user ? user.email : 'guest',
+        savedAt: new Date().toISOString(),
+        date: today.toISOString()
+      };
+      
+      await setDoc(doc(db, 'availability', availabilityDocName), data);
+      setSavedAvailability(data);
+      alert('Availability saved successfully!');
+    } catch (err) {
+      alert('Error saving availability: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Mark appointment as done
   const handleDoneAppointment = async (id) => {
     const db = getFirestore();
@@ -182,6 +241,7 @@ const Scheduling = () => {
 
   useEffect(() => {
     fetchSavedEntries();
+    fetchSavedAvailability();
     // eslint-disable-next-line
   }, [selectedDates]);
 
@@ -191,29 +251,43 @@ const Scheduling = () => {
     const db = getFirestore();
     const unsubscribe = auth.onAuthStateChanged(async user => {
       if (user) {
+        console.log('Debug - Firebase user:', user);
+        console.log('Debug - user.displayName:', user.displayName);
+        console.log('Debug - user.email:', user.email);
+        
         let name = user.displayName || (user.email ? user.email.split('@')[0] : '');
         setUserName(name);
+        console.log('Debug - set userName to:', name);
+        
         // Try to get full name from Firestore if displayName is missing or is just email username
         if (!user.displayName || name === user.email.split('@')[0]) {
           // Query Firestore for user info by email
           const q = query(collection(db, 'users'), where('email', '==', user.email));
           const querySnapshot = await getDocs(q);
+          console.log('Debug - Firestore query result:', querySnapshot.empty ? 'No user found' : 'User found');
+          
           if (!querySnapshot.empty) {
             const userData = querySnapshot.docs[0].data();
+            console.log('Debug - Firestore userData:', userData);
             if (userData.fullName) {
               setUserFullName(userData.fullName);
+              console.log('Debug - set userFullName to:', userData.fullName);
             } else {
               setUserFullName(name);
+              console.log('Debug - set userFullName to name:', name);
             }
           } else {
             setUserFullName(name);
+            console.log('Debug - set userFullName to name (no Firestore data):', name);
           }
         } else {
           setUserFullName(name);
+          console.log('Debug - set userFullName to name (has displayName):', name);
         }
       } else {
         setUserName('');
         setUserFullName('');
+        console.log('Debug - No user logged in');
       }
     });
     return () => unsubscribe();
@@ -233,6 +307,98 @@ const Scheduling = () => {
       }
     });
     return vesselMap;
+  };
+
+  // Handle crew availability toggle
+  const handleAvailabilityToggle = (workerName, dayIndex) => {
+    setCrewAvailability(prev => {
+      const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
+      const currentAvailability = prev[workerKey] || {};
+      const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
+      const dayKey = dayNames[dayIndex];
+      
+      return {
+        ...prev,
+        [workerKey]: {
+          ...currentAvailability,
+          [dayKey]: !currentAvailability[dayKey] // Toggle availability
+        }
+      };
+    });
+  };
+
+  // Check if current user can edit a specific worker's availability
+  const canEditWorkerAvailability = (workerName) => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    const userEmail = user ? user.email : '';
+    const matchName = userFullName || userName;
+    
+    const workerNameLower = workerName.toLowerCase();
+    const matchNameLower = matchName.toLowerCase();
+    const userEmailLower = userEmail.toLowerCase();
+    
+    // Check for exact name match
+    if (workerNameLower === matchNameLower) return true;
+    
+    // Check for partial name match
+    const workerNameParts = workerNameLower.split(/[\s,]+/);
+    const matchNameParts = matchNameLower.split(/[\s,]+/);
+    
+    for (const workerPart of workerNameParts) {
+      for (const matchPart of matchNameParts) {
+        if (workerPart === matchPart && workerPart.length > 2) return true;
+      }
+    }
+    
+    // Check email matches
+    if (userEmailLower.includes(workerNameLower.replace(/[\s,]+/g, ''))) return true;
+    
+    const emailUsername = userEmail.split('@')[0].toLowerCase();
+    if (workerNameLower.includes(emailUsername)) return true;
+    
+    return false;
+  };
+
+  // Check if Carla can edit a specific worker's availability
+  const canCarlaEditWorkerAvailability = (workerName) => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    const userEmail = user ? user.email : '';
+    const matchName = userFullName || userName;
+    
+    // Check if current user is Carla
+    const isCarla = 
+      matchName === 'Carla Dela Peña' || 
+      matchName === 'Carla' ||
+      (matchName && matchName.toLowerCase().includes('carla')) ||
+      (userEmail && userEmail.toLowerCase().includes('carla'));
+    
+    if (!isCarla) return false;
+    
+    // Check if worker has marked themselves as unavailable
+    const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
+    const workerAvailability = savedAvailability[workerKey] || {};
+    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
+    
+    // Check if worker has marked any day as unavailable
+    for (const dayKey of dayNames) {
+      if (workerAvailability[dayKey] === false) {
+        return false; // Carla cannot edit if worker has marked themselves unavailable
+      }
+    }
+    
+    return true; // Carla can edit if worker hasn't marked themselves unavailable
+  };
+
+  // Get availability status for a worker and day
+  const getAvailabilityStatus = (workerName, dayIndex) => {
+    const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
+    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
+    const dayKey = dayNames[dayIndex];
+    
+    const workerAvailability = crewAvailability[workerKey] || {};
+    return workerAvailability[dayKey] !== false; // Default to available (true) unless explicitly set to false
   };
 
   const dayVesselTypes = getDayVesselTypes();
@@ -320,52 +486,82 @@ return (
                 </ul>
                 <p>No appointments scheduled for this date.</p>
               </div>
-              {/* Only show one form at a time for selected dates */}
-              <div className="selected-dates-container" style={{ background: '#f5f7fa', borderRadius: '8px', padding: '16px', marginTop: '8px' }}>
-                <h4>Client Information</h4>
-                {(() => {
-                  // Find the first selected date that is not yet saved
-                  const savedISO = savedEntries.map(e => e.date && e.date.slice(0, 10));
-                  const firstUnfilledIdx = selectedDates.findIndex((date, idx) => {
-                    const iso = date.toISOString().slice(0, 10);
-                    return !savedISO.includes(iso);
-                  });
-                  if (firstUnfilledIdx === -1) {
-                    return <p>All selected dates have saved appointments.</p>;
-                  }
-                  const date = selectedDates[firstUnfilledIdx];
+              {/* Only show Client Information container if user is Carla Dela Peña */}
+              {(() => {
+                // Check if the logged-in user is Carla Dela Peña (including partial matches)
+                const auth = getAuth();
+                const currentUser = auth.currentUser;
+                const userEmail = currentUser ? currentUser.email : '';
+                
+                const isCarlaDelaPena = 
+                  userFullName === 'Carla Dela Peña' || 
+                  userName === 'Carla Dela Peña' ||
+                  userFullName === 'Carla' || 
+                  userName === 'Carla' ||
+                  (userFullName && userFullName.toLowerCase().includes('carla')) ||
+                  (userName && userName.toLowerCase().includes('carla')) ||
+                  (userEmail && userEmail.toLowerCase().includes('carla'));
+                
+                // Debug logging to help identify the issue
+                console.log('Debug - userFullName:', userFullName);
+                console.log('Debug - userName:', userName);
+                console.log('Debug - userEmail:', userEmail);
+                console.log('Debug - isCarlaDelaPena:', isCarlaDelaPena);
+                
+                // Only render the container if user is Carla Dela Peña
+                if (isCarlaDelaPena) {
                   return (
-                    <div key={firstUnfilledIdx} style={{ marginBottom: '24px', borderBottom: '1px solid #e0e0e0', paddingBottom: '16px' }}>
-                      <strong>Date:</strong> {date.toDateString()}
-                      <form style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }} onSubmit={e => handleFormSubmit(e, firstUnfilledIdx, date)}>
-                        <label>
-                          Name:
-                          <input type="text" name={`clientName_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.name || ''} onChange={e => handleInputChange(firstUnfilledIdx, 'name', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required />
-                        </label>
-                        <label>
-                          Time:
-                          <input type="time" name={`clientTime_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.time || ''} onChange={e => handleInputChange(firstUnfilledIdx, 'time', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required />
-                        </label>
-                        <label>
-                          Type of Service:
-                          <select name={`serviceType_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.serviceType || 'Mooring'} onChange={e => handleInputChange(firstUnfilledIdx, 'serviceType', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required>
-                            <option value="Mooring">Mooring</option>
-                            <option value="Unmooring">Unmooring</option>
-                          </select>
-                        </label>
-                        <label>
-                          Vessel Type:
-                          <select name={`vesselType_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.vesselType || 'Local'} onChange={e => handleInputChange(firstUnfilledIdx, 'vesselType', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required>
-                            <option value="Local">Local</option>
-                            <option value="International">International</option>
-                          </select>
-                        </label>
-                        <button type="submit" style={{ marginTop: '8px', padding: '6px 16px', borderRadius: '4px', background: '#2d3e5e', color: '#fff', border: 'none', cursor: 'pointer', alignSelf: 'flex-start' }}>Save</button>
-                      </form>
+                    <div className="selected-dates-container" style={{ background: '#f5f7fa', borderRadius: '8px', padding: '16px', marginTop: '8px' }}>
+                      <h4>Client Information</h4>
+                      {(() => {
+                        // Find the first selected date that is not yet saved
+                        const savedISO = savedEntries.map(e => e.date && e.date.slice(0, 10));
+                        const firstUnfilledIdx = selectedDates.findIndex((date, idx) => {
+                          const iso = date.toISOString().slice(0, 10);
+                          return !savedISO.includes(iso);
+                        });
+                        if (firstUnfilledIdx === -1) {
+                          return <p>All selected dates have saved appointments.</p>;
+                        }
+                        const date = selectedDates[firstUnfilledIdx];
+                        return (
+                          <div key={firstUnfilledIdx} style={{ marginBottom: '24px', borderBottom: '1px solid #e0e0e0', paddingBottom: '16px' }}>
+                            <strong>Date:</strong> {date.toDateString()}
+                            <form style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }} onSubmit={e => handleFormSubmit(e, firstUnfilledIdx, date)}>
+                              <label>
+                                Name:
+                                <input type="text" name={`clientName_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.name || ''} onChange={e => handleInputChange(firstUnfilledIdx, 'name', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required />
+                              </label>
+                              <label>
+                                Time:
+                                <input type="time" name={`clientTime_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.time || ''} onChange={e => handleInputChange(firstUnfilledIdx, 'time', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required />
+                              </label>
+                              <label>
+                                Type of Service:
+                                <select name={`serviceType_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.serviceType || 'Mooring'} onChange={e => handleInputChange(firstUnfilledIdx, 'serviceType', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required>
+                                  <option value="Mooring">Mooring</option>
+                                  <option value="Unmooring">Unmooring</option>
+                                </select>
+                              </label>
+                              <label>
+                                Vessel Type:
+                                <select name={`vesselType_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.vesselType || 'Local'} onChange={e => handleInputChange(firstUnfilledIdx, 'vesselType', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required>
+                                  <option value="Local">Local</option>
+                                  <option value="International">International</option>
+                                </select>
+                              </label>
+                              <button type="submit" style={{ marginTop: '8px', padding: '6px 16px', borderRadius: '4px', background: '#2d3e5e', color: '#fff', border: 'none', cursor: 'pointer', alignSelf: 'flex-start' }}>Save</button>
+                            </form>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
-                })()}
-              </div>
+                }
+                
+                // Return null for all other users - no container will be rendered
+                return null;
+              })()}
               {/* New container: show saved entries for selected dates */}
               {savedEntries.length > 0 && (
                 <div className="saved-entries-container" style={{ background: '#fff', borderRadius: '8px', padding: '16px', marginTop: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', maxHeight: '220px', overflowY: 'auto' }}>
@@ -393,6 +589,30 @@ return (
           <table className="crew-availability-table">
             <thead>
               <tr>
+                <th colSpan="8" style={{ 
+                  textAlign: 'center', 
+                  padding: '12px', 
+                  backgroundColor: '#f8f9fa', 
+                  borderBottom: '2px solid #dee2e6',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: '#2d3e5e'
+                }}>
+                  {(() => {
+                    const today = new Date();
+                    const monthName = today.toLocaleDateString('en-US', { month: 'long' });
+                    const year = today.getFullYear();
+                    
+                    // Calculate current week
+                    const startOfYear = new Date(today.getFullYear(), 0, 1);
+                    const days = Math.floor((today - startOfYear) / (24 * 60 * 60 * 1000));
+                    const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+                    
+                    return `${monthName} ${year} - Week ${weekNumber}`;
+                  })()}
+                </th>
+              </tr>
+              <tr>
                 <th>Crew</th>
                 <th>Sun</th>
                 <th>Mon</th>
@@ -404,9 +624,9 @@ return (
               </tr>
             </thead>
             <tbody>
-              {/* Only show the logged-in user's row if their name or email matches the provided workers list */}
+              {/* Show ALL workers in the table regardless of login status */}
               {(() => {
-                // List of workers provided by the user
+                // List of all workers
                 const workers = [
                   { name: 'Alice Margaretha Santos', type: 'Senior Supervisor' },
                   { name: 'Carla Dela Peña', type: 'Scheduler' },
@@ -426,61 +646,141 @@ return (
                   { name: 'Renzy, Cantos', type: 'Dock Worker' },
                   { name: 'PJ, Cusi', type: 'Dock Worker' }
                 ];
-                // Get logged-in user's email from Firebase Auth
+                
+                // Get logged-in user's information for highlighting
                 const auth = getAuth();
                 const user = auth.currentUser;
                 const userEmail = user ? user.email : '';
-                // Use full name for matching if available
                 const matchName = userFullName || userName;
-                // Match by full name, first name, or Gmail
-                const getFirstName = name => name.split(/\s|,/)[0].toLowerCase();
-                const userFirstName = getFirstName(matchName);
-                const matched = workers.filter(row => {
-                  const workerFirstName = getFirstName(row.name);
-                  return (
-                    row.name.toLowerCase() === matchName.toLowerCase() ||
-                    workerFirstName === userFirstName ||
-                    (userEmail && row.name.toLowerCase() === userEmail.toLowerCase())
-                  );
-                });
+                
+                console.log('Debug - Crew Table - matchName:', matchName);
+                console.log('Debug - Crew Table - userEmail:', userEmail);
+                
                 // Get today's day index (0=Sun, 1=Mon, ..., 6=Sat)
                 const todayIdx = new Date().getDay();
-                return matched.length > 0
-                  ? matched.map((row, idx) => (
-                      <tr key={row.name}>
-                        <td>{`${row.name} (${row.type})`}</td>
-                        {Array(7).fill(null).map((_, i) => (
-                          i === todayIdx
-                            ? <td key={i} className="available" style={{ background: '#ffe066', color: '#2d3e5e', fontWeight: 'bold', textAlign: 'center' }}>Available</td>
-                            : <td key={i}></td>
-                        ))}
-                      </tr>
-                    ))
-                  : (
-                      <tr><td colSpan={8} style={{ textAlign: 'center', color: '#888' }}>No crew availability for your account.</td></tr>
-                    );
+                const dayNames = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
+                
+                // Show all workers in the table
+                return workers.map((worker, idx) => {
+                  const canEdit = canEditWorkerAvailability(worker.name);
+                  const canCarlaEdit = canCarlaEditWorkerAvailability(worker.name);
+                  const isCurrentUser = canEdit; // Highlight if it's the current user's row
+                  const finalCanEdit = canEdit || canCarlaEdit; // Allow editing if either condition is met
+                  
+                  return (
+                    <tr key={worker.name}>
+                      <td style={{ 
+                        fontWeight: 'bold', 
+                        padding: '12px 8px',
+                        backgroundColor: isCurrentUser ? '#f0f8ff' : '#f5f5f5',
+                        borderRight: '2px solid #4156a1'
+                      }}>
+                        {worker.name}
+                        {isCurrentUser && <span style={{ fontSize: '12px', color: '#666', display: 'block' }}>← Your row</span>}
+                      </td>
+                      {Array(7).fill(null).map((_, i) => {
+                        const isAvailable = getAvailabilityStatus(worker.name, i);
+                        const isToday = i === todayIdx;
+                        
+                        return (
+                          <td 
+                            key={i} 
+                            className={`${finalCanEdit ? "clickable-availability" : "non-clickable"} ${isAvailable ? "availability-available" : "availability-unavailable"}`}
+                            style={{ 
+                              textAlign: 'center',
+                              padding: '12px 8px',
+                              borderRadius: '4px',
+                              border: isToday ? '2px solid #2d3e5e' : '1px solid #e0e0e0',
+                              backgroundColor: isAvailable ? '#e8f5e8' : '#ffe8e8',
+                              cursor: finalCanEdit ? 'pointer' : 'default'
+                            }}
+                            onClick={finalCanEdit ? () => handleAvailabilityToggle(worker.name, i) : undefined}
+                            title={finalCanEdit ? `Click to mark ${isAvailable ? 'unavailable' : 'available'} for ${['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'][i]}` : 'You can only edit your own availability'}
+                          >
+                            {isAvailable ? 'Available' : 'Not Available'}
+                            {isToday && <div className="today-indicator" style={{ fontSize: '10px', color: '#2d3e5e', fontWeight: 'bold', marginTop: '2px' }}>Today</div>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                });
               })()}
             </tbody>
           </table>
         </div>
       )}
-      {/* Navigation buttons below */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '16px' }}>
+      
+      {/* Save Button - only show in table view */}
+      {view === 'table' && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+          <button 
+            onClick={handleSaveAvailability}
+            disabled={isSaving}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              opacity: isSaving ? 0.6 : 1,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            {isSaving ? 'Saving...' : 'Save Availability'}
+          </button>
+        </div>
+      )}
+      
+      {/* Navigation buttons - positioned at lower right */}
+      <div className="report-nav-btns" style={{ 
+        position: 'fixed', 
+        bottom: '20px', 
+        right: '20px', 
+        zIndex: 1000,
+        display: 'flex',
+        gap: '8px'
+      }}>
         <button
-          className="nav-arrow left-arrow"
+          className="report-nav-btn"
           onClick={() => setView('calendar')}
           disabled={view === 'calendar'}
-          style={{ opacity: view === 'calendar' ? 0.5 : 1 }}
+          style={{
+            background: '#eaf3ff',
+            color: '#b0b7d1',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '8px 18px',
+            fontWeight: 'bold',
+            fontSize: '1rem',
+            cursor: view === 'calendar' ? 'not-allowed' : 'pointer',
+            opacity: view === 'calendar' ? 0.6 : 1,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
         >
-          ◀
+          &#8592; Previous
         </button>
         <button
-          className="nav-arrow right-arrow"
+          className="report-nav-btn"
           onClick={() => setView('table')}
           disabled={view === 'table'}
-          style={{ opacity: view === 'table' ? 0.5 : 1 }}
+          style={{
+            background: '#ffe14d',
+            color: '#222',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '8px 18px',
+            fontWeight: 'bold',
+            fontSize: '1rem',
+            cursor: view === 'table' ? 'not-allowed' : 'pointer',
+            opacity: view === 'table' ? 0.6 : 1,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
         >
-          ▶
+          Next &#8594;
         </button>
       </div>
     </div>
