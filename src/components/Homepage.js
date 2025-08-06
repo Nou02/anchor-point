@@ -93,8 +93,8 @@ const Homepage = () => {
           ))}
         </nav>
         {/* Logout button at the bottom of the sidebar */}
-        <div className="logout-section" style={{ marginTop: 'auto', padding: '24px 0', textAlign: 'center' }}>
-          <button className="logout-btn" onClick={handleLogout} style={{ background: '#2d3e5e', color: '#fff', border: 'none', borderRadius: '6px', padding: '10px 32px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>
+        <div className="logout-section">
+          <button className="logout-btn" onClick={handleLogout}>
             Logout
           </button>
         </div>
