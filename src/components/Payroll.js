@@ -214,41 +214,63 @@ const Payroll = () => {
     localStorage.removeItem('aliceManagerView');
   };
 
+  function computeRow(row) {
+    const local = parseFloat(row.localVess) || 0;
+    const foreign = parseFloat(row.foreignVess) || 0;
+    const tal = parseFloat(row.tal) || 0;
+    const sss = parseFloat(row.sss) || 0;
+    const pagibig = parseFloat(row.pagibig) || 0;
+    const philhealth = parseFloat(row.philhealth) || 0;
+    const cashAdvance = parseFloat(row.cashAdvance) || 0;
+
+    const total = local + foreign;
+    const sssPiPh = sss + philhealth;
+    const totalDeductions = sss + pagibig + philhealth + tal;
+    const balance = total - cashAdvance;
+    const finalTotal = total - (totalDeductions + cashAdvance);
+
+    return {
+      ...row,
+      total: total.toFixed(2),
+      sssPiPh: sssPiPh.toFixed(2),
+      totalDeductions: totalDeductions.toFixed(2),
+      balance: balance.toFixed(2),
+      netTotal: finalTotal.toFixed(2)
+    };
+  }
+
+  // Improved handleCellEdit function for continuous typing
   const handleCellEdit = (rowIndex, field, value) => {
     setTableData(prevData => {
       const newTableData = [...prevData];
-      newTableData[rowIndex] = {
+      newTableData[rowIndex] = computeRow({
         ...newTableData[rowIndex],
         [field]: value
-      };
+      });
       return newTableData;
     });
   };
 
-  // Handle keyboard navigation for continuous input
+  // Improved keyboard navigation that doesn't interfere with normal typing
   const handleKeyDown = (e, rowIndex, field) => {
     const currentRow = rowIndex;
-    const fields = ['localVess', 'foreignVess', 'tal', 'sss', 'pagibig', 'philhealth', 'cashAdvance', 'netTotal'];
+    const fields = ['localVess', 'foreignVess', 'tal', 'sss', 'pagibig', 'philhealth', 'cashAdvance'];
     const currentFieldIndex = fields.indexOf(field);
     
-    if (e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') {
+    // Only handle navigation on Enter or Tab, not on regular typing
+    if (e.key === 'Enter' || e.key === 'Tab') {
       e.preventDefault();
       
       // Move to next field in same row
       if (currentFieldIndex < fields.length - 1) {
         const nextField = fields[currentFieldIndex + 1];
         const nextInput = document.querySelector(`input[data-row="${currentRow}"][data-field="${nextField}"]`);
-        if (nextInput) {
+        if (nextInput && !nextInput.readOnly) {
           nextInput.focus();
-          // Only select if empty
-          if (!nextInput.value || nextInput.value === '') {
-            nextInput.select();
-          }
-          // Add visual feedback
-          nextInput.style.backgroundColor = '#fff3cd';
+          // Position cursor at the end for continuous typing
           setTimeout(() => {
-            nextInput.style.backgroundColor = '';
-          }, 200);
+            nextInput.setSelectionRange(nextInput.value.length, nextInput.value.length);
+          }, 0);
         }
       } else {
         // Move to first field of next row
@@ -256,98 +278,26 @@ const Payroll = () => {
           const nextRowInput = document.querySelector(`input[data-row="${currentRow + 1}"][data-field="localVess"]`);
           if (nextRowInput) {
             nextRowInput.focus();
-            // Only select if empty
-            if (!nextRowInput.value || nextRowInput.value === '') {
-              nextRowInput.select();
-            }
-            // Add visual feedback
-            nextRowInput.style.backgroundColor = '#fff3cd';
             setTimeout(() => {
-              nextRowInput.style.backgroundColor = '';
-            }, 200);
+              nextRowInput.setSelectionRange(nextRowInput.value.length, nextRowInput.value.length);
+            }, 0);
           }
-        }
-      }
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      
-      // Move to previous field in same row
-      if (currentFieldIndex > 0) {
-        const prevField = fields[currentFieldIndex - 1];
-        const prevInput = document.querySelector(`input[data-row="${currentRow}"][data-field="${prevField}"]`);
-        if (prevInput) {
-          prevInput.focus();
-          // Only select if empty
-          if (!prevInput.value || prevInput.value === '') {
-            prevInput.select();
-          }
-          // Add visual feedback
-          prevInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => {
-            prevInput.style.backgroundColor = '';
-          }, 200);
-        }
-      }
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      
-      // Move to same field in previous row
-      if (currentRow > 0) {
-        const prevRowInput = document.querySelector(`input[data-row="${currentRow - 1}"][data-field="${field}"]`);
-        if (prevRowInput) {
-          prevRowInput.focus();
-          // Only select if empty
-          if (!prevRowInput.value || prevRowInput.value === '') {
-            prevRowInput.select();
-          }
-          // Add visual feedback
-          prevRowInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => {
-            prevRowInput.style.backgroundColor = '';
-          }, 200);
-        }
-      }
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      
-      // Move to same field in next row
-      if (currentRow < tableData.length - 1) {
-        const nextRowInput = document.querySelector(`input[data-row="${currentRow + 1}"][data-field="${field}"]`);
-        if (nextRowInput) {
-          nextRowInput.focus();
-          // Only select if empty
-          if (!nextRowInput.value || nextRowInput.value === '') {
-            nextRowInput.select();
-          }
-          // Add visual feedback
-          nextRowInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => {
-            nextRowInput.style.backgroundColor = '';
-          }, 200);
         }
       }
     }
+    // Allow all other keys (numbers, backspace, etc.) to work normally without interference
   };
 
-  // Handle input focus to maintain focus
+  // Simplified input focus handler - no automatic text selection
   const handleInputFocus = (e) => {
-    // Only select all text if the field is empty or contains placeholder
-    if (!e.target.value || e.target.value === '') {
-      e.target.select();
-    }
+    // Don't automatically select text - let user continue typing naturally
+    // Just ensure the input is focused
+    e.target.focus();
   };
 
-  // Handle input blur to ensure data is saved
+  // Simplified input blur handler
   const handleInputBlur = (e, rowIndex, field) => {
-    const value = e.target.value;
-    setTableData(prevData => {
-      const newTableData = [...prevData];
-      newTableData[rowIndex] = {
-        ...newTableData[rowIndex],
-        [field]: value
-      };
-      return newTableData;
-    });
+    // Data is already saved through onChange, no need to do it again here
   };
 
   const handleVessTypeChange = (rowIndex, column, type) => {
@@ -541,10 +491,6 @@ const Payroll = () => {
       </div>
       
       <div className="manager-table-container">
-        <div className="table-instructions">
-          <p><strong>💡 Tip:</strong> Use Tab, Enter, or Arrow keys to navigate between cells for continuous input! 
-          <br /><small>• Tab/Enter/→: Next cell • ←: Previous cell • ↑/↓: Same column, different row</small></p>
-        </div>
         <table className="manager-table">
           <thead>
             <tr>
@@ -566,9 +512,13 @@ const Payroll = () => {
                 <td className="vess-cell">
                   <div className="vess-input-container">
                     <input
-                      type="number"
+                      type="text"
                       value={row.localVess}
-                      onChange={(e) => handleCellEdit(index, 'localVess', e.target.value)}
+                      onChange={(e) => {
+                        // Allow only numbers and decimal points
+                        const value = e.target.value.replace(/[^\d.-]/g, '');
+                        handleCellEdit(index, 'localVess', value);
+                      }}
                       onFocus={handleInputFocus}
                       onBlur={(e) => handleInputBlur(e, index, 'localVess')}
                       onKeyDown={(e) => handleKeyDown(e, index, 'localVess')}
@@ -576,7 +526,9 @@ const Payroll = () => {
                       data-field="localVess"
                       className="table-input vess-input"
                       placeholder="Enter number"
-                      step="any"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
                     />
                     <button 
                       className="cell-dropdown-button"
@@ -610,9 +562,13 @@ const Payroll = () => {
                 <td className="vess-cell">
                   <div className="vess-input-container">
                     <input
-                      type="number"
+                      type="text"
                       value={row.foreignVess}
-                      onChange={(e) => handleCellEdit(index, 'foreignVess', e.target.value)}
+                      onChange={(e) => {
+                        // Allow only numbers and decimal points
+                        const value = e.target.value.replace(/[^\d.-]/g, '');
+                        handleCellEdit(index, 'foreignVess', value);
+                      }}
                       onFocus={handleInputFocus}
                       onBlur={(e) => handleInputBlur(e, index, 'foreignVess')}
                       onKeyDown={(e) => handleKeyDown(e, index, 'foreignVess')}
@@ -620,7 +576,9 @@ const Payroll = () => {
                       data-field="foreignVess"
                       className="table-input vess-input"
                       placeholder="Enter number"
-                      step="any"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
                     />
                     <button 
                       className="cell-dropdown-button"
@@ -653,86 +611,147 @@ const Payroll = () => {
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={row.tal}
-                    onChange={(e) => handleCellEdit(index, 'tal', e.target.value)}
+                    onChange={(e) => {
+                      // Allow only numbers and decimal points
+                      const value = e.target.value.replace(/[^\d.-]/g, '');
+                      handleCellEdit(index, 'tal', value);
+                    }}
                     onFocus={handleInputFocus}
                     onBlur={(e) => handleInputBlur(e, index, 'tal')}
                     onKeyDown={(e) => handleKeyDown(e, index, 'tal')}
                     data-row={index}
                     data-field="tal"
                     className="table-input"
-                    step="any"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={row.sss}
-                    onChange={(e) => handleCellEdit(index, 'sss', e.target.value)}
+                    onChange={(e) => {
+                      // Allow only numbers and decimal points
+                      const value = e.target.value.replace(/[^\d.-]/g, '');
+                      handleCellEdit(index, 'sss', value);
+                    }}
                     onFocus={handleInputFocus}
                     onBlur={(e) => handleInputBlur(e, index, 'sss')}
                     onKeyDown={(e) => handleKeyDown(e, index, 'sss')}
                     data-row={index}
                     data-field="sss"
                     className="table-input"
-                    step="any"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={row.pagibig}
-                    onChange={(e) => handleCellEdit(index, 'pagibig', e.target.value)}
+                    onChange={(e) => {
+                      // Allow only numbers and decimal points
+                      const value = e.target.value.replace(/[^\d.-]/g, '');
+                      handleCellEdit(index, 'pagibig', value);
+                    }}
                     onFocus={handleInputFocus}
                     onBlur={(e) => handleInputBlur(e, index, 'pagibig')}
                     onKeyDown={(e) => handleKeyDown(e, index, 'pagibig')}
                     data-row={index}
                     data-field="pagibig"
                     className="table-input"
-                    step="any"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={row.philhealth}
-                    onChange={(e) => handleCellEdit(index, 'philhealth', e.target.value)}
+                    onChange={(e) => {
+                      // Allow only numbers and decimal points
+                      const value = e.target.value.replace(/[^\d.-]/g, '');
+                      handleCellEdit(index, 'philhealth', value);
+                    }}
                     onFocus={handleInputFocus}
                     onBlur={(e) => handleInputBlur(e, index, 'philhealth')}
                     onKeyDown={(e) => handleKeyDown(e, index, 'philhealth')}
                     data-row={index}
                     data-field="philhealth"
                     className="table-input"
-                    step="any"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={row.cashAdvance}
-                    onChange={(e) => handleCellEdit(index, 'cashAdvance', e.target.value)}
+                    onChange={(e) => {
+                      // Allow only numbers and decimal points
+                      const value = e.target.value.replace(/[^\d.-]/g, '');
+                      handleCellEdit(index, 'cashAdvance', value);
+                    }}
                     onFocus={handleInputFocus}
                     onBlur={(e) => handleInputBlur(e, index, 'cashAdvance')}
                     onKeyDown={(e) => handleKeyDown(e, index, 'cashAdvance')}
                     data-row={index}
                     data-field="cashAdvance"
                     className="table-input"
-                    step="any"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
+                    value={row.total}
+                    readOnly
+                    className="table-input table-input-readonly"
+                    tabIndex={-1}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={row.sssPiPh}
+                    readOnly
+                    className="table-input table-input-readonly"
+                    tabIndex={-1}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={row.totalDeductions}
+                    readOnly
+                    className="table-input table-input-readonly"
+                    tabIndex={-1}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={row.balance}
+                    readOnly
+                    className="table-input table-input-readonly"
+                    tabIndex={-1}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
                     value={row.netTotal}
-                    onChange={(e) => handleCellEdit(index, 'netTotal', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onBlur={(e) => handleInputBlur(e, index, 'netTotal')}
-                    onKeyDown={(e) => handleKeyDown(e, index, 'netTotal')}
-                    data-row={index}
-                    data-field="netTotal"
-                    className="table-input"
-                    step="any"
+                    readOnly
+                    className="table-input table-input-readonly"
+                    tabIndex={-1}
                   />
                 </td>
               </tr>
@@ -770,141 +789,39 @@ const Payroll = () => {
 
   // Regular Payroll View
   const RegularPayrollView = () => (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-      padding: '40px 20px'
-    }}>
+    <div className="payroll-regular-bg">
       {/* User Profile Section */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        marginBottom: '32px',
-        textAlign: 'center'
-      }}>
-        <div style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #ff6b9d 0%, #ff8fab 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '16px',
-          boxShadow: '0 4px 16px rgba(255, 107, 157, 0.3)',
-          fontSize: '24px',
-          fontWeight: '700',
-          color: 'white'
-        }}>
+      <div className="payroll-profile-section">
+        <div className="payroll-profile-avatar">
           {user.initials || 'U'}
         </div>
-        <h2 style={{
-          fontSize: '1.8rem',
-          fontWeight: '700',
-          color: '#2d3e5e',
-          margin: '0 0 8px 0',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px'
-        }}>
+        <h2 className="payroll-profile-name">
           {user.name && user.name.trim() !== "" ? user.name : "Your Name"}
         </h2>
-        <p style={{
-          fontSize: '1rem',
-          color: '#6c757d',
-          margin: '0 0 4px 0',
-          fontWeight: '500'
-        }}>
+        <p className="payroll-profile-email">
           {user.email}
         </p>
-        <p style={{
-          fontSize: '0.9rem',
-          color: '#8e9aaf',
-          margin: '0',
-          fontStyle: 'italic'
-        }}>
-          Billing of this day <span style={{ fontWeight: '600', color: '#2d3e5e' }}>({user.date})</span>
+        <p className="payroll-profile-date">
+          Billing of this day <span className="payroll-profile-date-highlight">({user.date})</span>
         </p>
-        
         {/* Worker Selection Dropdown */}
         {availableWorkers.length > 0 && (
-          <div style={{
-            marginTop: '24px',
-            width: '100%',
-            maxWidth: '300px'
-          }}>
-            <div style={{
-              position: 'relative',
-              width: '100%'
-            }}>
-              <button 
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: 'white',
-                  border: '2px solid #e9ecef',
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  color: '#2d3e5e',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                }}
+          <div className="payroll-worker-dropdown-container">
+            <div className="payroll-worker-dropdown">
+              <button
+                className="payroll-worker-dropdown-btn"
                 onClick={() => setShowWorkerDropdown(!showWorkerDropdown)}
-                onMouseEnter={(e) => {
-                  e.target.style.borderColor = '#2F3B70';
-                  e.target.style.boxShadow = '0 4px 12px rgba(47,59,112,0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.borderColor = '#e9ecef';
-                  e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                }}
               >
                 {selectedWorker || 'Select Worker'}
-                <span style={{ fontSize: '0.8rem', color: '#6c757d' }}>▼</span>
+                <span className="payroll-worker-dropdown-arrow">▼</span>
               </button>
               {showWorkerDropdown && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: '0',
-                  right: '0',
-                  background: 'white',
-                  border: '2px solid #e9ecef',
-                  borderRadius: '12px',
-                  marginTop: '4px',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                  zIndex: 1000,
-                  maxHeight: '200px',
-                  overflowY: 'auto'
-                }}>
+                <div className="payroll-worker-dropdown-menu">
                   {availableWorkers.map((workerName, index) => (
-                    <div 
+                    <div
                       key={index}
-                      style={{
-                        padding: '12px 16px',
-                        cursor: 'pointer',
-                        borderBottom: index < availableWorkers.length - 1 ? '1px solid #f8f9fa' : 'none',
-                        transition: 'all 0.2s ease',
-                        fontWeight: '500',
-                        color: '#2d3e5e'
-                      }}
+                      className="payroll-worker-dropdown-item"
                       onClick={() => handleWorkerSelection(workerName)}
-                      onMouseEnter={(e) => {
-                        e.target.style.background = '#f8f9fa';
-                        e.target.style.color = '#2F3B70';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.background = 'white';
-                        e.target.style.color = '#2d3e5e';
-                      }}
                     >
                       {workerName}
                     </div>
@@ -914,366 +831,70 @@ const Payroll = () => {
             </div>
           </div>
         )}
-        
         {user.name === "Alice Margaretha Santos" && (
-          <div style={{ marginTop: "24px" }}>
-            <button
-              onClick={handleToggleManagerView}
-              style={{
-                background: 'linear-gradient(135deg, #2F3B70 0%, #4156a1 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '12px 24px',
-                fontSize: '1rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(47,59,112,0.3)',
-                transition: 'all 0.2s ease',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 16px rgba(47,59,112,0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 12px rgba(47,59,112,0.3)';
-              }}
-            >
-              Toggle Manager View
+          <div className="payroll-manager-toggle">
+            <button className="manager-toggle-btn" onClick={handleToggleManagerView}>
+              Proceed
             </button>
           </div>
         )}
       </div>
-
-      {/* Payroll Details Card - Removed container constraints */}
-      <div style={{
-        background: 'white',
-        borderRadius: '20px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-        padding: '40px',
-        width: '100%',
-        position: 'relative',
-        overflow: 'visible'
-      }}>
-        {/* Card Header */}
-        <div style={{
-          marginBottom: '32px',
-          textAlign: 'center',
-          borderBottom: '2px solid #f8f9fa',
-          paddingBottom: '20px'
-        }}>
-          <h3 style={{
-            fontSize: '1.4rem',
-            fontWeight: '700',
-            color: '#2d3e5e',
-            margin: '0',
-            textTransform: 'uppercase',
-            letterSpacing: '1px'
-          }}>
+      {/* Payroll Details Card */}
+      <div className="payroll-details-card">
+        <div className="payroll-details-header">
+          <h3 className="payroll-details-title">
             Payroll Summary
           </h3>
         </div>
-
-        {/* Payroll Details Grid - Removed maxWidth constraint */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '20px',
-          width: '100%'
-        }}>
-          {/* First Group: LOCAL, FOREIGN, TOTAL */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            position: 'relative'
-          }}>
-            <div style={{
-              position: 'absolute',
-              left: '-8px',
-              top: '0',
-              bottom: '0',
-              width: '4px',
-              background: 'linear-gradient(135deg, #2F3B70 0%, #4156a1 100%)',
-              borderRadius: '2px'
-            }} />
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '12px 16px',
-              background: '#f8f9fa',
-              borderRadius: '8px',
-              border: '1px solid #e9ecef'
-            }}>
-              <span style={{
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#2d3e5e',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                LOCAL
-              </span>
-              <span style={{
-                fontSize: '1.1rem',
-                fontWeight: '700',
-                color: '#2d3e5e'
-              }}>
-                {individualPayrollData.local || '0'}
-              </span>
+        <div className="payroll-details-grid">
+          {/* First Group */}
+          <div className="payroll-details-group payroll-details-group-local">
+            <div className="payroll-details-group-bar payroll-details-group-bar-local" />
+            <div className="payroll-details-row">
+              <span className="payroll-details-label">LOCAL</span>
+              <span className="payroll-details-value">{individualPayrollData.local || '0'}</span>
             </div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '12px 16px',
-              background: '#f8f9fa',
-              borderRadius: '8px',
-              border: '1px solid #e9ecef'
-            }}>
-              <span style={{
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#2d3e5e',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                FOREIGN
-              </span>
-              <span style={{
-                fontSize: '1.1rem',
-                fontWeight: '700',
-                color: '#2d3e5e'
-              }}>
-                {individualPayrollData.foreign || '0'}
-              </span>
+            <div className="payroll-details-row">
+              <span className="payroll-details-label">FOREIGN</span>
+              <span className="payroll-details-value">{individualPayrollData.foreign || '0'}</span>
             </div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '12px 16px',
-              background: '#e3f2fd',
-              borderRadius: '8px',
-              border: '1px solid #2196f3'
-            }}>
-              <span style={{
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#1976d2',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                TOTAL
-              </span>
-              <span style={{
-                fontSize: '1.1rem',
-                fontWeight: '700',
-                color: '#1976d2'
-              }}>
-                {individualPayrollData.total || '0'}
-              </span>
+            <div className="payroll-details-row payroll-details-row-total">
+              <span className="payroll-details-label payroll-details-label-total">TOTAL</span>
+              <span className="payroll-details-value payroll-details-value-total">{individualPayrollData.total || '0'}</span>
             </div>
           </div>
-
-          {/* Second Group: PAG-IBIG LOAN, CASH ADVANCE, BALANCE */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            position: 'relative'
-          }}>
-            <div style={{
-              position: 'absolute',
-              left: '-8px',
-              top: '0',
-              bottom: '0',
-              width: '4px',
-              background: 'linear-gradient(135deg, #ff6b9d 0%, #ff8fab 100%)',
-              borderRadius: '2px'
-            }} />
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '12px 16px',
-              background: '#f8f9fa',
-              borderRadius: '8px',
-              border: '1px solid #e9ecef'
-            }}>
-              <span style={{
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#2d3e5e',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                PAG-IBIG LOAN
-              </span>
-              <span style={{
-                fontSize: '1.1rem',
-                fontWeight: '700',
-                color: '#2d3e5e'
-              }}>
-                {individualPayrollData.pagibigLoan || '0'}
-              </span>
+          {/* Second Group */}
+          <div className="payroll-details-group payroll-details-group-loan">
+            <div className="payroll-details-group-bar payroll-details-group-bar-loan" />
+            <div className="payroll-details-row">
+              <span className="payroll-details-label">PAG-IBIG LOAN</span>
+              <span className="payroll-details-value">{individualPayrollData.pagibigLoan || '0'}</span>
             </div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '12px 16px',
-              background: '#f8f9fa',
-              borderRadius: '8px',
-              border: '1px solid #e9ecef'
-            }}>
-              <span style={{
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#2d3e5e',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                CASH ADVANCE
-              </span>
-              <span style={{
-                fontSize: '1.1rem',
-                fontWeight: '700',
-                color: '#2d3e5e'
-              }}>
-                {individualPayrollData.cashAdvance || '0'}
-              </span>
+            <div className="payroll-details-row">
+              <span className="payroll-details-label">CASH ADVANCE</span>
+              <span className="payroll-details-value">{individualPayrollData.cashAdvance || '0'}</span>
             </div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '12px 16px',
-              background: '#fff3cd',
-              borderRadius: '8px',
-              border: '1px solid #ffc107'
-            }}>
-              <span style={{
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#856404',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                BALANCE
-              </span>
-              <span style={{
-                fontSize: '1.1rem',
-                fontWeight: '700',
-                color: '#856404'
-              }}>
-                {individualPayrollData.balance || '0'}
-              </span>
+            <div className="payroll-details-row payroll-details-row-balance">
+              <span className="payroll-details-label payroll-details-label-balance">BALANCE</span>
+              <span className="payroll-details-value payroll-details-value-balance">{individualPayrollData.balance || '0'}</span>
             </div>
           </div>
-
-          {/* Third Group: SSS/PI/PH, TOTAL DEDUCTIONS */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            position: 'relative'
-          }}>
-            <div style={{
-              position: 'absolute',
-              left: '-8px',
-              top: '0',
-              bottom: '0',
-              width: '4px',
-              background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-              borderRadius: '2px'
-            }} />
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '12px 16px',
-              background: '#f8f9fa',
-              borderRadius: '8px',
-              border: '1px solid #e9ecef'
-            }}>
-              <span style={{
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#2d3e5e',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                SSS/PI/PH
-              </span>
-              <span style={{
-                fontSize: '1.1rem',
-                fontWeight: '700',
-                color: '#2d3e5e'
-              }}>
-                {individualPayrollData.sssPiPh || '0'}
-              </span>
+          {/* Third Group */}
+          <div className="payroll-details-group payroll-details-group-deductions">
+            <div className="payroll-details-group-bar payroll-details-group-bar-deductions" />
+            <div className="payroll-details-row">
+              <span className="payroll-details-label">SSS/PI/PH</span>
+              <span className="payroll-details-value">{individualPayrollData.sssPiPh || '0'}</span>
             </div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '12px 16px',
-              background: '#d4edda',
-              borderRadius: '8px',
-              border: '1px solid #c3e6cb'
-            }}>
-              <span style={{
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#155724',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                TOTAL DEDUCTIONS
-              </span>
-              <span style={{
-                fontSize: '1.1rem',
-                fontWeight: '700',
-                color: '#155724'
-              }}>
-                {individualPayrollData.totalDeductions || '0'}
-              </span>
+            <div className="payroll-details-row payroll-details-row-deductions">
+              <span className="payroll-details-label payroll-details-label-deductions">TOTAL DEDUCTIONS</span>
+              <span className="payroll-details-value payroll-details-value-deductions">{individualPayrollData.totalDeductions || '0'}</span>
             </div>
           </div>
         </div>
-
-        {/* Final Total */}
-        <div style={{
-          marginTop: '32px',
-          padding: '20px',
-          background: 'linear-gradient(135deg, #2F3B70 0%, #4156a1 100%)',
-          borderRadius: '12px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: '0 4px 16px rgba(47,59,112,0.3)'
-        }}>
-          <span style={{
-            fontSize: '1.2rem',
-            fontWeight: '700',
-            color: 'white',
-            textTransform: 'uppercase',
-            letterSpacing: '1px'
-          }}>
-            TOTAL
-          </span>
-          <span style={{
-            fontSize: '1.4rem',
-            fontWeight: '800',
-            color: 'white'
-          }}>
-            {individualPayrollData.finalTotal || '0'}
-          </span>
+        <div className="payroll-details-final-total">
+          <span className="payroll-details-final-label">TOTAL</span>
+          <span className="payroll-details-final-value">{individualPayrollData.finalTotal || '0'}</span>
         </div>
       </div>
     </div>
