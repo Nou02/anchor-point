@@ -5,43 +5,45 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   background: #f7f3fa;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .payroll-profile {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 .payroll-avatar {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   background: #ffe6f6;
   color: #ff3399;
-  font-size: 2.2rem;
+  font-size: 2rem;
   font-weight: bold;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .payroll-name {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: bold;
   margin-bottom: 2px;
 }
 .payroll-email {
   color: #888;
-  font-size: 1rem;
-  margin-bottom: 8px;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
 }
 .payroll-date {
   color: #666;
-  font-size: 1.05rem;
-  margin-bottom: 18px;
+  font-size: 1rem;
+  margin-bottom: 12px;
 }
 
 .payroll-table-container {
@@ -61,4 +63,498 @@
 }
 .payroll-table tr td:first-child {
   font-weight: 500;
+}
+
+.payroll-value {
+  text-align: right;
+  font-weight: 500;
+  color: #233a6c;
+}
+
+/* Worker selection dropdown styles */
+.worker-selection-container {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.worker-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.worker-dropdown-button {
+  background: #233a6c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(35, 58, 108, 0.2);
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.worker-dropdown-button:hover {
+  background: #1a2a4a;
+  box-shadow: 0 4px 12px rgba(35, 58, 108, 0.3);
+}
+
+.worker-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.worker-dropdown-item {
+  padding: 10px 16px;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.worker-dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.worker-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+/* Payroll details styles */
+.payroll-details-container {
+  margin-top: 16px;
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 100%;
+}
+
+.payroll-details-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.payroll-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #233a6c;
+  transition: all 0.2s ease;
+}
+
+.payroll-detail-item:hover {
+  background: #e9ecef;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(35, 58, 108, 0.1);
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #233a6c;
+  font-size: 0.9rem;
+}
+
+.detail-value {
+  font-weight: 700;
+  color: #495057;
+  font-size: 1rem;
+  text-align: right;
+}
+
+.total-item {
+  background: #233a6c;
+  color: white;
+  grid-column: 1 / -1;
+}
+
+.total-item .detail-label,
+.total-item .detail-value {
+  color: white;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.total-item:hover {
+  background: #1a2a4a;
+}
+
+/* Manager View Styles */
+.manager-view {
+  width: 100%;
+  max-width: 1200px;
+  padding: 20px;
+  background: #f7f3fa;
+}
+
+.manager-header {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.manager-controls {
+  margin-bottom: 15px;
+}
+
+.back-button {
+  background: #233a6c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(35, 58, 108, 0.2);
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background: #1a2a4a;
+  box-shadow: 0 4px 12px rgba(35, 58, 108, 0.3);
+}
+
+.manager-header h2 {
+  color: #233a6c;
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.manager-view {
+  width: 100%;
+  max-width: 1200px;
+  padding: 20px;
+  background: #f7f3fa;
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* Custom scrollbar styling */
+.manager-view::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.manager-view::-webkit-scrollbar-track {
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+.manager-view::-webkit-scrollbar-thumb {
+  background: #b0b0b0;
+  border-radius: 4px;
+}
+
+.manager-view::-webkit-scrollbar-thumb:hover {
+  background: #909090;
+}
+
+.manager-view::-webkit-scrollbar-corner {
+  background: #e0e0e0;
+}
+
+.manager-table-container {
+  background: #233a6c;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(35, 58, 108, 0.3);
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+
+.table-instructions {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border: 1px solid #bbdefb;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.table-instructions p {
+  margin: 0;
+  color: #1976d2;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.table-instructions strong {
+  color: #1565c0;
+}
+
+.manager-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  color: white;
+  background: #233a6c;
+  min-width: 800px;
+}
+
+.manager-table th {
+  background: #1a2a4a;
+  color: white;
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: bold;
+  border: 1px solid #4a5a7a;
+  position: relative;
+}
+
+/* Header dropdown styles */
+.header-dropdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+.dropdown-button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.dropdown-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #233a6c;
+  border: 1px solid #4a5a7a;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 120px;
+  margin-top: 4px;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #1a2a4a;
+}
+
+.dropdown-item:first-child {
+  border-radius: 6px 6px 0 0;
+}
+
+.dropdown-item:last-child {
+  border-radius: 0 0 6px 6px;
+}
+
+/* Cell dropdown styles */
+.vess-cell {
+  position: relative;
+  padding: 8px !important;
+}
+
+.vess-input-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.vess-input {
+  flex: 1;
+  min-width: 60px;
+}
+
+.cell-dropdown-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+  min-width: 60px;
+  text-align: center;
+}
+
+.cell-dropdown-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.cell-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #233a6c;
+  border: 1px solid #4a5a7a;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  margin-top: 2px;
+}
+
+.vess-display {
+  font-size: 0.85rem;
+  color: #a0a0a0;
+  text-align: center;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.manager-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border: 1px solid #4a5a7a;
+  background: #233a6c;
+}
+
+.manager-table tr:nth-child(even) td {
+  background: #2a4470;
+}
+
+.grand-total-row {
+  background: #1a2a4a !important;
+  font-weight: bold;
+}
+
+.grand-total-row td {
+  background: #1a2a4a !important;
+  color: white;
+  font-weight: bold;
+}
+
+/* Editable table inputs */
+.table-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: white;
+  text-align: center;
+  font-size: 0.9rem;
+  padding: 4px;
+  outline: none;
+}
+
+.table-input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.table-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Worker name cell styling */
+.worker-name-cell {
+  font-weight: 500;
+  text-align: left;
+  padding-left: 12px !important;
+  min-width: 150px;
+}
+
+/* Save section styling */
+.save-section {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.save-button {
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+  transition: all 0.2s ease;
+}
+
+.save-button:hover:not(:disabled) {
+  background: #218838;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+  transform: translateY(-1px);
+}
+
+.save-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.save-message {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.save-message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.save-message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Responsive design for manager table */
+@media (max-width: 768px) {
+  .manager-table {
+    font-size: 0.8rem;
+  }
+  
+  .manager-table th,
+  .manager-table td {
+    padding: 6px 4px;
+  }
+  
+  .mooring-bubble {
+    position: relative;
+    top: 0;
+    left: 0;
+    margin-bottom: 20px;
+  }
+  
+  .back-button {
+    font-size: 0.85rem;
+    padding: 8px 12px;
+  }
 }
