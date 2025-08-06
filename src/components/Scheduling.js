@@ -648,13 +648,7 @@ return (
                       }
                     }
                   }
-                  
-                  // Get day name for today
-                  const dayNames = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
-                  const today = new Date();
-                  const isToday = dayData.isToday;
-                  const dayName = isToday ? dayNames[today.getDay()] : null;
-                  
+
                   return (
                     <div
                       key={index}
@@ -667,11 +661,6 @@ return (
                       onClick={() => handleDateClick(dayData.day, dayData.isCurrentMonth)}
                     >
                       <div>{dayData.day}</div>
-                      {isToday && dayName && (
-                        <div className="day-name">
-                          {dayName}
-                        </div>
-                      )}
                     </div>
                   );
                 })}

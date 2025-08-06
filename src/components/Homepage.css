@@ -158,6 +158,24 @@
   font-weight: bold;
 }
 
+/* Logout Section */
+.logout-section {
+  margin-top: auto;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.logout-btn {
+  background: #2d3e5e;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 32px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .sidebar {
@@ -228,4 +246,4 @@
     width: 45px;
     height: 45px;
   }
-} 
+}

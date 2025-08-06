@@ -51,6 +51,11 @@
   font-weight: bold;
 }
 
+.logo-icon {
+  font-size: 24px;
+  margin-right: 8px;
+}
+
 .logo svg {
   width: 30px;
   height: 30px;
@@ -223,4 +228,4 @@
   .dashboard-main {
     padding: 1rem;
   }
-} 
+}
