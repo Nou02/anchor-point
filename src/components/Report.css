@@ -205,10 +205,15 @@
     url('../assets/apone.png') center center/cover no-repeat;
   overflow: hidden;
 }
-.report-main-container {
+.report-page-bg {
   background:
     linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
-    url('../assets/apone.png') center center/cover no-repeat;
+    url('../assets/apone.png') center center/cover no-repeat fixed;
+  min-height: 100vh;
+  width: 100vw;
+}
+.report-main-container {
+  background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7));
   border-radius: 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   padding: 40px;

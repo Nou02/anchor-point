@@ -1,5 +1,6 @@
 import React from 'react';
 import './LandingPage.css';
+import anchorLogo from '../assets/anchorlogo.png'; // Adjust the path if needed
 
 const LandingPage = ({ onEnter }) => {
   const handleClick = () => {
@@ -12,16 +13,20 @@ const LandingPage = ({ onEnter }) => {
     <div className="landing-page" onClick={handleClick}>
       <div className="landing-content">
         <div className="logo-section">
-          <div className="anchor-icon">⚓</div>
+          <div className="anchor-icon" style={{ marginBottom: '1rem' }}>
+            <img src={anchorLogo} alt="Anchor Logo" width={64} height={64} />
+          </div>
           <div className="logo-text">
-            <span className="anchor-text">Anchor</span>
-            <span className="point-text">Point</span>
+            <span className="logo-letter logo-red">A</span>
+            <span className="logo-letter logo-white">nchor</span>
+            <span style={{ margin: '0 0.2rem' }}></span>
+            <span className="logo-letter logo-red">P</span>
+            <span className="logo-letter logo-white">oint</span>
           </div>
         </div>
         
         <div className="taglines">
-          <p className="tagline-1">Schedule your next mooring and unmooring services.</p>
-          <p className="tagline-2">Easily reserve and manage your appointments with L.E.O Marines</p>
+          <p className="tagline-1">Book with the professionals on mooring and unmooring services with ease of scheduling and handling your appointment with L.E.O Marines. </p>
         </div>
         
         <div className="click-hint">
@@ -32,4 +37,4 @@ const LandingPage = ({ onEnter }) => {
   );
 };
 
-export default LandingPage; 
+export default LandingPage;

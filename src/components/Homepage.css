@@ -16,7 +16,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   overflow: hidden;
   min-height: 100vh;
 }
@@ -38,10 +38,11 @@
 .content-overlay {
   position: relative;
   z-index: 2;
-  text-align: center;
+  text-align: left;
   color: #232b45;
   max-width: 800px;
   padding: 2rem;
+  align-self: flex-start;
 }
 
 .hero-text h1 {
@@ -55,7 +56,7 @@
 }
 
 .cta-button {
-  position: absolute;
+  position: fixed; /* Changed from absolute to fixed */
   bottom: 2.5rem;
   right: 2.5rem;
   width: 54px;
@@ -68,6 +69,7 @@
   cursor: pointer;
   transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
   box-shadow: 0 4px 16px rgba(44, 54, 80, 0.13);
+  z-index: 100; /* Make sure it stays above other content */
 }
 
 .cta-button:hover {

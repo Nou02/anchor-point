@@ -151,10 +151,10 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
 
   return (
     <div className="login-signup-split-bg">
-      <div className="login-signup-split-container">
-        <div className="login-left-panel">
+      <div className="login-left-panel">
+        <div className="form-section">
           {isLogin ? (
-            <form className="form-section" onSubmit={handleLogin}>
+            <form onSubmit={handleLogin}>
               <h2 className="login-title">Log in to your account</h2>
               <input name="usernameOrEmail" type="text" placeholder="Username or Email" value={loginData.usernameOrEmail} onChange={handleLoginChange} required className="input-field" />
               <PasswordInput
@@ -167,7 +167,7 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
               <div className="signup-link-row">New to AnchorPoint? <span className="switch-link" onClick={() => setIsLogin(false)}>Sign up</span></div>
             </form>
           ) : (
-            <form className="form-section" onSubmit={handleSignUp}>
+            <form onSubmit={handleSignUp}>
               <h2 className="login-title">Sign up</h2>
               <input name="username" type="text" placeholder="Username (Juan A. Dela Cruz)" value={signUpData.username} onChange={handleSignUpChange} required className="input-field" />
               <input name="email" type="email" placeholder="Email (juandelacruz@gmail.com)" value={signUpData.email} onChange={handleSignUpChange} className="input-field" />
@@ -187,13 +187,8 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
             </form>
           )}
         </div>
-        <div className="login-right-panel">
-          <div className="right-content">
-            <div className="right-logo">{/* You can add a logo here if needed */}</div>
-            <div className="right-title">TITE</div>
-            {/* Optionally add more content here */}
-          </div>
-        </div>
+      </div>
+      <div className="login-right-panel">
       </div>
     </div>
   );
