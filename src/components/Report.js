@@ -14,6 +14,19 @@ const containers = [
   },
 ];
 
+const initialTableData = {
+  portLocation: '',
+  voyageNo: '',
+  vesselName: '',
+  purposeOfCall: '',
+  workActivities: Array(7).fill().map(() => ({
+    activity: '',
+    timeScheduled: '',
+    timeStarted: '',
+    timeDone: ''
+  }))
+};
+
 const Report = () => {
   const [appointments, setAppointments] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
@@ -30,18 +43,7 @@ const Report = () => {
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   
   // Editable table data
-  const [tableData, setTableData] = useState({
-    portLocation: '',
-    voyageNo: '',
-    vesselName: '',
-    purposeOfCall: '',
-    workActivities: Array(7).fill().map(() => ({
-      activity: '',
-      timeScheduled: '',
-      timeStarted: '',
-      timeDone: ''
-    }))
-  });
+  const [tableData, setTableData] = useState(initialTableData);
 
   // Check if current user is Alice Santos
   const checkAliceAuthorization = (user) => {
@@ -142,11 +144,14 @@ const Report = () => {
         setCurrentUser(user);
         const isAlice = checkAliceAuthorization(user);
         setIsAliceAuthorized(isAlice);
-        console.log('Current user:', user.displayName || user.email);
-        console.log('Is Alice authorized:', isAlice);
-        
-        // Load data after user authentication
-        await loadReportData();
+        // Reset table data if Alice logs in
+        if (isAlice) {
+          setTableData(initialTableData);
+          // Do NOT load previous report data for Alice
+        } else {
+          // For other users, load saved data
+          await loadReportData();
+        }
       } else {
         setCurrentUser(null);
         setIsAliceAuthorized(false);

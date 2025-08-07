@@ -344,7 +344,7 @@ const Payroll = () => {
         );
         if (nextInput) {
           nextInput.focus();
-          if (!nextInput.value) nextInput.select();
+          nextInput.select();
           nextInput.style.backgroundColor = '#fff3cd';
           setTimeout(() => { nextInput.style.backgroundColor = ''; }, 200);
         }
@@ -358,7 +358,7 @@ const Payroll = () => {
         );
         if (prevInput) {
           prevInput.focus();
-          if (!prevInput.value) prevInput.select();
+          prevInput.select();
           prevInput.style.backgroundColor = '#fff3cd';
           setTimeout(() => { prevInput.style.backgroundColor = ''; }, 200);
         }
@@ -394,12 +394,9 @@ const Payroll = () => {
     }
   };
 
-  // Handle input focus to maintain focus
+  // Handle input focus (no auto-select, allow continuous typing)
   const handleInputFocus = (e) => {
-    if (e.target.type !== 'number') {
-      const cursorPos = e.target.selectionStart;
-      e.target.setSelectionRange(cursorPos, cursorPos);
-    }
+    // No auto-select to allow continuous typing
   };
 
   // Handle input blur to ensure data is saved
@@ -597,15 +594,16 @@ const Payroll = () => {
         </div>
         <h2>Worker Payroll Management</h2>
       </div>
-      
       <div className="manager-table-container">
         <table className="manager-table">
           <thead>
             <tr>
               <th>Workers</th>
-              <th>Local Vess</th>
-              <th>Foreign Vess</th>
-              <th>TAL</th>
+              <th>Local Vessel</th>
+              <th>Foreign Vessel</th>
+              <th>Mooring</th>
+              <th>Unmooring</th>
+              <th>TOTAL</th>
               <th>SSS</th>
               <th>PAG-IBIG</th>
               <th>PhilHealth</th>
@@ -617,70 +615,179 @@ const Payroll = () => {
             {tableData.map((row, rowIndex) => (
               <tr key={row.id}>
                 <td className="worker-name-cell">{row.workerName}</td>
-                {TABLE_FIELDS.map((field, colIndex) => (
-                  <td key={field} className={field.includes('Vess') ? 'vess-cell' : ''}>
-                    {field === 'localVess' || field === 'foreignVess' ? (
-                      <div className="vess-input-container">
-                        <input
-                          type="number"
-                          value={row[field]}
-                          onChange={e => handleCellEdit(rowIndex, field, e.target.value)}
-                          onFocus={handleInputFocus}
-                          onKeyDown={e => handleTableKeyDown(e, rowIndex, colIndex)}
-                          data-row={rowIndex}
-                          data-col={colIndex}
-                          data-field={field}
-                          className="table-input vess-input"
-                          placeholder="Enter num"
-                          step="any"
-                        />
-                        <button
-                          className="cell-dropdown-button"
-                          onClick={() => toggleDropdown(rowIndex, field === 'localVess' ? 'localVessType' : 'foreignVessType')}
-                        >
-                          {row[field === 'localVess' ? 'localVessType' : 'foreignVessType'] || '▼'}
-                        </button>
-                        {activeDropdownRow === rowIndex && activeDropdownColumn === (field === 'localVess' ? 'localVessType' : 'foreignVessType') && (
-                          <div className="cell-dropdown-menu">
-                            <div
-                              className="dropdown-item"
-                              onClick={() => handleVessTypeChange(rowIndex, field === 'localVess' ? 'localVessType' : 'foreignVessType', 'Mooring')}
-                            >
-                              Mooring
-                            </div>
-                            <div
-                              className="dropdown-item"
-                              onClick={() => handleVessTypeChange(rowIndex, field === 'localVess' ? 'localVessType' : 'foreignVessType', 'Unmooring')}
-                            >
-                              Unmooring
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <input
-                        type="number"
-                        value={row[field]}
-                        onChange={e => handleCellEdit(rowIndex, field, e.target.value)}
-                        onFocus={handleInputFocus}
-                        onKeyDown={e => handleTableKeyDown(e, rowIndex, colIndex)}
-                        data-row={rowIndex}
-                        data-col={colIndex}
-                        data-field={field}
-                        className="table-input"
-                        step="any"
-                        autoComplete="off"
-                        autoCorrect="off"
-                        spellCheck="false"
-                        placeholder="Enter num"
-                      />
-                    )}
-                  </td>
-                ))}
+                {/* Local Vessel */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.localVess}
+                    onChange={e => handleCellEdit(rowIndex, 'localVess', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 1)}
+                    data-row={rowIndex}
+                    data-col={1}
+                    className="table-input vess-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* Foreign Vessel */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.foreignVess}
+                    onChange={e => handleCellEdit(rowIndex, 'foreignVess', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 2)}
+                    data-row={rowIndex}
+                    data-col={2}
+                    className="table-input vess-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* Mooring */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.localVessType === 'Mooring' ? row.localVess : ''}
+                    onChange={e => { handleCellEdit(rowIndex, 'localVess', e.target.value); handleVessTypeChange(rowIndex, 'localVessType', 'Mooring'); }}
+                    onFocus={e => { handleInputFocus(e); handleVessTypeChange(rowIndex, 'localVessType', 'Mooring'); }}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 3)}
+                    data-row={rowIndex}
+                    data-col={3}
+                    className="table-input"
+                    placeholder="Mooring"
+                  />
+                </td>
+                {/* Unmooring */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.localVessType === 'Unmooring' ? row.localVess : ''}
+                    onChange={e => { handleCellEdit(rowIndex, 'localVess', e.target.value); handleVessTypeChange(rowIndex, 'localVessType', 'Unmooring'); }}
+                    onFocus={e => { handleInputFocus(e); handleVessTypeChange(rowIndex, 'localVessType', 'Unmooring'); }}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 4)}
+                    data-row={rowIndex}
+                    data-col={4}
+                    className="table-input"
+                    placeholder="Unmooring"
+                  />
+                </td>
+                {/* TOTAL */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={
+                      (parseFloat(row.localVess) || 0) + (parseFloat(row.foreignVess) || 0)
+                    }
+                    readOnly
+                    className="table-input"
+                    tabIndex={-1}
+                  />
+                </td>
+                {/* SSS */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.sss}
+                    onChange={e => handleCellEdit(rowIndex, 'sss', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 6)}
+                    data-row={rowIndex}
+                    data-col={6}
+                    className="table-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* PAG-IBIG */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.pagibig}
+                    onChange={e => handleCellEdit(rowIndex, 'pagibig', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 7)}
+                    data-row={rowIndex}
+                    data-col={7}
+                    className="table-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* PhilHealth */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.philhealth}
+                    onChange={e => handleCellEdit(rowIndex, 'philhealth', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 8)}
+                    data-row={rowIndex}
+                    data-col={8}
+                    className="table-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* Cash Advance */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.cashAdvance}
+                    onChange={e => handleCellEdit(rowIndex, 'cashAdvance', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 9)}
+                    data-row={rowIndex}
+                    data-col={9}
+                    className="table-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* NET TOTAL */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={
+                      // NET TOTAL = (localVess + foreignVess) - (sss + pagibig + philhealth + tal + cashAdvance)
+                      (
+                        (parseFloat(row.localVess) || 0) +
+                        (parseFloat(row.foreignVess) || 0)
+                      ) - (
+                        (parseFloat(row.sss) || 0) +
+                        (parseFloat(row.pagibig) || 0) +
+                        (parseFloat(row.philhealth) || 0) +
+                        (parseFloat(row.tal) || 0) +
+                        (parseFloat(row.cashAdvance) || 0)
+                      )
+                    }
+                    readOnly
+                    className="table-input"
+                    tabIndex={-1}
+                  />
+                </td>
               </tr>
             ))}
             <tr className="grand-total-row">
-              <td colSpan="2">GRAND TOTAL</td>
+              <td colSpan="1">GRAND TOTAL</td>
+              <td></td>
+              <td></td>
+              <td></td>
               <td></td>
               <td></td>
               <td></td>
@@ -691,7 +798,6 @@ const Payroll = () => {
             </tr>
           </tbody>
         </table>
-        
         <div className="save-section">
           <button
             onClick={handleSaveToFirestore}
