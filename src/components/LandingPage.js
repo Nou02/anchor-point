@@ -1,6 +1,6 @@
 import React from 'react';
 import './LandingPage.css';
-import anchorLogo from '../assets/anchorlogo.png'; // Adjust the path if needed
+import anchorLogo from '../assets/anchorpoint.png';
 
 const LandingPage = ({ onEnter }) => {
   const handleClick = () => {

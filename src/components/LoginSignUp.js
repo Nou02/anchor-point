@@ -44,23 +44,23 @@ const PasswordInput = ({ value, onChange, placeholder }) => {
 const LoginSignUp = ({ onLogin, onSignUp }) => {
   // List of workers for matching
   const workersList = [
-    { name: 'Alice Margaretha Santos', type: 'Senior Supervisor', age: 34, info: 'Alice is a senior supervisor with 10 years of experience.', phone: '0917-123-4567' },
-    { name: 'Carla Dela Peña', type: 'Scheduler', age: 29, info: 'Carla manages all schedules and logistics.', phone: '0917-123-4567' },
-    { name: 'Bryan Matthew Cruz', type: 'Dock Worker', age: 26, info: 'Bryan is responsible for loading and unloading cargo.', phone: '0917-123-4567' },
-    { name: 'David Emmanuel Reyes', type: 'Mechanic', age: 31, info: 'David maintains and repairs all dock equipment.', phone: '0917-123-4567' },
-    { name: 'Junnel, Cusi', type: 'Dock Worker', age: 28, info: 'Junnel is known for his efficiency and teamwork on the docks.', phone: '0917-123-4567' },
-    { name: 'Aljon, Dipasupil', type: 'Dock Worker', age: 27, info: 'Aljon specializes in cargo organization and safety procedures.', phone: '0917-123-4567' },
-    { name: 'Phil Allen, Eje', type: 'Dock Worker', age: 30, info: 'Phil Allen is a reliable worker with a keen eye for detail.', phone: '0917-123-4567' },
-    { name: 'Rhed, Escalon', type: 'Dock Worker', age: 25, info: 'Rhed is always ready to assist and ensures smooth dock operations.', phone: '0917-123-4567' },
-    { name: 'Fortune, Garcia Jr.', type: 'Dock Worker', age: 32, info: 'Fortune brings years of experience and leadership to the team.', phone: '0917-123-4567' },
-    { name: 'Keith, Javier', type: 'Dock Worker', age: 26, info: 'Keith is skilled in operating heavy machinery and equipment.', phone: '0917-123-4567' },
-    { name: 'Ericson, Mendoza', type: 'Dock Worker', age: 29, info: 'Ericson is dedicated to maintaining safety and order on the docks.', phone: '0917-123-4567' },
-    { name: 'Alec, Sino-ag', type: 'Dock Worker', age: 24, info: 'Alec is a fast learner and always eager to take on new tasks.', phone: '0917-123-4567' },
-    { name: 'Romeo, Velasquez', type: 'Dock Worker', age: 31, info: 'Romeo is respected for his hard work and positive attitude.', phone: '0917-123-4567' },
-    { name: 'Rodel, Maranan', type: 'Dock Worker', age: 28, info: 'Rodel is dependable and ensures all shipments are handled properly.', phone: '0917-123-4567' },
-    { name: 'Alloi, Sino-ag', type: 'Dock Worker', age: 23, info: 'Alloi is energetic and helps keep the workflow efficient.', phone: '0917-123-4567' },
-    { name: 'Renzy, Cantos', type: 'Dock Worker', age: 27, info: 'Renzy is known for his punctuality and strong work ethic.', phone: '0917-123-4567' },
-    { name: 'PJ, Cusi', type: 'Dock Worker', age: 25, info: 'PJ is a team player who always supports his fellow workers.', phone: '0917-123-4567' }
+    { name: 'Alice Margaretha Santos', type: 'Senior Supervisor'},
+    { name: 'Carla Dela Peña', type: 'Scheduler'},
+    { name: 'Bryan Matthew Cruz', type: 'Dock Worker'},
+    { name: 'David Emmanuel Reyes', type: 'Mechanic'},
+    { name: 'Junnel, Cusi', type: 'Dock Worker'},
+    { name: 'Aljon, Dipasupil', type: 'Dock Worker'},
+    { name: 'Phil Allen, Eje', type: 'Dock Worker'},
+    { name: 'Rhed, Escalon', type: 'Dock Worker'},
+    { name: 'Fortune, Garcia Jr.', type: 'Dock Worker'},
+    { name: 'Keith, Javier', type: 'Dock Worker'},
+    { name: 'Ericson, Mendoza', type: 'Dock Worker'},
+    { name: 'Alec, Sino-ag', type: 'Dock Worker'},
+    { name: 'Romeo, Velasquez', type: 'Dock Worker'},
+    { name: 'Rodel, Maranan', type: 'Dock Worker'},
+    { name: 'Alloi, Sino-ag', type: 'Dock Worker'},
+    { name: 'Renzy, Cantos', type: 'Dock Worker'},
+    { name: 'PJ, Cusi', type: 'Dock Worker'}
   ];
   const [isLogin, setIsLogin] = useState(true);
   const [loginData, setLoginData] = useState({ usernameOrEmail: '', password: '' });
@@ -126,6 +126,7 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
         username: signUpData.username,
         email: signUpData.email,
         phone: signUpData.phone,
+        password: signUpData.password, // Store password for demo (not secure)
         createdAt: new Date(),
         uid: user.uid,
         fullName: matchedWorker ? matchedWorker.name : signUpData.username,
@@ -189,6 +190,17 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
         </div>
       </div>
       <div className="login-right-panel">
+        <div className="right-content hero-content">
+          <img
+            src={require('../assets/anchorpoint.png')}
+            alt="Anchor Logo"
+            className="anchor-logo hero-logo"
+          />
+          <h1 className="right-title hero-title">L.E.O Marines</h1>
+          <div className="right-quote hero-quote">
+            L.E.O Marines – Anchoring Trust, Navigating Excellence since 2011
+          </div>
+        </div>
       </div>
     </div>
   );

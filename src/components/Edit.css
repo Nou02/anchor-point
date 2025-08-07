@@ -1,0 +1,71 @@
+.edit-container {
+  padding: 32px;
+  background: #bfc3e6;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.edit-title {
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.edit-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.edit-sort {
+  margin-left: 12px;
+  margin-right: 12px;
+}
+
+.edit-sort-arrow {
+  margin-left: 4px;
+  cursor: pointer;
+}
+
+.edit-search {
+  border-radius: 8px;
+  border: none;
+  padding: 4px 12px;
+  background: #a6a9d6;
+  outline: none;
+  margin-right: 16px;
+}
+
+.edit-icon {
+  font-size: 20px;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.edit-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #bfc3e6;
+}
+
+.edit-table th,
+.edit-table td {
+  border: 2px solid #3a4a7a;
+  padding: 8px;
+  text-align: left;
+}
+
+.edit-table th {
+  background: #bfc3e6;
+  font-weight: bold;
+}
+
+.edit-table tr {
+  height: 40px;
+}
+
+.edit-table th:first-child,
+.edit-table td:first-child {
+  width: 32px;
+}

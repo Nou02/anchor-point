@@ -47,12 +47,13 @@
 
 .hero-text h1 {
   font-size: 2.7rem;
-  font-weight: 400;
+  font-weight: 800;           /* Lighter font weight */
   line-height: 1.2;
   margin-bottom: 2.5rem;
-  text-shadow: none;
+  text-shadow: none;          /* Remove any shadow */
   color: #ffffff;
   letter-spacing: 0.2px;
+  font-family: 'Segoe UI', Arial, sans-serif; /* Use system sans-serif */
 }
 
 .cta-button {

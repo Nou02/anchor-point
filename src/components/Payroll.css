@@ -446,7 +446,7 @@
   width: 100%;
   max-width: 1200px;
   padding: 20px;
-  background: #f7f3fa;
+  background: none;
   max-height: 80vh;
   overflow-y: auto;
   overflow-x: auto;
