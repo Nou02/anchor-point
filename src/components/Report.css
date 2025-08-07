@@ -199,7 +199,21 @@
 .report-page {
   display: flex;
   min-height: 100vh;
-  background: #c7d6f7;
+  height: 100vh;
+  background:
+    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
+    url('../assets/apone.png') center center/cover no-repeat;
+  overflow: hidden;
+}
+.report-main-container {
+  background:
+    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
+    url('../assets/apone.png') center center/cover no-repeat;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding: 40px;
+  margin: 0 auto;
+  max-width: 1000px;
 }
 
 /* Enhanced Sidebar Styles */
@@ -219,7 +233,6 @@
   position: relative;
   overflow: hidden;
 }
-
 
 .report-logo {
   display: flex;
@@ -247,7 +260,6 @@
 .point {
   color: #ffe14d;
 }
-
 
 .report-nav {
   display: flex;
@@ -279,21 +291,50 @@
 
 .report-main {
   flex: 1;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  display: block;
   padding: 40px 0;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
 }
 
 .report-table-container {
+  position: relative;
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(47, 59, 112, 0.08);
-  padding: 24px 32px;
-  min-width: 700px;
+  padding: 16px 12px;
+  min-width: 280px;
   max-width: 900px;
+  width: 95%;
+  margin: 0 auto;
+  max-height: 85vh;
+  overflow-y: auto;
+  margin-bottom: 32px;
 }
 
+.add-row-btn {
+  position: static;
+  margin: 16px 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffe14d;
+  color: #4e5d94;
+  border: none;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 2rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 18px auto 0 auto;
+  box-shadow: 0 2px 8px #ffe14d44;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.add-row-btn:hover {
+  background: #fffbe6;
+  box-shadow: 0 4px 16px #ffe14d88;
+}
 
 .report-table {
   width: 100%;
@@ -361,4 +402,54 @@
 }
 .report-table tr:last-child td {
   border-bottom: none;
+}
+
+/* Save Button */
+.report-save-btn {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 32px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 1;
+  box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.report-save-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.report-save-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+.report-save-btn:not(:hover) {
+  transform: translateY(0);
+  box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
+}
+
+/* Save Message */
+.report-save-message {
+  margin-top: 16px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.report-save-message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+.report-save-message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
 }

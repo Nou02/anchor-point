@@ -1,9 +1,45 @@
-
 import React, { useState } from 'react';
 import './LoginSignUp.css';
 import { auth, db } from '../firebase/config';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
+
+const PasswordInput = ({ value, onChange, placeholder }) => {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div className="password-input-wrapper">
+      <input
+        className="input-field"
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoComplete="current-password"
+      />
+      <button
+        type="button"
+        className="eye-icon"
+        tabIndex={-1}
+        onClick={() => setShow((v) => !v)}
+        aria-label={show ? "Hide password" : "Show password"}
+      >
+        {show ? (
+          <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" strokeWidth="2" d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z"/>
+            <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+        ) : (
+          <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" strokeWidth="2" d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z"/>
+            <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="2"/>
+            <line x1="4" y1="20" x2="20" y2="4" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+};
 
 const LoginSignUp = ({ onLogin, onSignUp }) => {
   // List of workers for matching
@@ -28,7 +64,6 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
   ];
   const [isLogin, setIsLogin] = useState(true);
   const [loginData, setLoginData] = useState({ usernameOrEmail: '', password: '' });
-  // ...existing code...
   const [signUpData, setSignUpData] = useState({ username: '', email: '', phone: '', password: '', confirmPassword: '' });
 
   const handleLoginChange = (e) => {
@@ -122,10 +157,11 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
             <form className="form-section" onSubmit={handleLogin}>
               <h2 className="login-title">Log in to your account</h2>
               <input name="usernameOrEmail" type="text" placeholder="Username or Email" value={loginData.usernameOrEmail} onChange={handleLoginChange} required className="input-field" />
-              <div className="password-input-wrapper">
-                <input name="password" type="password" placeholder="Password" value={loginData.password} onChange={handleLoginChange} required className="input-field" />
-                <span className="eye-icon">👁️</span>
-              </div>
+              <PasswordInput
+                value={loginData.password}
+                onChange={e => setLoginData({ ...loginData, password: e.target.value })}
+                placeholder="Password"
+              />
               <button type="submit" className="main-btn login-btn">Log In</button>
               <div className="forgot-password">Forgot password?</div>
               <div className="signup-link-row">New to AnchorPoint? <span className="switch-link" onClick={() => setIsLogin(false)}>Sign up</span></div>
@@ -133,11 +169,19 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
           ) : (
             <form className="form-section" onSubmit={handleSignUp}>
               <h2 className="login-title">Sign up</h2>
-              <input name="username" type="text" placeholder="Username" value={signUpData.username} onChange={handleSignUpChange} required className="input-field" />
-              <input name="email" type="email" placeholder="Email" value={signUpData.email} onChange={handleSignUpChange} className="input-field" />
-              <input name="phone" type="text" placeholder="Phone Number" value={signUpData.phone} onChange={handleSignUpChange} required className="input-field" />
-              <input name="password" type="password" placeholder="Password" value={signUpData.password} onChange={handleSignUpChange} required className="input-field" />
-              <input name="confirmPassword" type="password" placeholder="Confirm Password" value={signUpData.confirmPassword} onChange={handleSignUpChange} required className="input-field" />
+              <input name="username" type="text" placeholder="Username (Juan A. Dela Cruz)" value={signUpData.username} onChange={handleSignUpChange} required className="input-field" />
+              <input name="email" type="email" placeholder="Email (juandelacruz@gmail.com)" value={signUpData.email} onChange={handleSignUpChange} className="input-field" />
+              <input name="phone" type="text" placeholder="Phone Number (09123456789)" value={signUpData.phone} onChange={handleSignUpChange} required className="input-field" />
+              <PasswordInput
+                value={signUpData.password}
+                onChange={e => setSignUpData({ ...signUpData, password: e.target.value })}
+                placeholder="Password"
+              />
+              <PasswordInput
+                value={signUpData.confirmPassword}
+                onChange={e => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
+                placeholder="Confirm Password"
+              />
               <button type="submit" className="main-btn login-btn">Sign up</button>
               <div className="signup-link-row">Already have an account? <span className="switch-link" onClick={() => setIsLogin(true)}>Log in</span></div>
             </form>

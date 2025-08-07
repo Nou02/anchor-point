@@ -16,6 +16,8 @@ const Scheduling = () => {
   const [crewAvailability, setCrewAvailability] = useState({}); // Track availability for each worker
   const [savedAvailability, setSavedAvailability] = useState({}); // Track saved availability from Firestore
   const [isSaving, setIsSaving] = useState(false); // Track save button state
+  const [assignedWorkers, setAssignedWorkers] = useState({}); // Track assigned workers for each appointment
+  const [currentDateIndex, setCurrentDateIndex] = useState(0); // Track which selected date is being processed
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();
@@ -110,6 +112,8 @@ const Scheduling = () => {
           return [...prev, clickedDate];
         }
       });
+      // Reset current date index when selection changes
+      setCurrentDateIndex(0);
     }
   };
 
@@ -130,6 +134,10 @@ const Scheduling = () => {
     const db = getFirestore();
     const auth = getAuth();
     const user = auth.currentUser;
+    
+    // Get assigned workers for this appointment
+    const assignedWorkersList = getAssignedWorkersForAppointment(idx);
+    
     // Ensure all fields are present and defaulted
     const data = {
       name: formData[idx]?.name || '',
@@ -138,12 +146,25 @@ const Scheduling = () => {
       vesselType: formData[idx]?.vesselType || 'Local',
       date: date.toISOString(),
       userEmail: user ? user.email : 'guest',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      assignedWorkers: assignedWorkersList // Add assigned workers to the appointment
     };
     try {
       await addDoc(collection(db, 'appointments'), data);
+      // Clear the form data and assigned workers for this specific date index
+      setFormData(prev => {
+        const newFormData = { ...prev };
+        delete newFormData[idx];
+        return newFormData;
+      });
+      setAssignedWorkers(prev => {
+        const newAssignedWorkers = { ...prev };
+        delete newAssignedWorkers[idx];
+        return newAssignedWorkers;
+      });
       fetchSavedEntries();
-      alert('Appointment saved!');
+      alert('Appointment saved successfully!');
+      moveToNextDate(); // Move to the next selected date after saving
     } catch (err) {
       alert('Error saving appointment: ' + err.message);
     }
@@ -232,6 +253,50 @@ const Scheduling = () => {
     try {
       const appointmentRef = doc(db, 'appointments', id);
       await updateDoc(appointmentRef, { status: 'done' });
+      
+      // Find the appointment to get assigned workers
+      const appointment = savedEntries.find(entry => entry.id === id);
+      if (appointment && appointment.assignedWorkers && appointment.assignedWorkers.length > 0) {
+        // Update crew availability to mark these workers as available again
+        const updatedCrewAvailability = { ...crewAvailability };
+        
+        // For each assigned worker, ensure they are marked as available
+        appointment.assignedWorkers.forEach(workerName => {
+          const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
+          const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
+          
+          // Get the day of the week for this appointment
+          const appointmentDate = new Date(appointment.date);
+          const dayIndex = appointmentDate.getDay();
+          const dayKey = dayNames[dayIndex];
+          
+          // Ensure the worker is marked as available (not false) for this day
+          if (!updatedCrewAvailability[workerKey]) {
+            updatedCrewAvailability[workerKey] = {};
+          }
+          updatedCrewAvailability[workerKey][dayKey] = true; // Mark as available
+        });
+        
+        // Update local state
+        setCrewAvailability(updatedCrewAvailability);
+        
+        // Save updated availability to Firestore
+        const today = new Date();
+        const month = today.getMonth() + 1;
+        const day = today.getDate();
+        const year = today.getFullYear();
+        const availabilityDocName = `availability (${month}, ${day}, ${year})`;
+        
+        const data = {
+          ...updatedCrewAvailability,
+          savedBy: 'system',
+          savedAt: new Date().toISOString(),
+          date: today.toISOString()
+        };
+        
+        await setDoc(doc(db, 'availability', availabilityDocName), data);
+      }
+      
       setSavedEntries(prev => prev.filter(entry => entry.id !== id)); // Remove from local state instantly
       fetchSavedEntries();
     } catch (err) {
@@ -327,6 +392,88 @@ const Scheduling = () => {
     });
   };
 
+  // Get available workers for a specific date
+  const getAvailableWorkers = (date) => {
+    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
+    const dayIndex = date.getDay();
+    const dayKey = dayNames[dayIndex];
+    
+    const workers = [
+      'Bryan Matthew Cruz',
+      'David Emmanuel Reyes',
+      'Junnel, Cusi',
+      'Aljon, Dipasupil',
+      'Phil Allen, Eje',
+      'Rhed, Escalon',
+      'Fortune, Garcia Jr.',
+      'Keith, Javier',
+      'Ericson, Mendoza',
+      'Alec, Sino-ag',
+      'Romeo, Velasquez',
+      'Rodel, Maranan',
+      'Alloi, Sino-ag',
+      'Renzy, Cantos',
+      'PJ, Cusi'
+    ];
+    
+    return workers.filter(workerName => {
+      const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
+      const workerAvailability = crewAvailability[workerKey] || {};
+      const isAvailable = workerAvailability[dayKey] !== false; // Available if not explicitly set to false
+      
+      // Check if worker is already assigned to an appointment on this date
+      const dateISO = date.toISOString().slice(0, 10);
+      const isAlreadyAssigned = savedEntries.some(entry => {
+        if (!entry.date || !entry.assignedWorkers) return false;
+        const entryDate = entry.date.slice(0, 10);
+        return entryDate === dateISO && entry.assignedWorkers.includes(workerName);
+      });
+      
+      return isAvailable && !isAlreadyAssigned; // Only show if available AND not already assigned
+    });
+  };
+
+  // Handle worker assignment for an appointment
+  const handleWorkerAssignment = (dateIdx, workerName, isAssigned) => {
+    setAssignedWorkers(prev => ({
+      ...prev,
+      [dateIdx]: {
+        ...prev[dateIdx],
+        [workerName]: isAssigned
+      }
+    }));
+  };
+
+  // Get assigned workers for a specific appointment
+  const getAssignedWorkersForAppointment = (dateIdx) => {
+    const assigned = assignedWorkers[dateIdx] || {};
+    return Object.keys(assigned).filter(worker => assigned[worker]);
+  };
+
+  // Move to next selected date after appointment is saved
+  const moveToNextDate = () => {
+    if (currentDateIndex < selectedDates.length - 1) {
+      setCurrentDateIndex(currentDateIndex + 1);
+      // Clear form data for the new date
+      setFormData(prev => {
+        const newFormData = { ...prev };
+        delete newFormData[currentDateIndex];
+        return newFormData;
+      });
+      setAssignedWorkers(prev => {
+        const newAssignedWorkers = { ...prev };
+        delete newAssignedWorkers[currentDateIndex];
+        return newAssignedWorkers;
+      });
+    } else {
+      // All dates processed, reset to first date and clear selection
+      setCurrentDateIndex(0);
+      setSelectedDates([]);
+      setFormData({});
+      setAssignedWorkers({});
+    }
+  };
+
   // Check if current user can edit a specific worker's availability
   const canEditWorkerAvailability = (workerName) => {
     const auth = getAuth();
@@ -398,19 +545,59 @@ const Scheduling = () => {
     const dayKey = dayNames[dayIndex];
     
     const workerAvailability = crewAvailability[workerKey] || {};
-    return workerAvailability[dayKey] !== false; // Default to available (true) unless explicitly set to false
+    const isAvailable = workerAvailability[dayKey] !== false; // Default to available (true) unless explicitly set to false
+    
+    // Check if this day has passed
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const isPastDay = dayIndex < currentDay;
+    
+    // Check if worker is assigned to any appointments on this day
+    const isAssignedToAppointment = checkIfWorkerAssignedToAppointment(workerName, dayIndex);
+    
+    // Return null for past days (no highlighting) or the actual availability for current/future days
+    if (isPastDay) return null;
+    if (isAssignedToAppointment) return 'assigned'; // Special status for assigned workers
+    return isAvailable; // true for available, false for unavailable
+  };
+
+  // Check if a worker is assigned to any appointments on a specific day
+  const checkIfWorkerAssignedToAppointment = (workerName, dayIndex) => {
+    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
+    const today = new Date();
+    const currentDay = today.getDay();
+    
+    // Calculate the date for the given day index
+    const targetDate = new Date(today);
+    const daysToAdd = dayIndex - currentDay;
+    targetDate.setDate(today.getDate() + daysToAdd);
+    
+    // Check if any saved entries have this worker assigned on this date
+    return savedEntries.some(entry => {
+      if (!entry.date || !entry.assignedWorkers) return false;
+      
+      const entryDate = new Date(entry.date);
+      const isSameDate = entryDate.getDate() === targetDate.getDate() &&
+                        entryDate.getMonth() === targetDate.getMonth() &&
+                        entryDate.getFullYear() === targetDate.getFullYear();
+      
+      return isSameDate && entry.assignedWorkers.includes(workerName);
+    });
   };
 
   const dayVesselTypes = getDayVesselTypes();
   const calendarDays = generateCalendarDays();
 
 return (
-    <div className="scheduling-container" style={{ flexDirection: 'column', alignItems: 'center', gap: '24px', maxHeight: '100vh', overflowY: 'auto' }}>
-      {/* Main content area: calendar or table */}
+  <div className="scheduling-container">
+    {/* Semi-transparent overlay */}
+    <div className="scheduling-overlay" />
+    {/* Main content area: calendar or table */}
+    <div className="scheduling-content">
       {view === 'calendar' ? (
         <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', gap: '32px', width: '100%' }}>
-          <div className="calendar-wrapper" style={{ margin: '0', flex: '0 0 600px' }}>
-            <div className="calendar-header" style={{ position: 'sticky', top: 0, background: '#eaf3ff', zIndex: 20, paddingTop: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+          <div className="calendar-wrapper">
+            <div className="calendar-header">
               <button 
                 className="nav-arrow left-arrow" 
                 onClick={goToPreviousMonth}
@@ -430,18 +617,23 @@ return (
               </button>
             </div>
             <div className="calendar-grid">
-              {/* Weekday headers - sticky below calendar header */}
-              <div className="weekday-header" style={{ position: 'sticky', top: 56, background: '#eaf3ff', zIndex: 15, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <div className="weekday">Sun</div>
-                <div className="weekday">Mon</div>
-                <div className="weekday">Tues</div>
-                <div className="weekday">Wed</div>
-                <div className="weekday">Thurs</div>
-                <div className="weekday">Fri</div>
-                <div className="weekday">Sat</div>
+              {/* Weekday headers */}
+              <div className="weekday-header">
+                {['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'].map((day, index) => {
+                  const today = new Date();
+                  const isCurrentDay = today.getDay() === index;
+                  return (
+                    <div 
+                      key={day}
+                      className={`weekday ${isCurrentDay ? 'current-day' : ''}`}
+                    >
+                      {day}
+                    </div>
+                  );
+                })}
               </div>
               {/* Calendar days */}
-              <div className="calendar-days" style={{ marginTop: '88px', minHeight: '420px', display: 'grid', gridTemplateRows: 'repeat(6, 1fr)', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+              <div className="calendar-days">
                 {calendarDays.map((dayData, index) => {
                   let bgColor = '';
                   if (dayData.isCurrentMonth && dayData.day) {
@@ -456,6 +648,7 @@ return (
                       }
                     }
                   }
+
                   return (
                     <div
                       key={index}
@@ -464,10 +657,10 @@ return (
                       } ${dayData.isToday ? 'today' : ''} ${
                         dayData.isSelected ? 'selected' : ''
                       }`}
-                      style={{ ...bgColor ? { background: bgColor } : {}, minHeight: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      style={{ ...bgColor ? { background: bgColor } : {} }}
                       onClick={() => handleDateClick(dayData.day, dayData.isCurrentMonth)}
                     >
-                      {dayData.day}
+                      <div>{dayData.day}</div>
                     </div>
                   );
                 })}
@@ -476,15 +669,33 @@ return (
           </div>
           {/* Selected date info beside calendar */}
           {selectedDates.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="selected-date-info" style={{ minWidth: '260px', maxWidth: '320px', marginTop: 0, background: '#f5f7fa', paddingTop: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="selected-date-info">
                 <h3>Selected Date{selectedDates.length > 1 ? 's' : ''}:</h3>
-                <ul style={{ paddingLeft: '18px', margin: 0 }}>
-                  {selectedDates.map((date, idx) => (
-                    <li key={idx}>{date.toDateString()}</li>
-                  ))}
+                <ul>
+                  {selectedDates.map((date, idx) => {
+                    const dateISO = date.toISOString().slice(0, 10);
+                    const appointmentsForDate = savedEntries.filter(entry => 
+                      entry.date && entry.date.slice(0, 10) === dateISO
+                    );
+                    return (
+                      <li key={idx}>
+                        {date.toDateString()}
+                        {appointmentsForDate.length > 0 && (
+                          <span style={{ 
+                            fontSize: '0.9rem', 
+                            color: '#6c757d', 
+                            marginLeft: '8px',
+                            fontStyle: 'italic'
+                          }}>
+                            ({appointmentsForDate.length} appointment{appointmentsForDate.length > 1 ? 's' : ''})
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
-                <p>No appointments scheduled for this date.</p>
+                <p>You can schedule multiple appointments for each selected date.</p>
               </div>
               {/* Only show Client Information container if user is Carla Dela Peña */}
               {(() => {
@@ -511,46 +722,196 @@ return (
                 // Only render the container if user is Carla Dela Peña
                 if (isCarlaDelaPena) {
                   return (
-                    <div className="selected-dates-container" style={{ background: '#f5f7fa', borderRadius: '8px', padding: '16px', marginTop: '8px' }}>
+                    <div className="selected-dates-container">
                       <h4>Client Information</h4>
+                      
+                      {/* Progress indicator */}
+                      {selectedDates.length > 1 && (
+                        <div style={{
+                          marginBottom: '20px',
+                          padding: '12px 16px',
+                          background: '#e3f2fd',
+                          borderRadius: '8px',
+                          border: '1px solid #2196f3'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '8px'
+                          }}>
+                            <span style={{
+                              fontSize: '0.9rem',
+                              fontWeight: '600',
+                              color: '#1976d2'
+                            }}>
+                              Processing Date {currentDateIndex + 1} of {selectedDates.length}
+                            </span>
+                            <span style={{
+                              fontSize: '0.8rem',
+                              color: '#666'
+                            }}>
+                              {selectedDates.length - currentDateIndex - 1} remaining
+                            </span>
+                          </div>
+                          <div style={{
+                            width: '100%',
+                            height: '6px',
+                            background: '#e0e0e0',
+                            borderRadius: '3px',
+                            overflow: 'hidden'
+                          }}>
+                            <div style={{
+                              width: `${((currentDateIndex + 1) / selectedDates.length) * 100}%`,
+                              height: '100%',
+                              background: '#2196f3',
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Show form for current date only */}
                       {(() => {
-                        // Find the first selected date that is not yet saved
-                        const savedISO = savedEntries.map(e => e.date && e.date.slice(0, 10));
-                        const firstUnfilledIdx = selectedDates.findIndex((date, idx) => {
-                          const iso = date.toISOString().slice(0, 10);
-                          return !savedISO.includes(iso);
-                        });
-                        if (firstUnfilledIdx === -1) {
-                          return <p>All selected dates have saved appointments.</p>;
-                        }
-                        const date = selectedDates[firstUnfilledIdx];
+                        const currentDate = selectedDates[currentDateIndex];
+                        if (!currentDate) return null;
+                        
+                        const dateISO = currentDate.toISOString().slice(0, 10);
+                        const existingAppointments = savedEntries.filter(entry => 
+                          entry.date && entry.date.slice(0, 10) === dateISO
+                        );
+                        
                         return (
-                          <div key={firstUnfilledIdx} style={{ marginBottom: '24px', borderBottom: '1px solid #e0e0e0', paddingBottom: '16px' }}>
-                            <strong>Date:</strong> {date.toDateString()}
-                            <form style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }} onSubmit={e => handleFormSubmit(e, firstUnfilledIdx, date)}>
+                          <div style={{ marginBottom: '24px', borderBottom: '1px solid #e0e0e0', paddingBottom: '20px' }}>
+                            <div className="date-display">
+                              <strong>Date:</strong> {currentDate.toDateString()}
+                              {existingAppointments.length > 0 && (
+                                <div style={{ 
+                                  fontSize: '0.85rem', 
+                                  color: '#6c757d', 
+                                  marginTop: '4px',
+                                  fontStyle: 'italic'
+                                }}>
+                                  {existingAppointments.length} appointment{existingAppointments.length > 1 ? 's' : ''} already scheduled
+                                </div>
+                              )}
+                            </div>
+                            <form onSubmit={e => handleFormSubmit(e, currentDateIndex, currentDate)}>
                               <label>
                                 Name:
-                                <input type="text" name={`clientName_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.name || ''} onChange={e => handleInputChange(firstUnfilledIdx, 'name', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required />
+                                <input 
+                                  type="text" 
+                                  name={`clientName_${currentDateIndex}`} 
+                                  value={formData[currentDateIndex]?.name || ''} 
+                                  onChange={e => handleInputChange(currentDateIndex, 'name', e.target.value)} 
+                                  placeholder="Enter client name" 
+                                  required 
+                                />
                               </label>
                               <label>
                                 Time:
-                                <input type="time" name={`clientTime_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.time || ''} onChange={e => handleInputChange(firstUnfilledIdx, 'time', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required />
+                                <input 
+                                  type="time" 
+                                  name={`clientTime_${currentDateIndex}`} 
+                                  value={formData[currentDateIndex]?.time || ''} 
+                                  onChange={e => handleInputChange(currentDateIndex, 'time', e.target.value)} 
+                                  required 
+                                />
                               </label>
                               <label>
                                 Type of Service:
-                                <select name={`serviceType_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.serviceType || 'Mooring'} onChange={e => handleInputChange(firstUnfilledIdx, 'serviceType', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required>
+                                <select 
+                                  name={`serviceType_${currentDateIndex}`} 
+                                  value={formData[currentDateIndex]?.serviceType || 'Mooring'} 
+                                  onChange={e => handleInputChange(currentDateIndex, 'serviceType', e.target.value)} 
+                                  required
+                                >
                                   <option value="Mooring">Mooring</option>
                                   <option value="Unmooring">Unmooring</option>
                                 </select>
                               </label>
                               <label>
                                 Vessel Type:
-                                <select name={`vesselType_${firstUnfilledIdx}`} value={formData[firstUnfilledIdx]?.vesselType || 'Local'} onChange={e => handleInputChange(firstUnfilledIdx, 'vesselType', e.target.value)} style={{ marginLeft: '8px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }} required>
+                                <select 
+                                  name={`vesselType_${currentDateIndex}`} 
+                                  value={formData[currentDateIndex]?.vesselType || 'Local'} 
+                                  onChange={e => handleInputChange(currentDateIndex, 'vesselType', e.target.value)} 
+                                  required
+                                >
                                   <option value="Local">Local</option>
                                   <option value="International">International</option>
                                 </select>
                               </label>
-                              <button type="submit" style={{ marginTop: '8px', padding: '6px 16px', borderRadius: '4px', background: '#2d3e5e', color: '#fff', border: 'none', cursor: 'pointer', alignSelf: 'flex-start' }}>Save</button>
+                              
+                              {/* Worker Assignment Section */}
+                              <div style={{ 
+                                marginTop: '20px', 
+                                padding: '16px', 
+                                background: '#f8f9fa', 
+                                borderRadius: '8px',
+                                border: '1px solid #e9ecef'
+                              }}>
+                                <h5 style={{ 
+                                  margin: '0 0 12px 0', 
+                                  color: '#2F3B70', 
+                                  fontSize: '1rem',
+                                  fontWeight: '600'
+                                }}>
+                                  Assign Available Workers
+                                </h5>
+                                <p style={{ 
+                                  fontSize: '0.9rem', 
+                                  color: '#6c757d', 
+                                  margin: '0 0 12px 0',
+                                  fontStyle: 'italic'
+                                }}>
+                                  Select workers who are available for this appointment:
+                                </p>
+                                <div style={{ 
+                                  display: 'grid', 
+                                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                                  gap: '8px',
+                                  maxHeight: '200px',
+                                  overflowY: 'auto'
+                                }}>
+                                  {getAvailableWorkers(currentDate).map(workerName => (
+                                    <label key={workerName} style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      padding: '8px 12px',
+                                      background: 'white',
+                                      borderRadius: '6px',
+                                      border: '1px solid #dee2e6',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease'
+                                    }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={assignedWorkers[currentDateIndex]?.[workerName] || false}
+                                        onChange={(e) => handleWorkerAssignment(currentDateIndex, workerName, e.target.checked)}
+                                        style={{ marginRight: '8px' }}
+                                      />
+                                      <span style={{ fontSize: '0.9rem', color: '#2F3B70' }}>
+                                        {workerName}
+                                      </span>
+                                    </label>
+                                  ))}
+                                </div>
+                                {getAvailableWorkers(currentDate).length === 0 && (
+                                  <p style={{ 
+                                    fontSize: '0.9rem', 
+                                    color: '#dc3545', 
+                                    margin: '8px 0 0 0',
+                                    fontStyle: 'italic'
+                                  }}>
+                                    No workers available for this date. Please check crew availability.
+                                  </p>
+                                )}
+                              </div>
+                              
+                              <button type="submit">
+                                {currentDateIndex < selectedDates.length - 1 ? 'Add Appointment & Continue' : 'Add Appointment & Finish'}
+                              </button>
                             </form>
                           </div>
                         );
@@ -564,18 +925,49 @@ return (
               })()}
               {/* New container: show saved entries for selected dates */}
               {savedEntries.length > 0 && (
-                <div className="saved-entries-container" style={{ background: '#fff', borderRadius: '8px', padding: '16px', marginTop: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', maxHeight: '220px', overflowY: 'auto' }}>
+                <div className="saved-entries-container">
                   <h4>Saved Appointments</h4>
-                  <ul style={{ paddingLeft: '18px', margin: 0 }}>
+                  <ul>
                     {savedEntries.map((entry, idx) => (
-                      <li key={idx} style={{ marginBottom: '12px' }}>
-                        <strong>Date:</strong> {entry.date ? new Date(entry.date).toDateString() : ''}<br />
-                        <strong>Name:</strong> {entry.name || ''}<br />
-                        <strong>Time:</strong> {entry.time || ''}<br />
-                        <strong>Type of Service:</strong> {entry.serviceType || ''}<br />
-                        <strong>Vessel Type:</strong> {entry.vesselType || ''}<br />
-                        <strong>User:</strong> {entry.userEmail || ''}<br />
-                        <button onClick={() => handleDoneAppointment(entry.id)} style={{ marginTop: '6px', padding: '4px 12px', borderRadius: '4px', background: '#28a745', color: '#fff', border: 'none', cursor: 'pointer' }}>Done</button>
+                      <li key={idx}>
+                        <div><strong>Date:</strong> <span>{entry.date ? new Date(entry.date).toDateString() : ''}</span></div>
+                        <div><strong>Name:</strong> <span>{entry.name || ''}</span></div>
+                        <div><strong>Time:</strong> <span>{entry.time || ''}</span></div>
+                        <div><strong>Type of Service:</strong> <span>{entry.serviceType || ''}</span></div>
+                        <div><strong>Vessel Type:</strong> <span>{entry.vesselType || ''}</span></div>
+                        <div><strong>User:</strong> <span>{entry.userEmail || ''}</span></div>
+                        {entry.assignedWorkers && entry.assignedWorkers.length > 0 && (
+                          <div style={{ marginTop: '8px' }}>
+                            <strong>Assigned Workers:</strong>
+                            <div style={{ 
+                              marginTop: '4px',
+                              padding: '8px',
+                              background: '#e9ecef',
+                              borderRadius: '4px',
+                              fontSize: '0.9rem'
+                            }}>
+                              {entry.assignedWorkers.map((worker, workerIdx) => (
+                                <span key={workerIdx} style={{ 
+                                  display: 'inline-block',
+                                  margin: '2px 4px 2px 0',
+                                  padding: '2px 6px',
+                                  background: '#2F3B70',
+                                  color: 'white',
+                                  borderRadius: '12px',
+                                  fontSize: '0.8rem'
+                                }}>
+                                  {worker}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <button 
+                          className="done-button"
+                          onClick={() => handleDoneAppointment(entry.id)}
+                        >
+                          Done
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -585,18 +977,20 @@ return (
           )}
         </div>
       ) : (
-        <div className="crew-availability-table-wrapper" style={{ margin: '0 auto' }}>
+        <div className="crew-availability-table-wrapper">
           <table className="crew-availability-table">
             <thead>
               <tr>
                 <th colSpan="8" style={{ 
                   textAlign: 'center', 
-                  padding: '12px', 
+                  padding: '24px', 
                   backgroundColor: '#f8f9fa', 
                   borderBottom: '2px solid #dee2e6',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: '#2d3e5e'
+                  fontSize: '1.4rem',
+                  fontWeight: '800',
+                  color: '#2d3e5e',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
                 }}>
                   {(() => {
                     const today = new Date();
@@ -613,14 +1007,63 @@ return (
                 </th>
               </tr>
               <tr>
-                <th>Crew</th>
-                <th>Sun</th>
-                <th>Mon</th>
-                <th>Tues</th>
-                <th>Wed</th>
-                <th>Thurs</th>
-                <th>Fri</th>
-                <th>Sat</th>
+                <th style={{ 
+                  textAlign: 'left', 
+                  padding: '20px 24px', 
+                  backgroundColor: '#f8f9fa', 
+                  borderBottom: '2px solid #dee2e6',
+                  fontSize: '1.1rem',
+                  fontWeight: '700',
+                  color: '#2d3e5e',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  minWidth: '200px'
+                }}>
+                  Crew
+                </th>
+                {(() => {
+                  const today = new Date();
+                  const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                  const dayNames = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
+                  
+                  // Calculate the start of the current week (Sunday)
+                  const startOfWeek = new Date(today);
+                  const dayOfWeek = today.getDay();
+                  startOfWeek.setDate(today.getDate() - dayOfWeek);
+                  
+                  return dayNames.map((day, index) => {
+                    const date = new Date(startOfWeek);
+                    date.setDate(startOfWeek.getDate() + index);
+                    const isCurrentDay = index === currentDay;
+                    
+                    return (
+                      <th 
+                        key={day}
+                        className={isCurrentDay ? 'current-day-header' : ''}
+                        style={{ 
+                          textAlign: 'center', 
+                          padding: '20px 16px', 
+                          borderBottom: '2px solid #dee2e6',
+                          fontSize: '1rem',
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          minWidth: '120px'
+                        }}
+                      >
+                        {day}<br />
+                        <span style={{ 
+                          fontSize: '1.2rem', 
+                          fontWeight: '800',
+                          marginTop: '4px',
+                          display: 'block'
+                        }}>
+                          {date.getDate()}
+                        </span>
+                      </th>
+                    );
+                  });
+                })()}
               </tr>
             </thead>
             <tbody>
@@ -670,35 +1113,68 @@ return (
                   return (
                     <tr key={worker.name}>
                       <td style={{ 
-                        fontWeight: 'bold', 
-                        padding: '12px 8px',
-                        backgroundColor: isCurrentUser ? '#f0f8ff' : '#f5f5f5',
-                        borderRight: '2px solid #4156a1'
+                        fontWeight: '600', 
+                        padding: '16px 20px',
+                        backgroundColor: isCurrentUser ? '#f0f8ff' : '#f8f9fa',
+                        borderRight: '2px solid #4156a1',
+                        textAlign: 'left',
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 10
                       }}>
-                        {worker.name}
-                        {isCurrentUser && <span style={{ fontSize: '12px', color: '#666', display: 'block' }}>← Your row</span>}
+                        <div style={{ fontWeight: '600', color: '#2d3e5e' }}>
+                          {worker.name}
+                        </div>
+                        {isCurrentUser && (
+                          <div className="your-row" style={{ 
+                            fontSize: '0.8rem', 
+                            color: '#6c757d', 
+                            fontWeight: '400', 
+                            marginTop: '4px',
+                            fontStyle: 'italic'
+                          }}>
+                            ← Your row
+                          </div>
+                        )}
                       </td>
                       {Array(7).fill(null).map((_, i) => {
-                        const isAvailable = getAvailabilityStatus(worker.name, i);
+                        const availabilityStatus = getAvailabilityStatus(worker.name, i);
                         const isToday = i === todayIdx;
+                        const isPastDay = i < todayIdx;
                         
                         return (
                           <td 
                             key={i} 
-                            className={`${finalCanEdit ? "clickable-availability" : "non-clickable"} ${isAvailable ? "availability-available" : "availability-unavailable"}`}
+                            className={`${finalCanEdit ? "clickable-availability" : "non-clickable"} ${availabilityStatus === true ? "availability-available" : availabilityStatus === false ? "availability-unavailable" : availabilityStatus === 'assigned' ? "availability-assigned" : "availability-past"}`}
                             style={{ 
                               textAlign: 'center',
-                              padding: '12px 8px',
-                              borderRadius: '4px',
+                              padding: '16px 12px',
+                              borderRadius: '8px',
                               border: isToday ? '2px solid #2d3e5e' : '1px solid #e0e0e0',
-                              backgroundColor: isAvailable ? '#e8f5e8' : '#ffe8e8',
-                              cursor: finalCanEdit ? 'pointer' : 'default'
+                              cursor: finalCanEdit && !isPastDay ? 'pointer' : 'default',
+                              transition: 'all 0.2s ease',
+                              fontWeight: '600',
+                              background: availabilityStatus === 'assigned' ? '#2F3B70' : availabilityStatus === true ? '#fff3cd' : availabilityStatus === false ? '#f8d7da' : '#f8f9fa',
+                              color: availabilityStatus === 'assigned' ? 'white' : availabilityStatus === true ? '#856404' : availabilityStatus === false ? '#721c24' : '#6c757d'
                             }}
-                            onClick={finalCanEdit ? () => handleAvailabilityToggle(worker.name, i) : undefined}
-                            title={finalCanEdit ? `Click to mark ${isAvailable ? 'unavailable' : 'available'} for ${['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'][i]}` : 'You can only edit your own availability'}
+                            onClick={finalCanEdit && !isPastDay ? () => handleAvailabilityToggle(worker.name, i) : undefined}
+                            title={finalCanEdit && !isPastDay ? `Click to mark ${availabilityStatus ? 'unavailable' : 'available'} for ${['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'][i]}` : isPastDay ? 'Past day - no editing allowed' : 'You can only edit your own availability'}
                           >
-                            {isAvailable ? 'Available' : 'Not Available'}
-                            {isToday && <div className="today-indicator" style={{ fontSize: '10px', color: '#2d3e5e', fontWeight: 'bold', marginTop: '2px' }}>Today</div>}
+                            <div style={{ fontWeight: '700', marginBottom: '4px' }}>
+                              {availabilityStatus === 'assigned' ? 'On Duty' : availabilityStatus === true ? 'Available' : availabilityStatus === false ? 'Not Available' : 'Past Day'}
+                            </div>
+                            {isToday && (
+                              <div className="today-indicator" style={{ 
+                                fontSize: '0.75rem', 
+                                color: availabilityStatus === 'assigned' ? 'white' : availabilityStatus === true ? '#2d3e5e' : '#2d3e5e', 
+                                fontWeight: '700', 
+                                marginTop: '4px',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px'
+                              }}>
+                                Today
+                              </div>
+                            )}
                           </td>
                         );
                       })}
@@ -713,53 +1189,22 @@ return (
       
       {/* Save Button - only show in table view */}
       {view === 'table' && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+        <div className="save-availability-btn">
           <button 
             onClick={handleSaveAvailability}
             disabled={isSaving}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: isSaving ? 'not-allowed' : 'pointer',
-              opacity: isSaving ? 0.6 : 1,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}
           >
             {isSaving ? 'Saving...' : 'Save Availability'}
           </button>
         </div>
       )}
-      
+
       {/* Navigation buttons - positioned at lower right */}
-      <div className="report-nav-btns" style={{ 
-        position: 'fixed', 
-        bottom: '20px', 
-        right: '20px', 
-        zIndex: 1000,
-        display: 'flex',
-        gap: '8px'
-      }}>
+      <div className="report-nav-btns">
         <button
           className="report-nav-btn"
           onClick={() => setView('calendar')}
           disabled={view === 'calendar'}
-          style={{
-            background: '#eaf3ff',
-            color: '#b0b7d1',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '8px 18px',
-            fontWeight: 'bold',
-            fontSize: '1rem',
-            cursor: view === 'calendar' ? 'not-allowed' : 'pointer',
-            opacity: view === 'calendar' ? 0.6 : 1,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}
         >
           &#8592; Previous
         </button>
@@ -767,24 +1212,13 @@ return (
           className="report-nav-btn"
           onClick={() => setView('table')}
           disabled={view === 'table'}
-          style={{
-            background: '#ffe14d',
-            color: '#222',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '8px 18px',
-            fontWeight: 'bold',
-            fontSize: '1rem',
-            cursor: view === 'table' ? 'not-allowed' : 'pointer',
-            opacity: view === 'table' ? 0.6 : 1,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}
         >
           Next &#8594;
         </button>
       </div>
     </div>
-  );
+  </div>
+)
 };
 
-export default Scheduling; 
+export default Scheduling;

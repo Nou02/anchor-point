@@ -1,5 +1,3 @@
-
-/* Split background */
 .login-signup-split-bg {
   min-height: 100vh;
   width: 100vw;
@@ -16,34 +14,49 @@
 
 .login-left-panel {
   flex: 1 1 0;
-  background: #fff;
+  background: rgba(255,255,255,0.95);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 0 0 0;
   min-width: 350px;
   max-width: 500px;
-  box-shadow: 1px 0 0 #eee;
+  box-shadow: 2px 0 16px #e0e0e0;
+  border-radius: 24px 0 0 24px;
+  padding: 48px 32px;
+  margin: 32px 0 32px 32px;
+  transition: box-shadow 0.2s;
 }
 
 .login-right-panel {
   flex: 1 1 0;
-  background: #000;
+  background: 
+    linear-gradient(rgba(44,62,80,0.25), rgba(44,62,80,0.25)),
+    url('../assets/apone.png') center center/cover no-repeat;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  background-image: 'public/images/anchor_one.png';
-  background-size: cover;
-  background-position: center;
+  border-radius: 0 24px 24px 0;
+  margin: 32px 32px 32px 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .right-content {
   width: 100%;
   text-align: center;
   z-index: 2;
+  padding: 32px 24px;
 }
+
+.login-signup-split-container {
+  box-shadow: 0 8px 32px rgba(44,62,80,0.10);
+  border-radius: 24px;
+  background: transparent;
+}
+
 .right-title {
   font-size: 2.2rem;
   font-weight: 700;
@@ -52,127 +65,106 @@
   text-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 
-
+/* Card effect for the form */
 .form-section {
-  width: 100%;
-  max-width: 400px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(44,62,80,0.10);
+  padding: 32px 32px 40px 32px;
   margin: 0 auto;
+  max-width: 400px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  background: #fff;
-  border-radius: 8px;
-  padding: 0 0 32px 0;
-  box-shadow: none;
-  border: none;
 }
 
+/* Title styling */
 .login-title {
   font-size: 2rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 2rem;
-  color: #222;
+  color: #2F3B70;
   text-align: center;
+  letter-spacing: 0.5px;
 }
 
+/* Input styling */
 .input-field {
   width: 100%;
-  margin-bottom: 1rem;
+  margin-bottom: 1.2rem;
   padding: 1.1rem 1.2rem;
-  border-radius: 6px;
-  border: none;
-  background: #f6f6f6;
+  border-radius: 8px;
+  border: 1.5px solid #e3e8f0;
+  background: #f7faff;
   font-size: 1rem;
   outline: none;
-  transition: box-shadow 0.2s;
-  box-shadow: 0 0 0 1.5px #ededed;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 4px rgba(44,62,80,0.04);
 }
 .input-field:focus {
-  box-shadow: 0 0 0 2px #ffbfa3;
+  border: 1.5px solid #5c6ab0;
+  box-shadow: 0 2px 8px #eaf3ff;
 }
 
-.password-input-wrapper {
-  position: relative;
+/* Button styling */
+.main-btn.login-btn {
   width: 100%;
-  margin-bottom: 1rem;
+  background: linear-gradient(90deg, #ff4848 0%, #ff7979 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px #ff484844;
 }
+.main-btn.login-btn:hover {
+  background: linear-gradient(90deg, #ff7979 0%, #ff4848 100%);
+  box-shadow: 0 4px 16px #ff484888;
+}
+
+/* Eye icon styling */
 .eye-icon {
   position: absolute;
   right: 1.2rem;
   top: 50%;
   transform: translateY(-50%);
   cursor: pointer;
-  color: #888;
-}
-
-.main-btn.login-btn {
-  width: 100%;
-  background: #ffbfa3;
-  color: #222;
+  color: #b0b7d1;
+  font-size: 1.25rem;
+  transition: color 0.2s;
+  background: none;
   border: none;
-  border-radius: 6px;
-  padding: 1rem 0;
-  font-size: 1.1rem;
-  font-weight: 600;
+  outline: none;
+  padding: 0;
+  z-index: 3;
+}
+.eye-icon:hover {
+  color: #5c6ab0;
+}
+
+/* Password input wrapper */
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
   margin-bottom: 1.2rem;
-  cursor: pointer;
-  transition: background 0.2s;
-  box-shadow: none;
-}
-.main-btn.login-btn:hover {
-  background: #ff9e6d;
 }
 
-.forgot-password {
-  width: 100%;
-  text-align: left;
-  font-size: 1rem;
-  color: #b36b4a;
-  margin-bottom: 1.2rem;
-  cursor: pointer;
-}
-
-.social-login-group {
-  width: 100%;
-  margin: 1.2rem 0 1.2rem 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-}
-.social-btn {
-  width: 100%;
-  background: #ededed;
-  color: #222;
-  border: none;
-  border-radius: 6px;
-  padding: 0.9rem 0;
-  font-size: 1rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s;
-  box-shadow: none;
-}
-.social-btn:hover {
-  background: #e0e0e0;
-}
-
-.signup-link-row {
-  width: 100%;
-  text-align: center;
-  font-size: 1rem;
-  margin-top: 1.2rem;
-  color: #222;
-}
-.switch-link {
-  color: #ff9e6d;
+/* Link styling */
+.switch-link, .forgot-password {
+  color: #ff7979;
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
   margin-left: 0.3rem;
+  transition: color 0.2s;
+}
+.switch-link:hover, .forgot-password:hover {
+  color: #ff4848;
 }
 
 .login-title {
@@ -195,7 +187,7 @@
   transition: box-shadow 0.2s;
 }
 .input-field:focus {
-  box-shadow: 0 0 0 2px #ffbfa3;
+  box-shadow: 0 0 0 2px #ff8b8b;
 }
 
 .password-input-wrapper {
@@ -213,7 +205,7 @@
 
 .main-btn.login-btn {
   width: 100%;
-  background: #ffbfa3;
+  background: #ff4848;
   color: #222;
   border: none;
   border-radius: 0.4rem;
@@ -225,14 +217,14 @@
   transition: background 0.2s;
 }
 .main-btn.login-btn:hover {
-  background: #ff9e6d;
+  background: #ff5555;
 }
 
 .forgot-password {
   width: 100%;
   text-align: left;
   font-size: 0.98rem;
-  color: #b36b4a;
+  color: #ff5c5c;
   margin-bottom: 1.2rem;
   cursor: pointer;
 }
@@ -260,29 +252,7 @@
   cursor: pointer;
   transition: background 0.2s;
 }
-.social-btn:hover {
-  background: #e0e0e0;
-}
-.google-icon {
-  color: #ea4335;
-  font-size: 1.2rem;
-}
-.github-icon {
-  color: #222;
-  font-size: 1.2rem;
-}
-.x-icon {
-  color: #222;
-  font-size: 1.2rem;
-}
-.facebook-icon {
-  color: #1877f3;
-  font-size: 1.2rem;
-}
-.apple-icon {
-  color: #222;
-  font-size: 1.2rem;
-}
+
 .signup-link-row {
   width: 100%;
   text-align: center;
@@ -291,7 +261,7 @@
   color: #222;
 }
 .switch-link {
-  color: #ff9e6d;
+  color: #ff9494;
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;

@@ -30,6 +30,10 @@ const WORKERS_LIST = [
   "Alloi, Sino-ag"
 ];
 
+const TABLE_FIELDS = [
+  'localVess', 'foreignVess', 'tal', 'sss', 'pagibig', 'philhealth', 'cashAdvance', 'netTotal'
+];
+
 const Payroll = () => {
   const [user, setUser] = useState({
     name: '',
@@ -214,6 +218,7 @@ const Payroll = () => {
     localStorage.removeItem('aliceManagerView');
   };
 
+  // Modify the handleCellEdit function
   const handleCellEdit = (rowIndex, field, value) => {
     setTableData(prevData => {
       const newTableData = [...prevData];
@@ -329,25 +334,78 @@ const Payroll = () => {
     }
   };
 
+  const handleTableKeyDown = (e, rowIndex, colIndex) => {
+    if (['Enter', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      // Move to same column, next row
+      if (rowIndex < tableData.length - 1) {
+        const nextInput = document.querySelector(
+          `input[data-row="${rowIndex + 1}"][data-col="${colIndex}"]`
+        );
+        if (nextInput) {
+          nextInput.focus();
+          if (!nextInput.value) nextInput.select();
+          nextInput.style.backgroundColor = '#fff3cd';
+          setTimeout(() => { nextInput.style.backgroundColor = ''; }, 200);
+        }
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      // Move to same column, previous row
+      if (rowIndex > 0) {
+        const prevInput = document.querySelector(
+          `input[data-row="${rowIndex - 1}"][data-col="${colIndex}"]`
+        );
+        if (prevInput) {
+          prevInput.focus();
+          if (!prevInput.value) prevInput.select();
+          prevInput.style.backgroundColor = '#fff3cd';
+          setTimeout(() => { prevInput.style.backgroundColor = ''; }, 200);
+        }
+      }
+    } else if (e.key === 'Tab' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      // Move to next column in same row
+      if (colIndex < TABLE_FIELDS.length - 1) {
+        const nextInput = document.querySelector(
+          `input[data-row="${rowIndex}"][data-col="${colIndex + 1}"]`
+        );
+        if (nextInput) {
+          nextInput.focus();
+          if (!nextInput.value) nextInput.select();
+          nextInput.style.backgroundColor = '#fff3cd';
+          setTimeout(() => { nextInput.style.backgroundColor = ''; }, 200);
+        }
+      }
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      // Move to previous column in same row
+      if (colIndex > 0) {
+        const prevInput = document.querySelector(
+          `input[data-row="${rowIndex}"][data-col="${colIndex - 1}"]`
+        );
+        if (prevInput) {
+          prevInput.focus();
+          if (!prevInput.value) prevInput.select();
+          prevInput.style.backgroundColor = '#fff3cd';
+          setTimeout(() => { prevInput.style.backgroundColor = ''; }, 200);
+        }
+      }
+    }
+  };
+
   // Handle input focus to maintain focus
   const handleInputFocus = (e) => {
-    // Only select all text if the field is empty or contains placeholder
-    if (!e.target.value || e.target.value === '') {
-      e.target.select();
+    if (e.target.type !== 'number') {
+      const cursorPos = e.target.selectionStart;
+      e.target.setSelectionRange(cursorPos, cursorPos);
     }
   };
 
   // Handle input blur to ensure data is saved
   const handleInputBlur = (e, rowIndex, field) => {
     const value = e.target.value;
-    setTableData(prevData => {
-      const newTableData = [...prevData];
-      newTableData[rowIndex] = {
-        ...newTableData[rowIndex],
-        [field]: value
-      };
-      return newTableData;
-    });
+    handleCellEdit(rowIndex, field, value);
   };
 
   const handleVessTypeChange = (rowIndex, column, type) => {
@@ -541,10 +599,6 @@ const Payroll = () => {
       </div>
       
       <div className="manager-table-container">
-        <div className="table-instructions">
-          <p><strong>💡 Tip:</strong> Use Tab, Enter, or Arrow keys to navigate between cells for continuous input! 
-          <br /><small>• Tab/Enter/→: Next cell • ←: Previous cell • ↑/↓: Same column, different row</small></p>
-        </div>
         <table className="manager-table">
           <thead>
             <tr>
@@ -560,181 +614,69 @@ const Payroll = () => {
             </tr>
           </thead>
           <tbody>
-            {tableData.map((row, index) => (
+            {tableData.map((row, rowIndex) => (
               <tr key={row.id}>
                 <td className="worker-name-cell">{row.workerName}</td>
-                <td className="vess-cell">
-                  <div className="vess-input-container">
-                    <input
-                      type="number"
-                      value={row.localVess}
-                      onChange={(e) => handleCellEdit(index, 'localVess', e.target.value)}
-                      onFocus={handleInputFocus}
-                      onBlur={(e) => handleInputBlur(e, index, 'localVess')}
-                      onKeyDown={(e) => handleKeyDown(e, index, 'localVess')}
-                      data-row={index}
-                      data-field="localVess"
-                      className="table-input vess-input"
-                      placeholder="Enter number"
-                      step="any"
-                    />
-                    <button 
-                      className="cell-dropdown-button"
-                      onClick={() => toggleDropdown(index, 'localVessType')}
-                    >
-                      {row.localVessType || '▼'}
-                    </button>
-                    {activeDropdownRow === index && activeDropdownColumn === 'localVessType' && (
-                      <div className="cell-dropdown-menu">
-                        <div 
-                          className="dropdown-item"
-                          onClick={() => handleVessTypeChange(index, 'localVessType', 'Mooring')}
+                {TABLE_FIELDS.map((field, colIndex) => (
+                  <td key={field} className={field.includes('Vess') ? 'vess-cell' : ''}>
+                    {field === 'localVess' || field === 'foreignVess' ? (
+                      <div className="vess-input-container">
+                        <input
+                          type="number"
+                          value={row[field]}
+                          onChange={e => handleCellEdit(rowIndex, field, e.target.value)}
+                          onFocus={handleInputFocus}
+                          onKeyDown={e => handleTableKeyDown(e, rowIndex, colIndex)}
+                          data-row={rowIndex}
+                          data-col={colIndex}
+                          data-field={field}
+                          className="table-input vess-input"
+                          placeholder="Enter num"
+                          step="any"
+                        />
+                        <button
+                          className="cell-dropdown-button"
+                          onClick={() => toggleDropdown(rowIndex, field === 'localVess' ? 'localVessType' : 'foreignVessType')}
                         >
-                          Mooring
-                        </div>
-                        <div 
-                          className="dropdown-item"
-                          onClick={() => handleVessTypeChange(index, 'localVessType', 'Unmooring')}
-                        >
-                          Unmooring
-                        </div>
+                          {row[field === 'localVess' ? 'localVessType' : 'foreignVessType'] || '▼'}
+                        </button>
+                        {activeDropdownRow === rowIndex && activeDropdownColumn === (field === 'localVess' ? 'localVessType' : 'foreignVessType') && (
+                          <div className="cell-dropdown-menu">
+                            <div
+                              className="dropdown-item"
+                              onClick={() => handleVessTypeChange(rowIndex, field === 'localVess' ? 'localVessType' : 'foreignVessType', 'Mooring')}
+                            >
+                              Mooring
+                            </div>
+                            <div
+                              className="dropdown-item"
+                              onClick={() => handleVessTypeChange(rowIndex, field === 'localVess' ? 'localVessType' : 'foreignVessType', 'Unmooring')}
+                            >
+                              Unmooring
+                            </div>
+                          </div>
+                        )}
                       </div>
+                    ) : (
+                      <input
+                        type="number"
+                        value={row[field]}
+                        onChange={e => handleCellEdit(rowIndex, field, e.target.value)}
+                        onFocus={handleInputFocus}
+                        onKeyDown={e => handleTableKeyDown(e, rowIndex, colIndex)}
+                        data-row={rowIndex}
+                        data-col={colIndex}
+                        data-field={field}
+                        className="table-input"
+                        step="any"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        placeholder="Enter num"
+                      />
                     )}
-                  </div>
-                  {row.localVess && row.localVessType && (
-                    <div className="vess-display">
-                      {row.localVess}, {row.localVessType}
-                    </div>
-                  )}
-                </td>
-                <td className="vess-cell">
-                  <div className="vess-input-container">
-                    <input
-                      type="number"
-                      value={row.foreignVess}
-                      onChange={(e) => handleCellEdit(index, 'foreignVess', e.target.value)}
-                      onFocus={handleInputFocus}
-                      onBlur={(e) => handleInputBlur(e, index, 'foreignVess')}
-                      onKeyDown={(e) => handleKeyDown(e, index, 'foreignVess')}
-                      data-row={index}
-                      data-field="foreignVess"
-                      className="table-input vess-input"
-                      placeholder="Enter number"
-                      step="any"
-                    />
-                    <button 
-                      className="cell-dropdown-button"
-                      onClick={() => toggleDropdown(index, 'foreignVessType')}
-                    >
-                      {row.foreignVessType || '▼'}
-                    </button>
-                    {activeDropdownRow === index && activeDropdownColumn === 'foreignVessType' && (
-                      <div className="cell-dropdown-menu">
-                        <div 
-                          className="dropdown-item"
-                          onClick={() => handleVessTypeChange(index, 'foreignVessType', 'Mooring')}
-                        >
-                          Mooring
-                        </div>
-                        <div 
-                          className="dropdown-item"
-                          onClick={() => handleVessTypeChange(index, 'foreignVessType', 'Unmooring')}
-                        >
-                          Unmooring
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {row.foreignVess && row.foreignVessType && (
-                    <div className="vess-display">
-                      {row.foreignVess}, {row.foreignVessType}
-                    </div>
-                  )}
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={row.tal}
-                    onChange={(e) => handleCellEdit(index, 'tal', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onBlur={(e) => handleInputBlur(e, index, 'tal')}
-                    onKeyDown={(e) => handleKeyDown(e, index, 'tal')}
-                    data-row={index}
-                    data-field="tal"
-                    className="table-input"
-                    step="any"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={row.sss}
-                    onChange={(e) => handleCellEdit(index, 'sss', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onBlur={(e) => handleInputBlur(e, index, 'sss')}
-                    onKeyDown={(e) => handleKeyDown(e, index, 'sss')}
-                    data-row={index}
-                    data-field="sss"
-                    className="table-input"
-                    step="any"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={row.pagibig}
-                    onChange={(e) => handleCellEdit(index, 'pagibig', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onBlur={(e) => handleInputBlur(e, index, 'pagibig')}
-                    onKeyDown={(e) => handleKeyDown(e, index, 'pagibig')}
-                    data-row={index}
-                    data-field="pagibig"
-                    className="table-input"
-                    step="any"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={row.philhealth}
-                    onChange={(e) => handleCellEdit(index, 'philhealth', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onBlur={(e) => handleInputBlur(e, index, 'philhealth')}
-                    onKeyDown={(e) => handleKeyDown(e, index, 'philhealth')}
-                    data-row={index}
-                    data-field="philhealth"
-                    className="table-input"
-                    step="any"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={row.cashAdvance}
-                    onChange={(e) => handleCellEdit(index, 'cashAdvance', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onBlur={(e) => handleInputBlur(e, index, 'cashAdvance')}
-                    onKeyDown={(e) => handleKeyDown(e, index, 'cashAdvance')}
-                    data-row={index}
-                    data-field="cashAdvance"
-                    className="table-input"
-                    step="any"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={row.netTotal}
-                    onChange={(e) => handleCellEdit(index, 'netTotal', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onBlur={(e) => handleInputBlur(e, index, 'netTotal')}
-                    onKeyDown={(e) => handleKeyDown(e, index, 'netTotal')}
-                    data-row={index}
-                    data-field="netTotal"
-                    className="table-input"
-                    step="any"
-                  />
-                </td>
+                  </td>
+                ))}
               </tr>
             ))}
             <tr className="grand-total-row">
@@ -770,105 +712,115 @@ const Payroll = () => {
 
   // Regular Payroll View
   const RegularPayrollView = () => (
-      <div className="payroll-card">
-        <div className="payroll-profile">
-          <div className="payroll-avatar">{user.initials || 'U'}</div>
-          <div className="payroll-name">
-            {user.name && user.name.trim() !== "" ? user.name : "Your Name"}
-          </div>
-          <div className="payroll-email">{user.email}</div>
-          <div className="payroll-date">
-            Billing of this day <span className="payroll-date-value">({user.date})</span>
-          </div>
-          
-          {/* Worker Selection Dropdown */}
-          {availableWorkers.length > 0 && (
-            <div className="worker-selection-container">
-              <div className="worker-dropdown">
-                <button 
-                  className="worker-dropdown-button"
-                  onClick={() => setShowWorkerDropdown(!showWorkerDropdown)}
-                >
-                  {selectedWorker || 'Select Worker'} ▼
-                </button>
-                {showWorkerDropdown && (
-                  <div className="worker-dropdown-menu">
-                    {availableWorkers.map((workerName, index) => (
-                      <div 
-                        key={index}
-                        className="worker-dropdown-item"
-                        onClick={() => handleWorkerSelection(workerName)}
-                      >
-                        {workerName}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {user.name === "Alice Margaretha Santos" && (
-            <div style={{ marginTop: "16px", textAlign: "center" }}>
-              <button
-              onClick={handleToggleManagerView}
-                style={{
-                  background: "#233a6c",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "10px 24px",
-                  fontSize: "1rem",
-                  cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
-                }}
-              >
-                Toggle Manager View
-              </button>
-            </div>
-          )}
+    <div className="payroll-regular-bg">
+      {/* User Profile Section */}
+      <div className="payroll-profile-section">
+        <div className="payroll-profile-avatar">
+          {user.initials || 'U'}
         </div>
-        <div className="payroll-details-container">
-          <div className="payroll-details-grid">
-            <div className="payroll-detail-item">
-              <span className="detail-label">LOCAL</span>
-              <span className="detail-value">{individualPayrollData.local || '0'}</span>
-            </div>
-            <div className="payroll-detail-item">
-              <span className="detail-label">FOREIGN</span>
-              <span className="detail-value">{individualPayrollData.foreign || '0'}</span>
-            </div>
-            <div className="payroll-detail-item">
-              <span className="detail-label">TOTAL</span>
-              <span className="detail-value">{individualPayrollData.total || '0'}</span>
-            </div>
-            <div className="payroll-detail-item">
-              <span className="detail-label">PAG-IBIG LOAN</span>
-              <span className="detail-value">{individualPayrollData.pagibigLoan || '0'}</span>
-            </div>
-            <div className="payroll-detail-item">
-              <span className="detail-label">CASH ADVANCE</span>
-              <span className="detail-value">{individualPayrollData.cashAdvance || '0'}</span>
-            </div>
-            <div className="payroll-detail-item">
-              <span className="detail-label">BALANCE</span>
-              <span className="detail-value">{individualPayrollData.balance || '0'}</span>
-            </div>
-            <div className="payroll-detail-item">
-              <span className="detail-label">SSS/PI/PH</span>
-              <span className="detail-value">{individualPayrollData.sssPiPh || '0'}</span>
-            </div>
-            <div className="payroll-detail-item">
-              <span className="detail-label">TOTAL DEDUCTIONS</span>
-              <span className="detail-value">{individualPayrollData.totalDeductions || '0'}</span>
-            </div>
-            <div className="payroll-detail-item total-item">
-              <span className="detail-label">TOTAL</span>
-              <span className="detail-value">{individualPayrollData.finalTotal || '0'}</span>
+        <h2 className="payroll-profile-name">
+          {user.name && user.name.trim() !== "" ? user.name : "Your Name"}
+        </h2>
+        <p className="payroll-profile-email">
+          {user.email}
+        </p>
+        <p className="payroll-profile-date">
+          Billing of this day <span className="payroll-profile-date-highlight">({user.date})</span>
+        </p>
+        {/* Worker Selection Dropdown */}
+        {availableWorkers.length > 0 && (
+          <div className="payroll-worker-dropdown-container">
+            <div className="payroll-worker-dropdown">
+              <button
+                className="payroll-worker-dropdown-btn"
+                onClick={() => setShowWorkerDropdown(!showWorkerDropdown)}
+              >
+                {selectedWorker || 'Select Worker'}
+                <span className="payroll-worker-dropdown-arrow">▼</span>
+              </button>
+              {showWorkerDropdown && (
+                <div className="payroll-worker-dropdown-menu">
+                  {availableWorkers.map((workerName, index) => (
+                    <div
+                      key={index}
+                      className="payroll-worker-dropdown-item"
+                      onClick={() => handleWorkerSelection(workerName)}
+                    >
+                      {workerName}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+        )}
+        {user.name === "Alice Margaretha Santos" && (
+          <div className="payroll-manager-toggle">
+            <button className="manager-toggle-btn" onClick={handleToggleManagerView}>
+              Proceed
+            </button>
+          </div>
+        )}
+      </div>
+      {/* Payroll Details Card */}
+      <div className="payroll-details-card">
+        <div className="payroll-details-header">
+          <h3 className="payroll-details-title">
+            Payroll Summary
+          </h3>
+        </div>
+        <div className="payroll-details-grid">
+          {/* First Group */}
+          <div className="payroll-details-group payroll-details-group-local">
+            <div className="payroll-details-group-bar payroll-details-group-bar-local" />
+            <div className="payroll-details-row">
+              <span className="payroll-details-label">LOCAL</span>
+              <span className="payroll-details-value">{individualPayrollData.local || '0'}</span>
+            </div>
+            <div className="payroll-details-row">
+              <span className="payroll-details-label">FOREIGN</span>
+              <span className="payroll-details-value">{individualPayrollData.foreign || '0'}</span>
+            </div>
+            <div className="payroll-details-row payroll-details-row-total">
+              <span className="payroll-details-label payroll-details-label-total">TOTAL</span>
+              <span className="payroll-details-value payroll-details-value-total">{individualPayrollData.total || '0'}</span>
+            </div>
+          </div>
+          {/* Second Group */}
+          <div className="payroll-details-group payroll-details-group-loan">
+            <div className="payroll-details-group-bar payroll-details-group-bar-loan" />
+            <div className="payroll-details-row">
+              <span className="payroll-details-label">PAG-IBIG LOAN</span>
+              <span className="payroll-details-value">{individualPayrollData.pagibigLoan || '0'}</span>
+            </div>
+            <div className="payroll-details-row">
+              <span className="payroll-details-label">CASH ADVANCE</span>
+              <span className="payroll-details-value">{individualPayrollData.cashAdvance || '0'}</span>
+            </div>
+            <div className="payroll-details-row payroll-details-row-balance">
+              <span className="payroll-details-label payroll-details-label-balance">BALANCE</span>
+              <span className="payroll-details-value payroll-details-value-balance">{individualPayrollData.balance || '0'}</span>
+            </div>
+          </div>
+          {/* Third Group */}
+          <div className="payroll-details-group payroll-details-group-deductions">
+            <div className="payroll-details-group-bar payroll-details-group-bar-deductions" />
+            <div className="payroll-details-row">
+              <span className="payroll-details-label">SSS/PI/PH</span>
+              <span className="payroll-details-value">{individualPayrollData.sssPiPh || '0'}</span>
+            </div>
+            <div className="payroll-details-row payroll-details-row-deductions">
+              <span className="payroll-details-label payroll-details-label-deductions">TOTAL DEDUCTIONS</span>
+              <span className="payroll-details-value payroll-details-value-deductions">{individualPayrollData.totalDeductions || '0'}</span>
+            </div>
+          </div>
+        </div>
+        <div className="payroll-details-final-total">
+          <span className="payroll-details-final-label">TOTAL</span>
+          <span className="payroll-details-final-value">{individualPayrollData.finalTotal || '0'}</span>
         </div>
       </div>
+    </div>
   );
 
   return (

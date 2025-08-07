@@ -4,8 +4,7 @@ import Scheduling from './Scheduling';
 import Weather from './Weather';
 import Report from './Report';
 import Payroll from './Payroll';
-
-
+import Sidebar from './Sidebar'; // <-- Import your Sidebar component
 
 const Homepage = () => {
   // Logout handler
@@ -19,6 +18,7 @@ const Homepage = () => {
       alert('Logout failed: ' + err.message);
     }
   };
+
   // Try to get last menu from localStorage, default to 'weather'
   const getInitialMenu = () => {
     return localStorage.getItem('activeMenu') || 'weather';
@@ -70,36 +70,12 @@ const Homepage = () => {
 
   return (
     <div className="homepage">
-      {/* Left Sidebar */}
-      <div className="sidebar">
-        <div className="logo-section">
-          <div className="anchor-icon">⚓</div>
-          <div className="logo-text">
-            <span className="anchor-text">Anchor</span>
-            <span className="point-text">Point</span>
-            <span className="red-dot">•</span>
-          </div>
-        </div>
-        <nav className="navigation">
-          {menuItems.map((item) => (
-            <div
-              key={item.id}
-              className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
-              onClick={() => setActiveMenu(item.id)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </div>
-          ))}
-        </nav>
-        {/* Logout button at the bottom of the sidebar */}
-        <div className="logout-section">
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
-      </div>
-      {/* Main Content Area */}
+      <Sidebar
+        activeMenu={activeMenu}
+        setActiveMenu={setActiveMenu}
+        menuItems={menuItems}
+        handleLogout={handleLogout}
+      />
       {renderContent()}
     </div>
   );

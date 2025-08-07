@@ -44,7 +44,7 @@ const Dashboard = () => {
       <header className="dashboard-header">
         <div className="header-content">
           <div className="logo">
-            <span style={{ fontSize: '24px', marginRight: '8px' }}>⚓</span>
+            <span className="logo-icon">⚓</span>
             <span>Anchor Point</span>
           </div>
           <div className="user-info">
@@ -123,4 +123,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

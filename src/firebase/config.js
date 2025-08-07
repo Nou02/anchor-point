@@ -5,13 +5,13 @@ import { getFirestore } from 'firebase/firestore';
 // Your Firebase configuration
 // Replace these with your actual Firebase project credentials
 const firebaseConfig = {
-  apiKey: "AIzaSyAguqSW6KK892KVQZ-jWwK8VAYkAGm8ftA",
-  authDomain: "anchorpoint-application.firebaseapp.com",
-  projectId: "anchorpoint-application",
-  storageBucket: "anchorpoint-application.firebasestorage.app",
-  messagingSenderId: "885746233140",
-  appId: "1:885746233140:web:458abf422b478bebc97f61",
-  measurementId: "G-91G5K7ZBMD"
+  apiKey: "AIzaSyA_JWaNHkylrHexzQqmMdqK96_TsekcUec",
+  authDomain: "anchorpoint-application-e0322.firebaseapp.com",
+  projectId: "anchorpoint-application-e0322",
+  storageBucket: "anchorpoint-application-e0322.firebasestorage.app",
+  messagingSenderId: "16995630285",
+  appId: "1:16995630285:web:7b6258575d6b459ff8fd84",
+  measurementId: "G-YDBDDESKBE"
 };
 
 // Initialize Firebase
