@@ -701,7 +701,7 @@ const Payroll = () => {
                     pattern="[0-9]*"
                     value={row.sss}
                     onChange={e => handleCellEdit(rowIndex, 'sss', e.target.value)}
-                    onFocus={handleInputFocus}
+                    // No auto-select or forced focus, just allow normal typing
                     onKeyDown={e => handleTableKeyDown(e, rowIndex, 6)}
                     data-row={rowIndex}
                     data-col={6}
@@ -717,7 +717,6 @@ const Payroll = () => {
                     pattern="[0-9]*"
                     value={row.pagibig}
                     onChange={e => handleCellEdit(rowIndex, 'pagibig', e.target.value)}
-                    onFocus={handleInputFocus}
                     onKeyDown={e => handleTableKeyDown(e, rowIndex, 7)}
                     data-row={rowIndex}
                     data-col={7}
@@ -733,7 +732,6 @@ const Payroll = () => {
                     pattern="[0-9]*"
                     value={row.philhealth}
                     onChange={e => handleCellEdit(rowIndex, 'philhealth', e.target.value)}
-                    onFocus={handleInputFocus}
                     onKeyDown={e => handleTableKeyDown(e, rowIndex, 8)}
                     data-row={rowIndex}
                     data-col={8}
@@ -749,7 +747,6 @@ const Payroll = () => {
                     pattern="[0-9]*"
                     value={row.cashAdvance}
                     onChange={e => handleCellEdit(rowIndex, 'cashAdvance', e.target.value)}
-                    onFocus={handleInputFocus}
                     onKeyDown={e => handleTableKeyDown(e, rowIndex, 9)}
                     data-row={rowIndex}
                     data-col={9}
