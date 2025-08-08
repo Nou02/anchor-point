@@ -335,61 +335,60 @@ const Payroll = () => {
   };
 
   const handleTableKeyDown = (e, rowIndex, colIndex) => {
+    // Determine available column indices dynamically for the current row
+    const rowInputs = Array.from(document.querySelectorAll(`input[data-row="${rowIndex}"][data-col]`));
+    const colIndices = rowInputs.map(input => parseInt(input.getAttribute('data-col'), 10)).filter(n => !Number.isNaN(n));
+    const minCol = colIndices.length ? Math.min(...colIndices) : 1;
+    const maxCol = colIndices.length ? Math.max(...colIndices) : colIndex;
+
+    const focusCell = (r, c) => {
+      const input = document.querySelector(`input[data-row="${r}"][data-col="${c}"]`);
+      if (input) {
+        input.focus();
+        if (!input.value) input.select();
+        input.style.backgroundColor = '#fff3cd';
+        setTimeout(() => { input.style.backgroundColor = ''; }, 200);
+      }
+    };
+
     if (['Enter', 'ArrowDown'].includes(e.key)) {
       e.preventDefault();
-      // Move to same column, next row
       if (rowIndex < tableData.length - 1) {
-        const nextInput = document.querySelector(
-          `input[data-row="${rowIndex + 1}"][data-col="${colIndex}"]`
-        );
-        if (nextInput) {
-          nextInput.focus();
-          nextInput.select();
-          nextInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => { nextInput.style.backgroundColor = ''; }, 200);
-        }
+        focusCell(rowIndex + 1, colIndex);
       }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      // Move to same column, previous row
       if (rowIndex > 0) {
-        const prevInput = document.querySelector(
-          `input[data-row="${rowIndex - 1}"][data-col="${colIndex}"]`
-        );
-        if (prevInput) {
-          prevInput.focus();
-          prevInput.select();
-          prevInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => { prevInput.style.backgroundColor = ''; }, 200);
-        }
+        focusCell(rowIndex - 1, colIndex);
       }
     } else if (e.key === 'Tab' || e.key === 'ArrowRight') {
       e.preventDefault();
-      // Move to next column in same row
-      if (colIndex < TABLE_FIELDS.length - 1) {
-        const nextInput = document.querySelector(
-          `input[data-row="${rowIndex}"][data-col="${colIndex + 1}"]`
-        );
-        if (nextInput) {
-          nextInput.focus();
-          if (!nextInput.value) nextInput.select();
-          nextInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => { nextInput.style.backgroundColor = ''; }, 200);
-        }
+      // Move to the next existing column in the same row, skipping gaps
+      let nextCol = colIndex + 1;
+      while (nextCol <= maxCol && !document.querySelector(`input[data-row="${rowIndex}"][data-col="${nextCol}"]`)) {
+        nextCol += 1;
+      }
+      if (nextCol <= maxCol) {
+        focusCell(rowIndex, nextCol);
+      } else if (rowIndex < tableData.length - 1) {
+        // Wrap to the first column on the next row
+        focusCell(rowIndex + 1, minCol);
       }
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      // Move to previous column in same row
-      if (colIndex > 0) {
-        const prevInput = document.querySelector(
-          `input[data-row="${rowIndex}"][data-col="${colIndex - 1}"]`
-        );
-        if (prevInput) {
-          prevInput.focus();
-          if (!prevInput.value) prevInput.select();
-          prevInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => { prevInput.style.backgroundColor = ''; }, 200);
-        }
+      // Move to the previous existing column in the same row, skipping gaps
+      let prevCol = colIndex - 1;
+      while (prevCol >= minCol && !document.querySelector(`input[data-row="${rowIndex}"][data-col="${prevCol}"]`)) {
+        prevCol -= 1;
+      }
+      if (prevCol >= minCol) {
+        focusCell(rowIndex, prevCol);
+      } else if (rowIndex > 0) {
+        // Wrap to the last column on the previous row
+        const prevRowInputs = Array.from(document.querySelectorAll(`input[data-row="${rowIndex - 1}"][data-col]`));
+        const prevRowCols = prevRowInputs.map(input => parseInt(input.getAttribute('data-col'), 10)).filter(n => !Number.isNaN(n));
+        const prevRowMax = prevRowCols.length ? Math.max(...prevRowCols) : colIndex;
+        focusCell(rowIndex - 1, prevRowMax);
       }
     }
   };
