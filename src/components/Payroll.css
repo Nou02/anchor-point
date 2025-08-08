@@ -521,118 +521,15 @@
   font-weight: bold;
   border: 1px solid #4a5a7a;
   position: relative;
+  min-width: 140px; /* Add this line for wider columns */
 }
 
-.header-dropdown {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  position: relative;
-}
-
-.dropdown-button {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px 4px;
-  border-radius: 3px;
-  transition: background-color 0.2s;
-}
-
-.dropdown-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #233a6c;
-  border: 1px solid #4a5a7a;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-  min-width: 120px;
-  margin-top: 4px;
-}
-
-.dropdown-item {
-  padding: 8px 12px;
-  color: white;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-}
-
-.dropdown-item:hover {
-  background: #1a2a4a;
-}
-
-.dropdown-item:first-child {
-  border-radius: 6px 6px 0 0;
-}
-
-.dropdown-item:last-child {
-  border-radius: 0 0 6px 6px;
-}
-
-.vess-cell {
-  position: relative;
-  padding: 8px !important;
-}
-
-.vess-input-container {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 4px;
-}
-
-.vess-input {
-  flex: 1;
-  min-width: 60px;
-}
-
-.cell-dropdown-button {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  cursor: pointer;
-  font-size: 11px;
-  padding: 4px 6px;
-  border-radius: 3px;
-  transition: background-color 0.2s;
-  min-width: 60px;
-  text-align: center;
-}
-
-.cell-dropdown-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.cell-dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #233a6c;
-  border: 1px solid #4a5a7a;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-  margin-top: 2px;
-}
-
-.vess-display {
-  font-size: 0.85rem;
-  color: #a0a0a0;
-  text-align: center;
-  margin-top: 2px;
-  font-style: italic;
+/* Optionally, make the first column (Workers) even wider */
+.manager-table th:first-child,
+.manager-table td:first-child {
+  min-width: 200px;
+  text-align: left;
+  padding-left: 16px;
 }
 
 .manager-table td {
