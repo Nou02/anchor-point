@@ -335,71 +335,67 @@ const Payroll = () => {
   };
 
   const handleTableKeyDown = (e, rowIndex, colIndex) => {
+    // Determine available column indices dynamically for the current row
+    const rowInputs = Array.from(document.querySelectorAll(`input[data-row="${rowIndex}"][data-col]`));
+    const colIndices = rowInputs.map(input => parseInt(input.getAttribute('data-col'), 10)).filter(n => !Number.isNaN(n));
+    const minCol = colIndices.length ? Math.min(...colIndices) : 1;
+    const maxCol = colIndices.length ? Math.max(...colIndices) : colIndex;
+
+    const focusCell = (r, c) => {
+      const input = document.querySelector(`input[data-row="${r}"][data-col="${c}"]`);
+      if (input) {
+        input.focus();
+        if (!input.value) input.select();
+        input.style.backgroundColor = '#fff3cd';
+        setTimeout(() => { input.style.backgroundColor = ''; }, 200);
+      }
+    };
+
     if (['Enter', 'ArrowDown'].includes(e.key)) {
       e.preventDefault();
-      // Move to same column, next row
       if (rowIndex < tableData.length - 1) {
-        const nextInput = document.querySelector(
-          `input[data-row="${rowIndex + 1}"][data-col="${colIndex}"]`
-        );
-        if (nextInput) {
-          nextInput.focus();
-          if (!nextInput.value) nextInput.select();
-          nextInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => { nextInput.style.backgroundColor = ''; }, 200);
-        }
+        focusCell(rowIndex + 1, colIndex);
       }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      // Move to same column, previous row
       if (rowIndex > 0) {
-        const prevInput = document.querySelector(
-          `input[data-row="${rowIndex - 1}"][data-col="${colIndex}"]`
-        );
-        if (prevInput) {
-          prevInput.focus();
-          if (!prevInput.value) prevInput.select();
-          prevInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => { prevInput.style.backgroundColor = ''; }, 200);
-        }
+        focusCell(rowIndex - 1, colIndex);
       }
     } else if (e.key === 'Tab' || e.key === 'ArrowRight') {
       e.preventDefault();
-      // Move to next column in same row
-      if (colIndex < TABLE_FIELDS.length - 1) {
-        const nextInput = document.querySelector(
-          `input[data-row="${rowIndex}"][data-col="${colIndex + 1}"]`
-        );
-        if (nextInput) {
-          nextInput.focus();
-          if (!nextInput.value) nextInput.select();
-          nextInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => { nextInput.style.backgroundColor = ''; }, 200);
-        }
+      // Move to the next existing column in the same row, skipping gaps
+      let nextCol = colIndex + 1;
+      while (nextCol <= maxCol && !document.querySelector(`input[data-row="${rowIndex}"][data-col="${nextCol}"]`)) {
+        nextCol += 1;
+      }
+      if (nextCol <= maxCol) {
+        focusCell(rowIndex, nextCol);
+      } else if (rowIndex < tableData.length - 1) {
+        // Wrap to the first column on the next row
+        focusCell(rowIndex + 1, minCol);
       }
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      // Move to previous column in same row
-      if (colIndex > 0) {
-        const prevInput = document.querySelector(
-          `input[data-row="${rowIndex}"][data-col="${colIndex - 1}"]`
-        );
-        if (prevInput) {
-          prevInput.focus();
-          if (!prevInput.value) prevInput.select();
-          prevInput.style.backgroundColor = '#fff3cd';
-          setTimeout(() => { prevInput.style.backgroundColor = ''; }, 200);
-        }
+      // Move to the previous existing column in the same row, skipping gaps
+      let prevCol = colIndex - 1;
+      while (prevCol >= minCol && !document.querySelector(`input[data-row="${rowIndex}"][data-col="${prevCol}"]`)) {
+        prevCol -= 1;
+      }
+      if (prevCol >= minCol) {
+        focusCell(rowIndex, prevCol);
+      } else if (rowIndex > 0) {
+        // Wrap to the last column on the previous row
+        const prevRowInputs = Array.from(document.querySelectorAll(`input[data-row="${rowIndex - 1}"][data-col]`));
+        const prevRowCols = prevRowInputs.map(input => parseInt(input.getAttribute('data-col'), 10)).filter(n => !Number.isNaN(n));
+        const prevRowMax = prevRowCols.length ? Math.max(...prevRowCols) : colIndex;
+        focusCell(rowIndex - 1, prevRowMax);
       }
     }
   };
 
-  // Handle input focus to maintain focus
+  // Handle input focus (no auto-select, allow continuous typing)
   const handleInputFocus = (e) => {
-    if (e.target.type !== 'number') {
-      const cursorPos = e.target.selectionStart;
-      e.target.setSelectionRange(cursorPos, cursorPos);
-    }
+    // No auto-select to allow continuous typing
   };
 
   // Handle input blur to ensure data is saved
@@ -597,15 +593,14 @@ const Payroll = () => {
         </div>
         <h2>Worker Payroll Management</h2>
       </div>
-      
       <div className="manager-table-container">
         <table className="manager-table">
           <thead>
             <tr>
               <th>Workers</th>
-              <th>Local Vess</th>
-              <th>Foreign Vess</th>
-              <th>TAL</th>
+              <th>Local Vessel</th>
+              <th>Foreign Vessel</th>
+              <th>TOTAL</th>
               <th>SSS</th>
               <th>PAG-IBIG</th>
               <th>PhilHealth</th>
@@ -617,70 +612,298 @@ const Payroll = () => {
             {tableData.map((row, rowIndex) => (
               <tr key={row.id}>
                 <td className="worker-name-cell">{row.workerName}</td>
-                {TABLE_FIELDS.map((field, colIndex) => (
-                  <td key={field} className={field.includes('Vess') ? 'vess-cell' : ''}>
-                    {field === 'localVess' || field === 'foreignVess' ? (
-                      <div className="vess-input-container">
-                        <input
-                          type="number"
-                          value={row[field]}
-                          onChange={e => handleCellEdit(rowIndex, field, e.target.value)}
-                          onFocus={handleInputFocus}
-                          onKeyDown={e => handleTableKeyDown(e, rowIndex, colIndex)}
-                          data-row={rowIndex}
-                          data-col={colIndex}
-                          data-field={field}
-                          className="table-input vess-input"
-                          placeholder="Enter num"
-                          step="any"
-                        />
-                        <button
-                          className="cell-dropdown-button"
-                          onClick={() => toggleDropdown(rowIndex, field === 'localVess' ? 'localVessType' : 'foreignVessType')}
-                        >
-                          {row[field === 'localVess' ? 'localVessType' : 'foreignVessType'] || '▼'}
-                        </button>
-                        {activeDropdownRow === rowIndex && activeDropdownColumn === (field === 'localVess' ? 'localVessType' : 'foreignVessType') && (
-                          <div className="cell-dropdown-menu">
-                            <div
-                              className="dropdown-item"
-                              onClick={() => handleVessTypeChange(rowIndex, field === 'localVess' ? 'localVessType' : 'foreignVessType', 'Mooring')}
-                            >
-                              Mooring
-                            </div>
-                            <div
-                              className="dropdown-item"
-                              onClick={() => handleVessTypeChange(rowIndex, field === 'localVess' ? 'localVessType' : 'foreignVessType', 'Unmooring')}
-                            >
-                              Unmooring
-                            </div>
-                          </div>
-                        )}
+                {/* Local Vessel */}
+                <td style={{ position: "relative" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      pattern="[0-9]*"
+                      value={row.localVess}
+                      onChange={e => handleCellEdit(rowIndex, 'localVess', e.target.value)}
+                      onFocus={handleInputFocus}
+                      onKeyDown={e => handleTableKeyDown(e, rowIndex, 1)}
+                      data-row={rowIndex}
+                      data-col={1}
+                      className="table-input vess-input"
+                      placeholder="Enter num"
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="dropdown-arrow-btn"
+                      style={{
+                        marginLeft: 2,
+                        minWidth: 0,
+                        padding: "0 10px",
+                        background: "transparent",
+                        border: "none",
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: 22,
+                        lineHeight: 1,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                      onClick={() => toggleDropdown(rowIndex, 'localVessType')}
+                      aria-label="Select Local Vessel Type"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                  {activeDropdownRow === rowIndex && activeDropdownColumn === 'localVessType' && (
+                    <div
+                      className="dropdown-menu improved-dropdown"
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: "110%",
+                        zIndex: 10,
+                        minWidth: 120,
+                        background: "#fff",
+                        border: "1px solid #bfc8e2",
+                        borderRadius: 8,
+                        boxShadow: "0 4px 16px 0 rgba(0,0,0,0.10)",
+                        padding: "4px 0"
+                      }}
+                    >
+                      <div
+                        className="dropdown-item improved-dropdown-item"
+                        style={{
+                          color: "#232f4b",
+                          padding: "10px 18px",
+                          cursor: "pointer",
+                          fontWeight: row.localVessType === "Mooring" ? 700 : 400,
+                          background: row.localVessType === "Mooring" ? "#e6f0ff" : "transparent",
+                          borderRadius: 6,
+                          transition: "background 0.15s"
+                        }}
+                        onClick={() => handleVessTypeChange(rowIndex, 'localVessType', 'Mooring')}
+                      >
+                        Mooring
                       </div>
-                    ) : (
-                      <input
-                        type="number"
-                        value={row[field]}
-                        onChange={e => handleCellEdit(rowIndex, field, e.target.value)}
-                        onFocus={handleInputFocus}
-                        onKeyDown={e => handleTableKeyDown(e, rowIndex, colIndex)}
-                        data-row={rowIndex}
-                        data-col={colIndex}
-                        data-field={field}
-                        className="table-input"
-                        step="any"
-                        autoComplete="off"
-                        autoCorrect="off"
-                        spellCheck="false"
-                        placeholder="Enter num"
-                      />
-                    )}
-                  </td>
-                ))}
+                      <div
+                        className="dropdown-item improved-dropdown-item"
+                        style={{
+                          color: "#232f4b",
+                          padding: "10px 18px",
+                          cursor: "pointer",
+                          fontWeight: row.localVessType === "Unmooring" ? 700 : 400,
+                          background: row.localVessType === "Unmooring" ? "#e6f0ff" : "transparent",
+                          borderRadius: 6,
+                          transition: "background 0.15s"
+                        }}
+                        onClick={() => handleVessTypeChange(rowIndex, 'localVessType', 'Unmooring')}
+                      >
+                        Unmooring
+                      </div>
+                    </div>
+                  )}
+                  {row.localVess && row.localVessType && (
+                    <div style={{ fontStyle: 'italic', color: '#b0b8d1', fontSize: 13, marginTop: 2 }}>
+                      {row.localVess}, {row.localVessType}
+                    </div>
+                  )}
+                </td>
+                {/* Foreign Vessel */}
+                <td style={{ position: "relative" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      pattern="[0-9]*"
+                      value={row.foreignVess}
+                      onChange={e => handleCellEdit(rowIndex, 'foreignVess', e.target.value)}
+                      onFocus={handleInputFocus}
+                      onKeyDown={e => handleTableKeyDown(e, rowIndex, 2)}
+                      data-row={rowIndex}
+                      data-col={2}
+                      className="table-input vess-input"
+                      placeholder="Enter num"
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="dropdown-arrow-btn"
+                      style={{
+                        marginLeft: 2,
+                        minWidth: 0,
+                        padding: "0 10px",
+                        background: "transparent",
+                        border: "none",
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: 22,
+                        lineHeight: 1,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                      onClick={() => toggleDropdown(rowIndex, 'foreignVessType')}
+                      aria-label="Select Foreign Vessel Type"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                  {activeDropdownRow === rowIndex && activeDropdownColumn === 'foreignVessType' && (
+                    <div
+                      className="dropdown-menu improved-dropdown"
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: "110%",
+                        zIndex: 10,
+                        minWidth: 120,
+                        background: "#fff",
+                        border: "1px solid #bfc8e2",
+                        borderRadius: 8,
+                        boxShadow: "0 4px 16px 0 rgba(0,0,0,0.10)",
+                        padding: "4px 0"
+                      }}
+                    >
+                      <div
+                        className="dropdown-item improved-dropdown-item"
+                        style={{
+                          color: "#232f4b",
+                          padding: "10px 18px",
+                          cursor: "pointer",
+                          fontWeight: row.foreignVessType === "Mooring" ? 700 : 400,
+                          background: row.foreignVessType === "Mooring" ? "#e6f0ff" : "transparent",
+                          borderRadius: 6,
+                          transition: "background 0.15s"
+                        }}
+                        onClick={() => handleVessTypeChange(rowIndex, 'foreignVessType', 'Mooring')}
+                      >
+                        Mooring
+                      </div>
+                      <div
+                        className="dropdown-item improved-dropdown-item"
+                        style={{
+                          color: "#232f4b",
+                          padding: "10px 18px",
+                          cursor: "pointer",
+                          fontWeight: row.foreignVessType === "Unmooring" ? 700 : 400,
+                          background: row.foreignVessType === "Unmooring" ? "#e6f0ff" : "transparent",
+                          borderRadius: 6,
+                          transition: "background 0.15s"
+                        }}
+                        onClick={() => handleVessTypeChange(rowIndex, 'foreignVessType', 'Unmooring')}
+                      >
+                        Unmooring
+                      </div>
+                    </div>
+                  )}
+                  {row.foreignVess && row.foreignVessType && (
+                    <div style={{ fontStyle: 'italic', color: '#b0b8d1', fontSize: 13, marginTop: 2 }}>
+                      {row.foreignVess}, {row.foreignVessType}
+                    </div>
+                  )}
+                </td>
+                {/* TOTAL */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={
+                      (parseFloat(row.localVess) || 0) + (parseFloat(row.foreignVess) || 0)
+                    }
+                    readOnly
+                    className="table-input"
+                    tabIndex={-1}
+                  />
+                </td>
+                {/* SSS */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.sss}
+                    onChange={e => handleCellEdit(rowIndex, 'sss', e.target.value)}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 6)}
+                    data-row={rowIndex}
+                    data-col={6}
+                    className="table-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* PAG-IBIG */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.pagibig}
+                    onChange={e => handleCellEdit(rowIndex, 'pagibig', e.target.value)}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 7)}
+                    data-row={rowIndex}
+                    data-col={7}
+                    className="table-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* PhilHealth */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.philhealth}
+                    onChange={e => handleCellEdit(rowIndex, 'philhealth', e.target.value)}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 8)}
+                    data-row={rowIndex}
+                    data-col={8}
+                    className="table-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* Cash Advance */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.cashAdvance}
+                    onChange={e => handleCellEdit(rowIndex, 'cashAdvance', e.target.value)}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 9)}
+                    data-row={rowIndex}
+                    data-col={9}
+                    className="table-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* NET TOTAL */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={
+                    (
+                      (parseFloat(row.localVess) || 0) +
+                      (parseFloat(row.foreignVess) || 0)
+                    ) - (
+                      (parseFloat(row.sss) || 0) +
+                      (parseFloat(row.pagibig) || 0) +
+                      (parseFloat(row.philhealth) || 0) +
+                      (parseFloat(row.tal) || 0) +
+                      (parseFloat(row.cashAdvance) || 0)
+                    )
+                  }
+                  readOnly
+                  className="table-input"
+                  tabIndex={-1}
+                />
+                </td>
               </tr>
             ))}
             <tr className="grand-total-row">
-              <td colSpan="2">GRAND TOTAL</td>
+              <td colSpan="1">GRAND TOTAL</td>
+              <td></td>
               <td></td>
               <td></td>
               <td></td>
@@ -691,7 +914,6 @@ const Payroll = () => {
             </tr>
           </tbody>
         </table>
-        
         <div className="save-section">
           <button
             onClick={handleSaveToFirestore}
