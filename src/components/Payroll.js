@@ -798,6 +798,7 @@ const Payroll = () => {
                 {/* SSS */}
                 <td>
                   <input
+<<<<<<< HEAD
                     type="number"
                     value={row.sss}
                     onChange={e => handleCellEdit(rowIndex, 'sss', e.target.value)}
@@ -830,6 +831,13 @@ const Payroll = () => {
                     value={row.philhealth}
                     onChange={e => handleCellEdit(rowIndex, 'philhealth', e.target.value)}
                     onFocus={handleInputFocus}
+=======
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.sss}
+                    onChange={e => handleCellEdit(rowIndex, 'sss', e.target.value)}
+>>>>>>> 470a10269181dcd1ccfb3c50e7cbd3d036921eac
                     onKeyDown={e => handleTableKeyDown(e, rowIndex, 6)}
                     data-row={rowIndex}
                     data-col={6}
