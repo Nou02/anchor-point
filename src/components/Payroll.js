@@ -837,6 +837,7 @@ const Payroll = () => {
                     placeholder="Enter num"
                   />
                 </td>
+<<<<<<< HEAD
                 {/* Cash Advance */}
                 <td>
                   <input
@@ -844,6 +845,16 @@ const Payroll = () => {
                     value={row.cashAdvance}
                     onChange={e => handleCellEdit(rowIndex, 'cashAdvance', e.target.value)}
                     onFocus={handleInputFocus}
+=======
+                {/* PAG-IBIG */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.pagibig}
+                    onChange={e => handleCellEdit(rowIndex, 'pagibig', e.target.value)}
+>>>>>>> 470a10269181dcd1ccfb3c50e7cbd3d036921eac
                     onKeyDown={e => handleTableKeyDown(e, rowIndex, 7)}
                     data-row={rowIndex}
                     data-col={7}
@@ -851,6 +862,39 @@ const Payroll = () => {
                     placeholder="Enter num"
                   />
                 </td>
+<<<<<<< HEAD
+=======
+                {/* PhilHealth */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.philhealth}
+                    onChange={e => handleCellEdit(rowIndex, 'philhealth', e.target.value)}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 8)}
+                    data-row={rowIndex}
+                    data-col={8}
+                    className="table-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+                {/* Cash Advance */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.cashAdvance}
+                    onChange={e => handleCellEdit(rowIndex, 'cashAdvance', e.target.value)}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 9)}
+                    data-row={rowIndex}
+                    data-col={9}
+                    className="table-input"
+                    placeholder="Enter num"
+                  />
+                </td>
+>>>>>>> 470a10269181dcd1ccfb3c50e7cbd3d036921eac
                 {/* NET TOTAL */}
                 <td>
                   <input
@@ -1029,5 +1073,10 @@ const Payroll = () => {
       )}
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+};
+
+>>>>>>> 470a10269181dcd1ccfb3c50e7cbd3d036921eac
 export default Payroll;

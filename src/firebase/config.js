@@ -12,6 +12,13 @@ const firebaseConfig = {
   messagingSenderId: "983336254442",
   appId: "1:983336254442:web:b65e3d6583e2f964961093",
   measurementId: "G-MDK1LF97B0"
+  apiKey: "AIzaSyA_JWaNHkylrHexzQqmMdqK96_TsekcUec",
+  authDomain: "anchorpoint-application-e0322.firebaseapp.com",
+  projectId: "anchorpoint-application-e0322",
+  storageBucket: "anchorpoint-application-e0322.firebasestorage.app",
+  messagingSenderId: "16995630285",
+  appId: "1:16995630285:web:7b6258575d6b459ff8fd84",
+  measurementId: "G-YDBDDESKBE"
 };
 
 // Initialize Firebase
