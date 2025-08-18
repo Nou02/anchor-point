@@ -4,8 +4,11 @@ import Scheduling from './Scheduling';
 import Weather from './Weather';
 import Report from './Report';
 import Payroll from './Payroll';
-
-
+import Sidebar from './Sidebar';
+import InfoContent from './InfoContent';
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 const Homepage = () => {
   // Logout handler
@@ -19,25 +22,65 @@ const Homepage = () => {
       alert('Logout failed: ' + err.message);
     }
   };
+
   // Try to get last menu from localStorage, default to 'weather'
   const getInitialMenu = () => {
     return localStorage.getItem('activeMenu') || 'weather';
   };
   const [activeMenu, setActiveMenu] = useState(getInitialMenu());
+  const [showInfo, setShowInfo] = useState(false);
+  const [showInfoButton, setShowInfoButton] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('activeMenu', activeMenu);
   }, [activeMenu]);
 
+  // Only show info button for Alice Margaretha Santos
+  useEffect(() => {
+    const checkUser = async () => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        setShowInfoButton(false);
+        return;
+      }
+      // Try to get displayName from auth, or fullName from Firestore
+      let displayName = user.displayName;
+      if (!displayName) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            displayName = data.fullName || data.username || '';
+          }
+        } catch {}
+      }
+      setShowInfoButton(displayName === 'Alice Margaretha Santos');
+    };
+    checkUser();
+  }, []);
+
+  const handleInfoClick = () => {
+    setShowInfo(true);
+  };
+
+  const handleMenuClick = (menu) => {
+    setShowInfo(false);
+    setActiveMenu(menu);
+  };
+
   const menuItems = [
-    { id: 'home', label: 'Home', icon: '🏠' },
-    { id: 'scheduling', label: 'Scheduling', icon: '📅' },
-    { id: 'reports', label: 'Reports', icon: '📋' },
-    { id: 'payroll', label: 'Payroll', icon: '💰' },
-    { id: 'weather', label: 'Weather', icon: '☁️' }
+    { id: 'home', label: 'Home'},
+    { id: 'scheduling', label: 'Scheduling'},
+    { id: 'reports', label: 'Reports'},
+    { id: 'payroll', label: 'Payroll'},
+    { id: 'weather', label: 'Weather'}
   ];
 
   const renderContent = () => {
+    if (showInfo) {
+      return <InfoContent />;
+    }
     switch (activeMenu) {
       case 'scheduling':
         return <Scheduling />;
@@ -70,36 +113,14 @@ const Homepage = () => {
 
   return (
     <div className="homepage">
-      {/* Left Sidebar */}
-      <div className="sidebar">
-        <div className="logo-section">
-          <div className="anchor-icon">⚓</div>
-          <div className="logo-text">
-            <span className="anchor-text">Anchor</span>
-            <span className="point-text">Point</span>
-            <span className="red-dot">•</span>
-          </div>
-        </div>
-        <nav className="navigation">
-          {menuItems.map((item) => (
-            <div
-              key={item.id}
-              className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
-              onClick={() => setActiveMenu(item.id)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </div>
-          ))}
-        </nav>
-        {/* Logout button at the bottom of the sidebar */}
-        <div className="logout-section">
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
-      </div>
-      {/* Main Content Area */}
+      <Sidebar
+        activeMenu={activeMenu}
+        setActiveMenu={handleMenuClick}
+        menuItems={menuItems}
+        handleLogout={handleLogout}
+        onInfoClick={handleInfoClick}
+        showInfoButton={showInfoButton}
+      />
       {renderContent()}
     </div>
   );

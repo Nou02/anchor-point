@@ -1,6 +1,7 @@
 .payroll-center-content {
+  position: relative;
   min-height: 100vh;
-  width: 100vw;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -8,6 +9,28 @@
   background: #f7f3fa;
   padding: 20px;
   overflow-y: auto;
+  z-index: 1;
+}
+
+.payroll-center-content::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 220px;
+  width: calc(100vw - 220px);
+  height: 100vh;
+  background-image: url('../assets/apone.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.payroll-center-content > * {
+  position: relative;
+  z-index: 1;
 }
 
 .payroll-profile {
@@ -70,17 +93,14 @@
   color: #233a6c;
 }
 
-/* Background and layout */
 .payroll-regular-bg {
   display: flex;
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   padding: 40px 20px;
 }
 
-/* Profile section */
 .payroll-profile-section {
   display: flex;
   flex-direction: column;
@@ -206,7 +226,6 @@
   color: #2F3B70;
 }
 
-/* Payroll details card */
 .payroll-details-card {
   background: white;
   border-radius: 20px;
@@ -240,29 +259,10 @@
   width: 100%;
 }
 
-/* Details group bars */
 .payroll-details-group-bar {
-  position: absolute;
-  left: -8px;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  border-radius: 2px;
+  display: none !important;
 }
 
-.payroll-details-group-bar-local {
-  background: linear-gradient(135deg, #2F3B70 0%, #4156a1 100%);
-}
-
-.payroll-details-group-bar-loan {
-  background: linear-gradient(135deg, #ff6b9d 0%, #ff8fab 100%);
-}
-
-.payroll-details-group-bar-deductions {
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-}
-
-/* Details rows */
 .payroll-details-row {
   display: flex;
   justify-content: space-between;
@@ -303,7 +303,6 @@
   color: #155724;
 }
 
-/* Details labels and values */
 .payroll-details-label {
   font-size: 0.9rem;
   font-weight: 600;
@@ -318,7 +317,6 @@
   color: #2d3e5e;
 }
 
-/* Final total */
 .payroll-details-final-total {
   margin-top: 32px;
   padding: 20px;
@@ -344,7 +342,6 @@
   color: white;
 }
 
-/* Worker selection dropdown styles */
 .worker-selection-container {
   margin-top: 12px;
   text-align: center;
@@ -405,7 +402,6 @@
   border-bottom: none;
 }
 
-/* Manager View Styles */
 .manager-view {
   width: 100%;
   max-width: 1200px;
@@ -450,13 +446,12 @@
   width: 100%;
   max-width: 1200px;
   padding: 20px;
-  background: #f7f3fa;
+  background: none;
   max-height: 80vh;
   overflow-y: auto;
   overflow-x: auto;
 }
 
-/* Custom scrollbar styling */
 .manager-view::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -526,120 +521,15 @@
   font-weight: bold;
   border: 1px solid #4a5a7a;
   position: relative;
+  min-width: 140px; /* Add this line for wider columns */
 }
 
-/* Header dropdown styles */
-.header-dropdown {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  position: relative;
-}
-
-.dropdown-button {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px 4px;
-  border-radius: 3px;
-  transition: background-color 0.2s;
-}
-
-.dropdown-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #233a6c;
-  border: 1px solid #4a5a7a;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-  min-width: 120px;
-  margin-top: 4px;
-}
-
-.dropdown-item {
-  padding: 8px 12px;
-  color: white;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-}
-
-.dropdown-item:hover {
-  background: #1a2a4a;
-}
-
-.dropdown-item:first-child {
-  border-radius: 6px 6px 0 0;
-}
-
-.dropdown-item:last-child {
-  border-radius: 0 0 6px 6px;
-}
-
-/* Cell dropdown styles */
-.vess-cell {
-  position: relative;
-  padding: 8px !important;
-}
-
-.vess-input-container {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 4px;
-}
-
-.vess-input {
-  flex: 1;
-  min-width: 60px;
-}
-
-.cell-dropdown-button {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  cursor: pointer;
-  font-size: 11px;
-  padding: 4px 6px;
-  border-radius: 3px;
-  transition: background-color 0.2s;
-  min-width: 60px;
-  text-align: center;
-}
-
-.cell-dropdown-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.cell-dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #233a6c;
-  border: 1px solid #4a5a7a;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-  margin-top: 2px;
-}
-
-.vess-display {
-  font-size: 0.85rem;
-  color: #a0a0a0;
-  text-align: center;
-  margin-top: 2px;
-  font-style: italic;
+/* Optionally, make the first column (Workers) even wider */
+.manager-table th:first-child,
+.manager-table td:first-child {
+  min-width: 200px;
+  text-align: left;
+  padding-left: 16px;
 }
 
 .manager-table td {
@@ -664,7 +554,6 @@
   font-weight: bold;
 }
 
-/* Editable table inputs */
 .table-input {
   width: 100%;
   background: transparent;
@@ -692,7 +581,6 @@
   pointer-events: none;
 }
 
-/* Worker name cell styling */
 .worker-name-cell {
   font-weight: 500;
   text-align: left;
@@ -700,7 +588,6 @@
   min-width: 150px;
 }
 
-/* Save section styling */
 .save-section {
   margin-top: 20px;
   text-align: center;
@@ -751,7 +638,6 @@
   border: 1px solid #f5c6cb;
 }
 
-/* Responsive design for manager table */
 @media (max-width: 768px) {
   .manager-table {
     font-size: 0.8rem;

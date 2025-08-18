@@ -7,7 +7,9 @@
   height: 100%;
   max-height: none;
   overflow-y: auto;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: 
+    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
+    url('../assets/apone.png') center center/cover no-repeat;
   background-size: cover;
   background-position: center;
   position: relative;
@@ -27,7 +29,6 @@
   pointer-events: none;
 }
 
-/* Main content area */
 .scheduling-content {
   position: relative;
   z-index: 1;
@@ -36,7 +37,6 @@
   margin: 0 auto;
 }
 
-/* Calendar wrapper */
 .calendar-wrapper {
   max-width: 600px;
   width: 100%;
@@ -48,7 +48,6 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Calendar header */
 .calendar-header {
   display: flex;
   align-items: center;
@@ -97,12 +96,10 @@
   transform: scale(0.95);
 }
 
-/* Calendar grid */
 .calendar-grid {
   width: 100%;
 }
 
-/* Weekday header */
 .weekday-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -130,7 +127,6 @@
   box-shadow: 0 4px 16px rgba(47, 59, 112, 0.3);
 }
 
-/* Calendar days */
 .calendar-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

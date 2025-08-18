@@ -1,0 +1,122 @@
+body, #root, .App {
+  background: 
+    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
+    url('../assets/apone.png') center center/cover no-repeat !important;
+  min-height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+.info-content {
+  background: rgba(255,255,255,0.93);
+  border-radius: 18px;
+  padding: 32px 24px 24px 24px;
+  margin: 32px auto;
+  max-width: 98vw;
+  min-width: 0;
+  width: 1200px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.13);
+  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+.info-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2d2d4b;
+  margin-bottom: 8px;
+}
+.info-table-meta {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 16px;
+}
+.info-sort {
+  margin-left: 12px;
+  color: #2d2d4b;
+  font-weight: 500;
+}
+.info-sort-arrow {
+  font-size: 1.1em;
+}
+.info-search {
+  margin-left: 16px;
+  border-radius: 8px;
+  background: #bfc6e0;
+  border: none;
+  padding: 4px 12px;
+  width: 120px;
+}
+.info-icons {
+  margin-left: 16px;
+  display: flex;
+  gap: 8px;
+}
+.info-add-btn, .info-edit-btn, .info-delete-btn {
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  margin: 0 2px;
+  font-size: 1.2em;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+}
+.info-add-btn:hover, .info-edit-btn:hover, .info-delete-btn:hover {
+  background: #e0e4f7;
+}
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #bfc6e0;
+  table-layout: fixed;
+  min-width: 900px;
+}
+.info-table th, .info-table td {
+  border: 2px solid #2d2d4b;
+  padding: 4px 6px;
+  text-align: left;
+  color: #2d2d4b;
+  font-size: 1.05em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.info-content {
+  overflow-x: auto;
+}
+
+.info-table input[type="text"],
+.info-table input[type="password"],
+.info-table input[type="date"],
+.info-table input:not([type="checkbox"]) {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #bfc6e0;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 1em;
+  background: none;
+  color: #232b45;
+}
+.info-table input:disabled {
+  background: #e0e4f7;
+  color: #888;
+}
+.info-table th {
+  background: #bfc6e0;
+  font-weight: 700;
+}
+.info-table td {
+  background: #bfc6e0;
+}
+.row-selected {
+  background: #fff9d1 !important;
+}

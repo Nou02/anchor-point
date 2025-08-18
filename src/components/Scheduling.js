@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Scheduling.css';
-import { getFirestore, collection, addDoc, query, where, getDocs, updateDoc, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import '../firebase/config'; // Make sure this imports your firebase config
 
@@ -192,23 +192,25 @@ const Scheduling = () => {
     setSavedEntries(entries);
   };
 
+  // Helper to build availability document ID
+  const buildAvailabilityDocId = (dateObj) => {
+    const month = dateObj.getMonth() + 1;
+    const day = dateObj.getDate();
+    const year = dateObj.getFullYear();
+    return `availabilityId(${month}, ${day}, ${year})`;
+  };
+
   // Fetch saved availability from Firestore
   const fetchSavedAvailability = async () => {
     const db = getFirestore();
     try {
       const today = new Date();
-      const month = today.getMonth() + 1; // getMonth() returns 0-11, so add 1
-      const day = today.getDate();
-      const year = today.getFullYear();
-      const availabilityDocName = `availability (${month}, ${day}, ${year})`;
-      
+      const availabilityDocName = buildAvailabilityDocId(today);
       const docRef = doc(db, 'availability', availabilityDocName);
-      const docSnap = await getDocs(query(collection(db, 'availability'), where('__name__', '==', availabilityDocName)));
-      
-      if (!docSnap.empty) {
-        const data = docSnap.docs[0].data();
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
         setSavedAvailability(data);
-        // Also update local crew availability with saved data
         setCrewAvailability(data);
       }
     } catch (err) {
@@ -225,10 +227,7 @@ const Scheduling = () => {
     
     try {
       const today = new Date();
-      const month = today.getMonth() + 1; // getMonth() returns 0-11, so add 1
-      const day = today.getDate();
-      const year = today.getFullYear();
-      const availabilityDocName = `availability (${month}, ${day}, ${year})`;
+      const availabilityDocName = buildAvailabilityDocId(today);
       
       const data = {
         ...crewAvailability,
@@ -237,7 +236,7 @@ const Scheduling = () => {
         date: today.toISOString()
       };
       
-      await setDoc(doc(db, 'availability', availabilityDocName), data);
+      await setDoc(doc(db, 'availability', availabilityDocName), data, { merge: true });
       setSavedAvailability(data);
       alert('Availability saved successfully!');
     } catch (err) {
@@ -282,10 +281,7 @@ const Scheduling = () => {
         
         // Save updated availability to Firestore
         const today = new Date();
-        const month = today.getMonth() + 1;
-        const day = today.getDate();
-        const year = today.getFullYear();
-        const availabilityDocName = `availability (${month}, ${day}, ${year})`;
+        const availabilityDocName = buildAvailabilityDocId(today);
         
         const data = {
           ...updatedCrewAvailability,
@@ -294,7 +290,7 @@ const Scheduling = () => {
           date: today.toISOString()
         };
         
-        await setDoc(doc(db, 'availability', availabilityDocName), data);
+        await setDoc(doc(db, 'availability', availabilityDocName), data, { merge: true });
       }
       
       setSavedEntries(prev => prev.filter(entry => entry.id !== id)); // Remove from local state instantly

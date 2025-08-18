@@ -65,20 +65,12 @@ const Payroll = () => {
   ]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
-  const [individualPayrollData, setIndividualPayrollData] = useState({
-    local: '',
-    foreign: '',
-    total: '',
-    pagibigLoan: '',
-    cashAdvance: '',
-    balance: '',
-    sssPiPh: '',
-    totalDeductions: '',
-    finalTotal: ''
-  });
+
+  // The following states were missing in your code but are referenced later:
   const [availableWorkers, setAvailableWorkers] = useState([]);
-  const [selectedWorker, setSelectedWorker] = useState('');
   const [showWorkerDropdown, setShowWorkerDropdown] = useState(false);
+  const [selectedWorker, setSelectedWorker] = useState('');
+  const [individualPayrollData, setIndividualPayrollData] = useState({});
 
   useEffect(() => {
     const auth = getAuth();
@@ -125,19 +117,6 @@ const Payroll = () => {
     });
     return () => unsubscribe();
   }, []);
-
-  // Check for Alice's manager view preference after user is loaded
-  useEffect(() => {
-    if (user.name === "Alice Margaretha Santos") {
-      const savedPreference = localStorage.getItem('aliceManagerView');
-      if (savedPreference === 'true') {
-        setIsManagerView(true);
-      }
-    } else {
-      // Reset manager view for non-Alice users
-      setIsManagerView(false);
-    }
-  }, [user.name]);
 
   // Load individual worker payroll data
   useEffect(() => {
@@ -819,14 +798,13 @@ const Payroll = () => {
                 {/* SSS */}
                 <td>
                   <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
+                    type="number"
                     value={row.sss}
                     onChange={e => handleCellEdit(rowIndex, 'sss', e.target.value)}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 6)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 4)}
                     data-row={rowIndex}
-                    data-col={6}
+                    data-col={4}
                     className="table-input"
                     placeholder="Enter num"
                   />
@@ -834,14 +812,13 @@ const Payroll = () => {
                 {/* PAG-IBIG */}
                 <td>
                   <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
+                    type="number"
                     value={row.pagibig}
                     onChange={e => handleCellEdit(rowIndex, 'pagibig', e.target.value)}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 7)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 5)}
                     data-row={rowIndex}
-                    data-col={7}
+                    data-col={5}
                     className="table-input"
                     placeholder="Enter num"
                   />
@@ -849,14 +826,13 @@ const Payroll = () => {
                 {/* PhilHealth */}
                 <td>
                   <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
+                    type="number"
                     value={row.philhealth}
                     onChange={e => handleCellEdit(rowIndex, 'philhealth', e.target.value)}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 8)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 6)}
                     data-row={rowIndex}
-                    data-col={8}
+                    data-col={6}
                     className="table-input"
                     placeholder="Enter num"
                   />
@@ -864,14 +840,13 @@ const Payroll = () => {
                 {/* Cash Advance */}
                 <td>
                   <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
+                    type="number"
                     value={row.cashAdvance}
                     onChange={e => handleCellEdit(rowIndex, 'cashAdvance', e.target.value)}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 9)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 7)}
                     data-row={rowIndex}
-                    data-col={9}
+                    data-col={7}
                     className="table-input"
                     placeholder="Enter num"
                   />
@@ -1054,6 +1029,5 @@ const Payroll = () => {
       )}
     </div>
   );
-};
-
+}
 export default Payroll;
