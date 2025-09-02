@@ -1,8 +1,3 @@
-
-
-
-
-
 const Weather = () => {
   // Make the iframe fill the parent (main content), not the whole viewport
   return (
