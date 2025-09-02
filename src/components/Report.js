@@ -312,6 +312,378 @@ const Report = () => {
     return { foreign, local };
   };
 
+  // Generate time series data for the selected month/year
+  const getTimeSeriesData = () => {
+    const filteredAppointments = getFilteredAppointments();
+    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    const timeSeriesData = [];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayAppointments = filteredAppointments.filter(app => {
+        if (!app.date) return false;
+        const appDate = new Date(app.date);
+        return appDate.getDate() === day && 
+               appDate.getMonth() === selectedMonth && 
+               appDate.getFullYear() === selectedYear;
+      });
+      
+      let foreignCount = 0;
+      let localCount = 0;
+      
+      dayAppointments.forEach(app => {
+        if (app.vesselType && app.vesselType.toLowerCase().includes('foreign')) {
+          foreignCount++;
+        } else if (app.vesselType && app.vesselType.toLowerCase().includes('local')) {
+          localCount++;
+        }
+      });
+      
+      timeSeriesData.push({
+        day: day,
+        date: dateKey,
+        foreign: foreignCount,
+        local: localCount,
+        total: foreignCount + localCount
+      });
+    }
+    
+    return timeSeriesData;
+  };
+
+  // Render time series chart
+  const renderTimeSeriesChart = () => {
+    const timeSeriesData = getTimeSeriesData();
+    const chartWidth = 400;
+    const chartHeight = 200;
+    const padding = 40;
+    const chartAreaWidth = chartWidth - (padding * 2);
+    const chartAreaHeight = chartHeight - (padding * 2);
+    
+    if (timeSeriesData.length === 0) return null;
+    
+    const maxValue = Math.max(...timeSeriesData.map(d => Math.max(d.foreign, d.local, d.total)));
+    const scaleY = maxValue > 0 ? chartAreaHeight / maxValue : 1;
+    const scaleX = chartAreaWidth / (timeSeriesData.length - 1);
+    
+    // Generate SVG paths for the lines
+    const foreignPath = timeSeriesData.map((point, index) => {
+      const x = padding + (index * scaleX);
+      const y = padding + chartAreaHeight - (point.foreign * scaleY);
+      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+    
+    const localPath = timeSeriesData.map((point, index) => {
+      const x = padding + (index * scaleX);
+      const y = padding + chartAreaHeight - (point.local * scaleY);
+      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+    
+    const totalPath = timeSeriesData.map((point, index) => {
+      const x = padding + (index * scaleX);
+      const y = padding + chartAreaHeight - (point.total * scaleY);
+      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+    
+    return (
+      <div style={{ marginTop: '32px', width: '100%' }}>
+        <h4 style={{
+          color: '#2F3B70',
+          fontSize: '1.1rem',
+          fontWeight: '700',
+          marginBottom: '20px',
+          textAlign: 'center',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px'
+        }}>
+          Vessel Activity Over Time - {monthNames[selectedMonth]} {selectedYear}
+        </h4>
+        <svg width={chartWidth} height={chartHeight} style={{ 
+          background: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e9ecef'
+        }}>
+          {/* Grid lines */}
+          {Array.from({ length: 6 }, (_, i) => {
+            const y = padding + (i * chartAreaHeight / 5);
+            return (
+              <line
+                key={`grid-${i}`}
+                x1={padding}
+                y1={y}
+                x2={padding + chartAreaWidth}
+                y2={y}
+                stroke="#e9ecef"
+                strokeWidth="1"
+                opacity="0.5"
+              />
+            );
+          })}
+          
+          {/* Y-axis labels */}
+          {Array.from({ length: 6 }, (_, i) => {
+            const y = padding + (i * chartAreaHeight / 5);
+            const value = Math.round(maxValue - (i * maxValue / 5));
+            return (
+              <text
+                key={`y-label-${i}`}
+                x={padding - 10}
+                y={y + 4}
+                textAnchor="end"
+                fontSize="10"
+                fill="#6c757d"
+                fontWeight="500"
+              >
+                {value}
+              </text>
+            );
+          })}
+          
+          {/* X-axis labels (every 5 days) */}
+          {timeSeriesData.map((point, index) => {
+            if (index % 5 === 0 || index === timeSeriesData.length - 1) {
+              const x = padding + (index * scaleX);
+              return (
+                <text
+                  key={`x-label-${index}`}
+                  x={x}
+                  y={chartHeight - 10}
+                  textAnchor="middle"
+                  fontSize="10"
+                  fill="#6c757d"
+                  fontWeight="500"
+                >
+                  {point.day}
+                </text>
+              );
+            }
+            return null;
+          })}
+          
+          {/* Chart lines */}
+          <path
+            d={totalPath}
+            stroke="#2F3B70"
+            strokeWidth="3"
+            fill="none"
+            opacity="0.8"
+          />
+          <path
+            d={foreignPath}
+            stroke="#2F3B70"
+            strokeWidth="2"
+            fill="none"
+            opacity="0.9"
+          />
+          <path
+            d={localPath}
+            stroke="#ff3c3c"
+            strokeWidth="2"
+            fill="none"
+            opacity="0.9"
+          />
+          
+          {/* Data points */}
+          {timeSeriesData.map((point, index) => {
+            const x = padding + (index * scaleX);
+            const yForeign = padding + chartAreaHeight - (point.foreign * scaleY);
+            const yLocal = padding + chartAreaHeight - (point.local * scaleY);
+            const yTotal = padding + chartAreaHeight - (point.total * scaleY);
+            
+            return (
+              <g key={`points-${index}`}>
+                {point.total > 0 && (
+                  <circle
+                    cx={x}
+                    cy={yTotal}
+                    r="4"
+                    fill="#2F3B70"
+                    opacity="0.8"
+                  />
+                )}
+                {point.foreign > 0 && (
+                  <circle
+                    cx={x}
+                    cy={yForeign}
+                    r="3"
+                    fill="#2F3B70"
+                    opacity="0.9"
+                  />
+                )}
+                {point.local > 0 && (
+                  <circle
+                    cx={x}
+                    cy={yLocal}
+                    r="3"
+                    fill="#ff3c3c"
+                    opacity="0.9"
+                  />
+                )}
+              </g>
+            );
+          })}
+        </svg>
+        
+        {/* Chart legend */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '24px',
+          marginTop: '16px',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.9rem',
+            color: '#2F3B70',
+            fontWeight: '500'
+          }}>
+            <div style={{
+              width: '12px',
+              height: '12px',
+              background: '#2F3B70',
+              borderRadius: '50%',
+              opacity: '0.8'
+            }}></div>
+            <span>Total Vessels</span>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.9rem',
+            color: '#2F3B70',
+            fontWeight: '500'
+          }}>
+            <div style={{
+              width: '12px',
+              height: '12px',
+              background: '#2F3B70',
+              borderRadius: '50%',
+              opacity: '0.9'
+            }}></div>
+            <span>Foreign</span>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.9rem',
+            color: '#ff3c3c',
+            fontWeight: '500'
+          }}>
+            <div style={{
+              width: '12px',
+              height: '12px',
+              background: '#ff3c3c',
+              borderRadius: '50%',
+              opacity: '0.9'
+            }}></div>
+            <span>Local</span>
+          </div>
+        </div>
+        
+        {/* Summary Statistics */}
+        <div style={{
+          marginTop: '24px',
+          padding: '20px',
+          background: '#f8f9fa',
+          borderRadius: '12px',
+          border: '1px solid #e9ecef'
+        }}>
+          <h5 style={{
+            color: '#2F3B70',
+            fontSize: '1rem',
+            fontWeight: '700',
+            marginBottom: '16px',
+            textAlign: 'center',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            Monthly Summary
+          </h5>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '16px'
+          }}>
+            <div style={{
+              textAlign: 'center',
+              padding: '12px',
+              background: 'white',
+              borderRadius: '8px',
+              border: '1px solid #e9ecef'
+            }}>
+              <div style={{
+                fontSize: '1.5rem',
+                fontWeight: '800',
+                color: '#2F3B70',
+                marginBottom: '4px'
+              }}>
+                {getVesselCounts().foreign + getVesselCounts().local}
+              </div>
+              <div style={{
+                fontSize: '0.8rem',
+                color: '#6c757d',
+                fontWeight: '500'
+              }}>
+                Total Vessels
+              </div>
+            </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '12px',
+              background: 'white',
+              borderRadius: '8px',
+              border: '1px solid #e9ecef'
+            }}>
+              <div style={{
+                fontSize: '1.5rem',
+                fontWeight: '800',
+                color: '#2F3B70',
+                marginBottom: '4px'
+              }}>
+                {getVesselCounts().foreign}
+              </div>
+              <div style={{
+                fontSize: '0.8rem',
+                color: '#6c757d',
+                fontWeight: '500'
+              }}>
+                Foreign
+              </div>
+            </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '12px',
+              background: 'white',
+              borderRadius: '8px',
+              border: '1px solid #e9ecef'
+            }}>
+              <div style={{
+                fontSize: '1.5rem',
+                fontWeight: '800',
+                color: '#ff3c3c',
+                marginBottom: '4px'
+              }}>
+                {getVesselCounts().local}
+              </div>
+              <div style={{
+                fontSize: '0.8rem',
+                color: '#6c757d',
+                fontWeight: '500'
+              }}>
+                Local
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Handle add row button click
   const handleAddRow = () => {
     if (!isAliceAuthorized) {
@@ -993,7 +1365,9 @@ const Report = () => {
               alignItems: 'center',
               justifyContent: 'flex-start',
               border: '1px solid rgba(255, 255, 255, 0.2)',
-              flex: '1'
+              flex: '1',
+              maxHeight: '600px',
+              overflowY: 'auto'
             }}>
               <div className="analytics-title" style={{
                 fontSize: '1.5rem',
@@ -1005,114 +1379,124 @@ const Report = () => {
               }}>Analytics</div>
               <div className="analytics-chart-area" style={{
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                gap: '40px',
-                justifyContent: 'center',
+                gap: '20px',
+                justifyContent: 'flex-start',
                 width: '100%'
               }}>
-                {(() => {
-                  const { foreign, local } = getVesselCounts();
-                  const total = foreign + local;
-                  const foreignPercent = total ? (foreign / total) * 100 : 0;
-                  const localPercent = total ? (local / total) * 100 : 0;
-                  // Pie chart math
-                  const radius = 120;
-                  const cx = 140;
-                  const cy = 140;
-                  const foreignAngle = (foreignPercent / 100) * 360;
-                  const localAngle = (localPercent / 100) * 360;
-                  // Foreign arc
-                  const foreignRadians = (foreignAngle - 90) * Math.PI / 180;
-                  const fx = cx + radius * Math.cos(foreignRadians);
-                  const fy = cy + radius * Math.sin(foreignRadians);
-                  // Local arc
-                  const localRadians = (localAngle - 90) * Math.PI / 180;
-                  const lx = cx + radius * Math.cos(localRadians);
-                  const ly = cy + radius * Math.sin(localRadians);
-                  // Large arc flag
-                  const largeArcFlag = foreignPercent > 50 ? 1 : 0;
-                  // Pie path for local vessel
-                  const localPath = total === 0
-                    ? ''
-                    : `M${cx},${cy} L${cx},${cy - radius} A${radius},${radius} 0 ${largeArcFlag},1 ${fx},${fy} Z`;
-                  return (
-                    <svg width="280" height="280" viewBox="0 0 280 280" style={{
-                      filter: 'drop-shadow(0 4px 16px rgba(47, 59, 112, 0.2))'
-                    }}>
-                      {/* Foreign Vessel Pie */}
-                      <circle r={radius} cx={cx} cy={cy} fill="#2F3B70" />
-                      {/* Local Vessel Pie */}
-                      {local > 0 && (
-                        <path
-                          d={`M${cx},${cy} L${cx},${cy - radius} A${radius},${radius} 0 ${localPercent > 50 ? 1 : 0},1 ${cx + radius * Math.cos((localAngle - 90) * Math.PI / 180)},${cy + radius * Math.sin((localAngle - 90) * Math.PI / 180)} Z`}
-                          fill="#ff3c3c"
-                        />
-                      )}
-                      {/* Foreign count */}
-                      <text x={cx - 60} y={cy + 10} textAnchor="middle" fontSize="2.5rem" fill="#fff" fontWeight="bold">{foreign}</text>
-                      {/* Local count */}
-                      <text x={cx + 60} y={cy + 40} textAnchor="middle" fontSize="2.5rem" fill="#fff" fontWeight="bold">{local}</text>
-                    </svg>
-                  );
-                })()}
-                <div className="analytics-legend" style={{
+                <div style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '24px'
+                  alignItems: 'center',
+                  gap: '40px',
+                  justifyContent: 'center',
+                  width: '100%'
                 }}>
-                  <div className="analytics-legend-item" style={{
+                  {(() => {
+                    const { foreign, local } = getVesselCounts();
+                    const total = foreign + local;
+                    const foreignPercent = total ? (foreign / total) * 100 : 0;
+                    const localPercent = total ? (local / total) * 100 : 0;
+                    // Pie chart math
+                    const radius = 120;
+                    const cx = 140;
+                    const cy = 140;
+                    const foreignAngle = (foreignPercent / 100) * 360;
+                    const localAngle = (localPercent / 100) * 360;
+                    // Foreign arc
+                    const foreignRadians = (foreignAngle - 90) * Math.PI / 180;
+                    const fx = cx + radius * Math.cos(foreignRadians);
+                    const fy = cy + radius * Math.sin(foreignRadians);
+                    // Local arc
+                    const localRadians = (localAngle - 90) * Math.PI / 180;
+                    const lx = cx + radius * Math.cos(localRadians);
+                    const ly = cy + radius * Math.sin(localRadians);
+                    // Large arc flag
+                    const largeArcFlag = foreignPercent > 50 ? 1 : 0;
+                    // Pie path for local vessel
+                    const localPath = total === 0
+                      ? ''
+                      : `M${cx},${cy} L${cx},${cy - radius} A${radius},${radius} 0 ${largeArcFlag},1 ${fx},${fy} Z`;
+                    return (
+                      <svg width="280" height="280" viewBox="0 0 280 280" style={{
+                        filter: 'drop-shadow(0 4px 16px rgba(47, 59, 112, 0.2))'
+                      }}>
+                        {/* Foreign Vessel Pie */}
+                        <circle r={radius} cx={cx} cy={cy} fill="#2F3B70" />
+                        {/* Local Vessel Pie */}
+                        {local > 0 && (
+                          <path
+                            d={`M${cx},${cy} L${cx},${cy - radius} A${radius},${radius} 0 ${localPercent > 50 ? 1 : 0},1 ${cx + radius * Math.cos((localAngle - 90) * Math.PI / 180)},${cy + radius * Math.sin((localAngle - 90) * Math.PI / 180)} Z`}
+                            fill="#ff3c3c"
+                          />
+                        )}
+                        {/* Foreign count */}
+                        <text x={cx - 60} y={cy + 10} textAnchor="middle" fontSize="2.5rem" fill="#fff" fontWeight="bold">{foreign}</text>
+                        {/* Local count */}
+                        <text x={cx + 60} y={cy + 40} textAnchor="middle" fontSize="2.5rem" fill="#fff" fontWeight="bold">{local}</text>
+                      </svg>
+                    );
+                  })()}
+                  <div className="analytics-legend" style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    fontSize: '1.1rem',
-                    color: '#2F3B70',
-                    fontWeight: '600',
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    background: '#f8f9fa',
-                    border: '1px solid #e9ecef'
+                    flexDirection: 'column',
+                    gap: '24px'
                   }}>
-                    <span className="analytics-legend-dot" style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      background: '#2F3B70',
-                      display: 'inline-block',
-                      boxShadow: '0 2px 8px rgba(47, 59, 112, 0.3)'
-                    }}></span>
-                    <span className="analytics-legend-label" style={{
+                    <div className="analytics-legend-item" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                      fontSize: '1.1rem',
                       color: '#2F3B70',
                       fontWeight: '600',
-                      fontSize: '1.1rem'
-                    }}>Foreign Vessel</span>
-                  </div>
-                  <div className="analytics-legend-item" style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    fontSize: '1.1rem',
-                    color: '#2F3B70',
-                    fontWeight: '600',
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    background: '#f8f9fa',
-                    border: '1px solid #e9ecef'
-                  }}>
-                    <span className="analytics-legend-dot" style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      background: '#ff3c3c',
-                      display: 'inline-block',
-                      boxShadow: '0 2px 8px rgba(255, 60, 60, 0.3)'
-                    }}></span>
-                    <span className="analytics-legend-label" style={{
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      background: '#f8f9fa',
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <span className="analytics-legend-dot" style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: '#2F3B70',
+                        display: 'inline-block',
+                        boxShadow: '0 2px 8px rgba(47, 59, 112, 0.3)'
+                      }}></span>
+                      <span className="analytics-legend-label" style={{
+                        color: '#2F3B70',
+                        fontWeight: '600',
+                        fontSize: '1.1rem'
+                      }}>Foreign Vessel</span>
+                    </div>
+                    <div className="analytics-legend-item" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                      fontSize: '1.1rem',
                       color: '#2F3B70',
                       fontWeight: '600',
-                      fontSize: '1.1rem'
-                    }}>Local Vessel</span>
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      background: '#f8f9fa',
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <span className="analytics-legend-dot" style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: '#ff3c3c',
+                        display: 'inline-block',
+                        boxShadow: '0 2px 8px rgba(255, 60, 60, 0.3)'
+                      }}></span>
+                      <span className="analytics-legend-label" style={{
+                        color: '#2F3B70',
+                        fontWeight: '600',
+                        fontSize: '1.1rem'
+                      }}>Local Vessel</span>
+                    </div>
                   </div>
                 </div>
+                {renderTimeSeriesChart()}
               </div>
             </div>
           </div>
