@@ -49,19 +49,19 @@ const Payroll = () => {
   const [activeDropdownRow, setActiveDropdownRow] = useState(null);
   const [activeDropdownColumn, setActiveDropdownColumn] = useState(null);
   const [tableData, setTableData] = useState([
-    { id: 1, workerName: 'Bryan Matthew Cruz', localVess: '1', localVessType: 'Mooring', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 2, workerName: 'David Emmanuel Reyes', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 3, workerName: 'Junnel, Cusi', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 4, workerName: 'Aljon, Dipasupil', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 5, workerName: 'Phil Allen, Eje', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 6, workerName: 'Rhed, Escalon', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 7, workerName: 'Fortune, Garcia Jr.', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 8, workerName: 'Keith, Javier', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 9, workerName: 'Ericson, Mendoza', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 10, workerName: 'Alec, Sino-ag', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 11, workerName: 'Romeo, Velasquez', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 12, workerName: 'Rodel, Maranan', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 13, workerName: 'Alloi, Sino-ag', localVess: '', localVessType: '', foreignVess: '', foreignVessType: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' }
+    { id: 1, workerName: 'Bryan Matthew Cruz', localMooring: '1', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 2, workerName: 'David Emmanuel Reyes', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 3, workerName: 'Junnel, Cusi', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 4, workerName: 'Aljon, Dipasupil', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 5, workerName: 'Phil Allen, Eje', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 6, workerName: 'Rhed, Escalon', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 7, workerName: 'Fortune, Garcia Jr.', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 8, workerName: 'Keith, Javier', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 9, workerName: 'Ericson, Mendoza', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 10, workerName: 'Alec, Sino-ag', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 11, workerName: 'Romeo, Velasquez', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 12, workerName: 'Rodel, Maranan', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 13, workerName: 'Alloi, Sino-ag', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' }
   ]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
@@ -481,10 +481,10 @@ const Payroll = () => {
         workers: tableData.map(row => ({
           id: row.id,
           workerName: row.workerName,
-          localVess: row.localVess || '',
-          localVessType: row.localVessType || '',
-          foreignVess: row.foreignVess || '',
-          foreignVessType: row.foreignVessType || '',
+          localMooring: row.localMooring || '',
+          localUnmooring: row.localUnmooring || '',
+          foreignMooring: row.foreignMooring || '',
+          foreignUnmooring: row.foreignUnmooring || '',
           tal: row.tal || '',
           sss: row.sss || '',
           pagibig: row.pagibig || '',
@@ -493,8 +493,10 @@ const Payroll = () => {
           netTotal: row.netTotal || ''
         })),
         totals: {
-          localVess: tableData.reduce((sum, row) => sum + (parseFloat(row.localVess) || 0), 0),
-          foreignVess: tableData.reduce((sum, row) => sum + (parseFloat(row.foreignVess) || 0), 0),
+          localMooring: tableData.reduce((sum, row) => sum + (parseFloat(row.localMooring) || 0), 0),
+          localUnmooring: tableData.reduce((sum, row) => sum + (parseFloat(row.localUnmooring) || 0), 0),
+          foreignMooring: tableData.reduce((sum, row) => sum + (parseFloat(row.foreignMooring) || 0), 0),
+          foreignUnmooring: tableData.reduce((sum, row) => sum + (parseFloat(row.foreignUnmooring) || 0), 0),
           tal: tableData.reduce((sum, row) => sum + (parseFloat(row.tal) || 0), 0),
           sss: tableData.reduce((sum, row) => sum + (parseFloat(row.sss) || 0), 0),
           pagibig: tableData.reduce((sum, row) => sum + (parseFloat(row.pagibig) || 0), 0),
@@ -528,15 +530,17 @@ const Payroll = () => {
           workerName: worker.workerName,
           email: `${worker.workerName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
           payrollData: {
-            local: worker.localVess || '',
-            foreign: worker.foreignVess || '',
-            total: (parseFloat(worker.localVess) || 0) + (parseFloat(worker.foreignVess) || 0),
+            localMooring: worker.localMooring || '',
+            localUnmooring: worker.localUnmooring || '',
+            foreignMooring: worker.foreignMooring || '',
+            foreignUnmooring: worker.foreignUnmooring || '',
+            total: (parseFloat(worker.localMooring) || 0) + (parseFloat(worker.localUnmooring) || 0) + (parseFloat(worker.foreignMooring) || 0) + (parseFloat(worker.foreignUnmooring) || 0),
             pagibigLoan: worker.pagibig || '',
             cashAdvance: worker.cashAdvance || '',
-            balance: ((parseFloat(worker.localVess) || 0) + (parseFloat(worker.foreignVess) || 0)) - (parseFloat(worker.cashAdvance) || 0),
+            balance: ((parseFloat(worker.localMooring) || 0) + (parseFloat(worker.localUnmooring) || 0) + (parseFloat(worker.foreignMooring) || 0) + (parseFloat(worker.foreignUnmooring) || 0)) - (parseFloat(worker.cashAdvance) || 0),
             sssPiPh: (parseFloat(worker.sss) || 0) + (parseFloat(worker.philhealth) || 0),
             totalDeductions: (parseFloat(worker.sss) || 0) + (parseFloat(worker.pagibig) || 0) + (parseFloat(worker.philhealth) || 0) + (parseFloat(worker.tal) || 0),
-            finalTotal: ((parseFloat(worker.localVess) || 0) + (parseFloat(worker.foreignVess) || 0)) - ((parseFloat(worker.sss) || 0) + (parseFloat(worker.pagibig) || 0) + (parseFloat(worker.philhealth) || 0) + (parseFloat(worker.tal) || 0) + (parseFloat(worker.cashAdvance) || 0))
+            finalTotal: ((parseFloat(worker.localMooring) || 0) + (parseFloat(worker.localUnmooring) || 0) + (parseFloat(worker.foreignMooring) || 0) + (parseFloat(worker.foreignUnmooring) || 0)) - ((parseFloat(worker.sss) || 0) + (parseFloat(worker.pagibig) || 0) + (parseFloat(worker.philhealth) || 0) + (parseFloat(worker.tal) || 0) + (parseFloat(worker.cashAdvance) || 0))
           }
         })),
         lastUpdated: new Date().toISOString()
@@ -576,210 +580,90 @@ const Payroll = () => {
         <table className="manager-table">
           <thead>
             <tr>
-              <th>Workers</th>
-              <th>Local Vessel</th>
-              <th>Foreign Vessel</th>
-              <th>TOTAL</th>
-              <th>SSS</th>
-              <th>PAG-IBIG</th>
-              <th>PhilHealth</th>
-              <th>Cash Advance</th>
-              <th>NET TOTAL</th>
+              <th rowSpan="2">Workers</th>
+              <th colSpan="2">Local Vessel</th>
+              <th colSpan="2">Foreign Vessel</th>
+              <th rowSpan="2">TOTAL</th>
+              <th rowSpan="2">SSS</th>
+              <th rowSpan="2">PAG-IBIG</th>
+              <th rowSpan="2">PhilHealth</th>
+              <th rowSpan="2">Cash Advance</th>
+              <th rowSpan="2">NET TOTAL</th>
+            </tr>
+            <tr>
+              <th>Mooring</th>
+              <th>Unmooring</th>
+              <th>Mooring</th>
+              <th>Unmooring</th>
             </tr>
           </thead>
           <tbody>
             {tableData.map((row, rowIndex) => (
               <tr key={row.id}>
                 <td className="worker-name-cell">{row.workerName}</td>
-                {/* Local Vessel */}
-                <td style={{ position: "relative" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      pattern="[0-9]*"
-                      value={row.localVess}
-                      onChange={e => handleCellEdit(rowIndex, 'localVess', e.target.value)}
-                      onFocus={handleInputFocus}
-                      onKeyDown={e => handleTableKeyDown(e, rowIndex, 1)}
-                      data-row={rowIndex}
-                      data-col={1}
-                      className="table-input vess-input"
-                      placeholder="Enter num"
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      className="dropdown-arrow-btn"
-                      style={{
-                        marginLeft: 2,
-                        minWidth: 0,
-                        padding: "0 10px",
-                        background: "transparent",
-                        border: "none",
-                        color: "#fff",
-                        fontWeight: 700,
-                        fontSize: 22,
-                        lineHeight: 1,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                      onClick={() => toggleDropdown(rowIndex, 'localVessType')}
-                      aria-label="Select Local Vessel Type"
-                    >
-                      ▼
-                    </button>
-                  </div>
-                  {activeDropdownRow === rowIndex && activeDropdownColumn === 'localVessType' && (
-                    <div
-                      className="dropdown-menu improved-dropdown"
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        top: "110%",
-                        zIndex: 10,
-                        minWidth: 120,
-                        background: "#fff",
-                        border: "1px solid #bfc8e2",
-                        borderRadius: 8,
-                        boxShadow: "0 4px 16px 0 rgba(0,0,0,0.10)",
-                        padding: "4px 0"
-                      }}
-                    >
-                      <div
-                        className="dropdown-item improved-dropdown-item"
-                        style={{
-                          color: "#232f4b",
-                          padding: "10px 18px",
-                          cursor: "pointer",
-                          fontWeight: row.localVessType === "Mooring" ? 700 : 400,
-                          background: row.localVessType === "Mooring" ? "#e6f0ff" : "transparent",
-                          borderRadius: 6,
-                          transition: "background 0.15s"
-                        }}
-                        onClick={() => handleVessTypeChange(rowIndex, 'localVessType', 'Mooring')}
-                      >
-                        Mooring
-                      </div>
-                      <div
-                        className="dropdown-item improved-dropdown-item"
-                        style={{
-                          color: "#232f4b",
-                          padding: "10px 18px",
-                          cursor: "pointer",
-                          fontWeight: row.localVessType === "Unmooring" ? 700 : 400,
-                          background: row.localVessType === "Unmooring" ? "#e6f0ff" : "transparent",
-                          borderRadius: 6,
-                          transition: "background 0.15s"
-                        }}
-                        onClick={() => handleVessTypeChange(rowIndex, 'localVessType', 'Unmooring')}
-                      >
-                        Unmooring
-                      </div>
-                    </div>
-                  )}
-                  {row.localVess && row.localVessType && (
-                    <div style={{ fontStyle: 'italic', color: '#b0b8d1', fontSize: 13, marginTop: 2 }}>
-                      {row.localVess}, {row.localVessType}
-                    </div>
-                  )}
+                {/* Local Vessel - Mooring */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.localMooring}
+                    onChange={e => handleCellEdit(rowIndex, 'localMooring', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 1)}
+                    data-row={rowIndex}
+                    data-col={1}
+                    className="table-input vess-input"
+                    placeholder="Amount"
+                  />
                 </td>
-                {/* Foreign Vessel */}
-                <td style={{ position: "relative" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      pattern="[0-9]*"
-                      value={row.foreignVess}
-                      onChange={e => handleCellEdit(rowIndex, 'foreignVess', e.target.value)}
-                      onFocus={handleInputFocus}
-                      onKeyDown={e => handleTableKeyDown(e, rowIndex, 2)}
-                      data-row={rowIndex}
-                      data-col={2}
-                      className="table-input vess-input"
-                      placeholder="Enter num"
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      className="dropdown-arrow-btn"
-                      style={{
-                        marginLeft: 2,
-                        minWidth: 0,
-                        padding: "0 10px",
-                        background: "transparent",
-                        border: "none",
-                        color: "#fff",
-                        fontWeight: 700,
-                        fontSize: 22,
-                        lineHeight: 1,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                      onClick={() => toggleDropdown(rowIndex, 'foreignVessType')}
-                      aria-label="Select Foreign Vessel Type"
-                    >
-                      ▼
-                    </button>
-                  </div>
-                  {activeDropdownRow === rowIndex && activeDropdownColumn === 'foreignVessType' && (
-                    <div
-                      className="dropdown-menu improved-dropdown"
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        top: "110%",
-                        zIndex: 10,
-                        minWidth: 120,
-                        background: "#fff",
-                        border: "1px solid #bfc8e2",
-                        borderRadius: 8,
-                        boxShadow: "0 4px 16px 0 rgba(0,0,0,0.10)",
-                        padding: "4px 0"
-                      }}
-                    >
-                      <div
-                        className="dropdown-item improved-dropdown-item"
-                        style={{
-                          color: "#232f4b",
-                          padding: "10px 18px",
-                          cursor: "pointer",
-                          fontWeight: row.foreignVessType === "Mooring" ? 700 : 400,
-                          background: row.foreignVessType === "Mooring" ? "#e6f0ff" : "transparent",
-                          borderRadius: 6,
-                          transition: "background 0.15s"
-                        }}
-                        onClick={() => handleVessTypeChange(rowIndex, 'foreignVessType', 'Mooring')}
-                      >
-                        Mooring
-                      </div>
-                      <div
-                        className="dropdown-item improved-dropdown-item"
-                        style={{
-                          color: "#232f4b",
-                          padding: "10px 18px",
-                          cursor: "pointer",
-                          fontWeight: row.foreignVessType === "Unmooring" ? 700 : 400,
-                          background: row.foreignVessType === "Unmooring" ? "#e6f0ff" : "transparent",
-                          borderRadius: 6,
-                          transition: "background 0.15s"
-                        }}
-                        onClick={() => handleVessTypeChange(rowIndex, 'foreignVessType', 'Unmooring')}
-                      >
-                        Unmooring
-                      </div>
-                    </div>
-                  )}
-                  {row.foreignVess && row.foreignVessType && (
-                    <div style={{ fontStyle: 'italic', color: '#b0b8d1', fontSize: 13, marginTop: 2 }}>
-                      {row.foreignVess}, {row.foreignVessType}
-                    </div>
-                  )}
+                {/* Local Vessel - Unmooring */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.localUnmooring}
+                    onChange={e => handleCellEdit(rowIndex, 'localUnmooring', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 2)}
+                    data-row={rowIndex}
+                    data-col={2}
+                    className="table-input vess-input"
+                    placeholder="Amount"
+                  />
+                </td>
+                {/* Foreign Vessel - Mooring */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.foreignMooring}
+                    onChange={e => handleCellEdit(rowIndex, 'foreignMooring', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 3)}
+                    data-row={rowIndex}
+                    data-col={3}
+                    className="table-input vess-input"
+                    placeholder="Amount"
+                  />
+                </td>
+                {/* Foreign Vessel - Unmooring */}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    value={row.foreignUnmooring}
+                    onChange={e => handleCellEdit(rowIndex, 'foreignUnmooring', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 4)}
+                    data-row={rowIndex}
+                    data-col={4}
+                    className="table-input vess-input"
+                    placeholder="Amount"
+                  />
                 </td>
                 {/* TOTAL */}
                 <td>
@@ -788,7 +672,10 @@ const Payroll = () => {
                     inputMode="decimal"
                     pattern="[0-9]*"
                     value={
-                      (parseFloat(row.localVess) || 0) + (parseFloat(row.foreignVess) || 0)
+                      (parseFloat(row.localMooring) || 0) + 
+                      (parseFloat(row.localUnmooring) || 0) + 
+                      (parseFloat(row.foreignMooring) || 0) + 
+                      (parseFloat(row.foreignUnmooring) || 0)
                     }
                     readOnly
                     className="table-input"
@@ -798,9 +685,17 @@ const Payroll = () => {
                 {/* SSS */}
                 <td>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
                     value={row.sss}
                     onChange={e => handleCellEdit(rowIndex, 'sss', e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 6)}
+                    data-row={rowIndex}
+                    data-col={6}
+                    className="table-input vess-input"
+                    placeholder="Enter amount"
                   />
                 </td>
                 {/* PAG-IBIG */}
@@ -811,11 +706,12 @@ const Payroll = () => {
                     pattern="[0-9]*"
                     value={row.pagibig}
                     onChange={e => handleCellEdit(rowIndex, 'pagibig', e.target.value)}
+                    onFocus={handleInputFocus}
                     onKeyDown={e => handleTableKeyDown(e, rowIndex, 7)}
                     data-row={rowIndex}
                     data-col={7}
-                    className="table-input"
-                    placeholder="Enter num"
+                    className="table-input vess-input"
+                    placeholder="Enter amount"
                   />
                 </td>
                 {/* PhilHealth */}
@@ -826,11 +722,12 @@ const Payroll = () => {
                     pattern="[0-9]*"
                     value={row.philhealth}
                     onChange={e => handleCellEdit(rowIndex, 'philhealth', e.target.value)}
+                    onFocus={handleInputFocus}
                     onKeyDown={e => handleTableKeyDown(e, rowIndex, 8)}
                     data-row={rowIndex}
                     data-col={8}
-                    className="table-input"
-                    placeholder="Enter num"
+                    className="table-input vess-input"
+                    placeholder="Enter amount"
                   />
                 </td>
                 {/* Cash Advance */}
@@ -841,11 +738,12 @@ const Payroll = () => {
                     pattern="[0-9]*"
                     value={row.cashAdvance}
                     onChange={e => handleCellEdit(rowIndex, 'cashAdvance', e.target.value)}
+                    onFocus={handleInputFocus}
                     onKeyDown={e => handleTableKeyDown(e, rowIndex, 9)}
                     data-row={rowIndex}
                     data-col={9}
-                    className="table-input"
-                    placeholder="Enter num"
+                    className="table-input vess-input"
+                    placeholder="Enter amount"
                   />
                 </td>
                 {/* NET TOTAL */}
@@ -856,8 +754,10 @@ const Payroll = () => {
                     pattern="[0-9]*"
                     value={
                     (
-                      (parseFloat(row.localVess) || 0) +
-                      (parseFloat(row.foreignVess) || 0)
+                      (parseFloat(row.localMooring) || 0) +
+                      (parseFloat(row.localUnmooring) || 0) +
+                      (parseFloat(row.foreignMooring) || 0) +
+                      (parseFloat(row.foreignUnmooring) || 0)
                     ) - (
                       (parseFloat(row.sss) || 0) +
                       (parseFloat(row.pagibig) || 0) +
@@ -875,6 +775,7 @@ const Payroll = () => {
             ))}
             <tr className="grand-total-row">
               <td colSpan="1">GRAND TOTAL</td>
+              <td></td>
               <td></td>
               <td></td>
               <td></td>

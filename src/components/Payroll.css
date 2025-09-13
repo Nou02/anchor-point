@@ -444,12 +444,13 @@
 
 .manager-view {
   width: 100%;
-  max-width: 1200px;
+  max-width: 100%;
   padding: 20px;
   background: none;
   max-height: 80vh;
   overflow-y: auto;
   overflow-x: auto;
+  box-sizing: border-box;
 }
 
 .manager-view::-webkit-scrollbar {
@@ -482,6 +483,8 @@
   box-shadow: 0 4px 20px rgba(35, 58, 108, 0.3);
   margin-bottom: 24px;
   overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
 }
 
 .table-instructions {
@@ -510,7 +513,8 @@
   font-size: 0.95rem;
   color: white;
   background: #233a6c;
-  min-width: 800px;
+  min-width: 100%;
+  table-layout: fixed;
 }
 
 .manager-table th {
@@ -521,22 +525,85 @@
   font-weight: bold;
   border: 1px solid #4a5a7a;
   position: relative;
-  min-width: 140px; /* Add this line for wider columns */
+  width: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Optionally, make the first column (Workers) even wider */
+/* Vessel column headers - allow text wrapping */
+.manager-table th:nth-child(2),
+.manager-table th:nth-child(3),
+.manager-table th:nth-child(4),
+.manager-table th:nth-child(5) {
+  white-space: normal;
+  line-height: 1.2;
+  font-size: 0.9rem;
+  word-wrap: break-word;
+}
+
+/* Column width distribution */
+.manager-table th,
+.manager-table td {
+  text-align: center;
+  padding: 10px 8px;
+  min-width: 80px;
+}
+
+/* Workers column - bigger for better readability */
 .manager-table th:first-child,
 .manager-table td:first-child {
-  min-width: 200px;
+  width: 15%;
   text-align: left;
   padding-left: 16px;
 }
 
+/* Vessel columns (Local Mooring, Local Unmooring, Foreign Mooring, Foreign Unmooring) */
+.manager-table th:nth-child(2),
+.manager-table th:nth-child(3),
+.manager-table th:nth-child(4),
+.manager-table th:nth-child(5),
+.manager-table td:nth-child(2),
+.manager-table td:nth-child(3),
+.manager-table td:nth-child(4),
+.manager-table td:nth-child(5) {
+  width: 10%;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+/* TOTAL column - smaller */
+.manager-table th:nth-child(6),
+.manager-table td:nth-child(6) {
+  width: 7%;
+}
+
+/* SSS, PAG-IBIG, PhilHealth, Cash Advance columns */
+.manager-table th:nth-child(7),
+.manager-table th:nth-child(8),
+.manager-table th:nth-child(9),
+.manager-table th:nth-child(10),
+.manager-table td:nth-child(7),
+.manager-table td:nth-child(8),
+.manager-table td:nth-child(9),
+.manager-table td:nth-child(10) {
+  width: 9%;
+}
+
+/* NET TOTAL column - smaller */
+.manager-table th:nth-child(11),
+.manager-table td:nth-child(11) {
+  width: 7%;
+}
+
 .manager-table td {
-  padding: 10px 8px;
-  text-align: center;
   border: 1px solid #4a5a7a;
   background: #233a6c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .manager-table tr:nth-child(even) td {
@@ -563,6 +630,86 @@
   font-size: 0.9rem;
   padding: 4px;
   outline: none;
+}
+
+/* Vessel input specific styling */
+.vess-input {
+  width: 100%;
+  max-width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.vess-input:focus {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.vess-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+}
+
+/* Dropdown arrow button styling */
+.dropdown-arrow-btn {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: none !important;
+  border-radius: 4px !important;
+  color: white !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px 8px !important;
+  min-width: 32px !important;
+  transition: all 0.2s ease !important;
+}
+
+.dropdown-arrow-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: none !important;
+}
+
+/* Dropdown menu improvements */
+.dropdown-menu {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 1000;
+  min-width: 120px;
+  background: white;
+  border: 1px solid #bfc8e2;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  padding: 4px 0;
+  margin-top: 2px;
+}
+
+.dropdown-item {
+  color: #232f4b;
+  padding: 10px 18px;
+  cursor: pointer;
+  font-weight: 400;
+  background: transparent;
+  border-radius: 6px;
+  transition: background 0.15s;
+  font-size: 0.9rem;
+}
+
+.dropdown-item:hover {
+  background: #e6f0ff;
+  font-weight: 600;
 }
 
 .table-input:focus {
@@ -648,6 +795,56 @@
     padding: 6px 4px;
   }
   
+  /* Maintain column proportions on tablet */
+  .manager-table th:first-child,
+  .manager-table td:first-child {
+    width: 15%;
+    padding-left: 8px;
+  }
+  
+  .manager-table th:nth-child(2),
+  .manager-table th:nth-child(3),
+  .manager-table th:nth-child(4),
+  .manager-table th:nth-child(5),
+  .manager-table td:nth-child(2),
+  .manager-table td:nth-child(3),
+  .manager-table td:nth-child(4),
+  .manager-table td:nth-child(5) {
+    width: 10%;
+    min-width: 60px;
+  }
+  
+  .manager-table th:nth-child(6),
+  .manager-table th:nth-child(11),
+  .manager-table td:nth-child(6),
+  .manager-table td:nth-child(11) {
+    width: 7%;
+    min-width: 50px;
+  }
+  
+  .manager-table th:nth-child(7),
+  .manager-table th:nth-child(8),
+  .manager-table th:nth-child(9),
+  .manager-table th:nth-child(10),
+  .manager-table td:nth-child(7),
+  .manager-table td:nth-child(8),
+  .manager-table td:nth-child(9),
+  .manager-table td:nth-child(10) {
+    width: 9%;
+    min-width: 60px;
+  }
+  
+  .vess-input {
+    font-size: 0.8rem;
+    padding: 4px 6px;
+  }
+  
+  .dropdown-arrow-btn {
+    font-size: 14px !important;
+    padding: 4px 6px !important;
+    min-width: 28px !important;
+  }
+  
   .mooring-bubble {
     position: relative;
     top: 0;
@@ -658,6 +855,92 @@
   .back-button {
     font-size: 0.85rem;
     padding: 8px 12px;
+  }
+  
+  .manager-view {
+    padding: 10px;
+  }
+  
+  .manager-table-container {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .manager-table {
+    font-size: 0.7rem;
+  }
+  
+  .manager-table th,
+  .manager-table td {
+    padding: 4px 2px;
+  }
+  
+  /* Maintain column proportions on mobile */
+  .manager-table th:first-child,
+  .manager-table td:first-child {
+    width: 15%;
+    padding-left: 4px;
+  }
+  
+  .manager-table th:nth-child(2),
+  .manager-table th:nth-child(3),
+  .manager-table th:nth-child(4),
+  .manager-table th:nth-child(5),
+  .manager-table td:nth-child(2),
+  .manager-table td:nth-child(3),
+  .manager-table td:nth-child(4),
+  .manager-table td:nth-child(5) {
+    width: 10%;
+    min-width: 50px;
+  }
+  
+  .manager-table th:nth-child(6),
+  .manager-table th:nth-child(11),
+  .manager-table td:nth-child(6),
+  .manager-table td:nth-child(11) {
+    width: 7%;
+    min-width: 40px;
+  }
+  
+  .manager-table th:nth-child(7),
+  .manager-table th:nth-child(8),
+  .manager-table th:nth-child(9),
+  .manager-table th:nth-child(10),
+  .manager-table td:nth-child(7),
+  .manager-table td:nth-child(8),
+  .manager-table td:nth-child(9),
+  .manager-table td:nth-child(10) {
+    width: 9%;
+    min-width: 50px;
+  }
+  
+  .vess-input {
+    font-size: 0.7rem;
+    padding: 3px 4px;
+  }
+  
+  .dropdown-arrow-btn {
+    font-size: 12px !important;
+    padding: 3px 4px !important;
+    min-width: 24px !important;
+  }
+  
+  .dropdown-menu {
+    min-width: 100px;
+  }
+  
+  .dropdown-item {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .manager-view {
+    padding: 5px;
+  }
+  
+  .manager-table-container {
+    padding: 5px;
   }
 }
 
