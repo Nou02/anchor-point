@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+// Main App component for AnchorPoint application
 import LandingPage from './components/LandingPage';
 import Homepage from './components/Homepage';
 import LoginSignUp from './components/LoginSignUp';
