@@ -17,11 +17,11 @@ const LandingPage = ({ onEnter }) => {
             <img src={anchorLogo} alt="Anchor Logo" width={64} height={64} />
           </div>
           <div className="logo-text">
-            <span className="logo-letter logo-red">A</span>
+            <span className="logo-letter logo-white">A</span>
             <span className="logo-letter logo-white">nchor</span>
             <span style={{ margin: '0 0.2rem' }}></span>
             <span className="logo-letter logo-red">P</span>
-            <span className="logo-letter logo-white">oint</span>
+            <span className="logo-letter logo-red">oint</span>
           </div>
         </div>
         
