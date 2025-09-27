@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef, memo } from 'react';
 import './Payroll.css';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, query, where, getDocs, getDoc, addDoc, updateDoc, doc, setDoc } from 'firebase/firestore';
@@ -30,6 +30,43 @@ const WORKERS_LIST = [
   "Alloi, Sino-ag"
 ];
 
+// Ultra-simple input that never re-renders
+const UltraSimpleInput = ({ 
+  initialValue, 
+  onValueChange, 
+  placeholder, 
+  className, 
+  dataRow, 
+  dataCol 
+}) => {
+  const inputRef = useRef(null);
+  
+  // Set initial value only once, never again
+  useEffect(() => {
+    if (inputRef.current && initialValue !== undefined) {
+      inputRef.current.value = initialValue;
+    }
+  }, []); // Empty dependency array - only runs once
+
+  const handleChange = (e) => {
+    if (onValueChange) {
+      onValueChange(e.target.value);
+    }
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      onChange={handleChange}
+      data-row={dataRow}
+      data-col={dataCol}
+      className={className}
+      placeholder={placeholder}
+    />
+  );
+};
+
 const TABLE_FIELDS = [
   'localVess', 'foreignVess', 'tal', 'sss', 'pagibig', 'philhealth', 'cashAdvance', 'netTotal'
 ];
@@ -48,29 +85,120 @@ const Payroll = () => {
   const [showForeignDropdown, setShowForeignDropdown] = useState(false);
   const [activeDropdownRow, setActiveDropdownRow] = useState(null);
   const [activeDropdownColumn, setActiveDropdownColumn] = useState(null);
-  const [tableData, setTableData] = useState([
-    { id: 1, workerName: 'Bryan Matthew Cruz', localMooring: '1', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 2, workerName: 'David Emmanuel Reyes', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 3, workerName: 'Junnel, Cusi', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 4, workerName: 'Aljon, Dipasupil', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 5, workerName: 'Phil Allen, Eje', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 6, workerName: 'Rhed, Escalon', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 7, workerName: 'Fortune, Garcia Jr.', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 8, workerName: 'Keith, Javier', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 9, workerName: 'Ericson, Mendoza', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 10, workerName: 'Alec, Sino-ag', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 11, workerName: 'Romeo, Velasquez', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 12, workerName: 'Rodel, Maranan', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
-    { id: 13, workerName: 'Alloi, Sino-ag', localMooring: '', localUnmooring: '', foreignMooring: '', foreignUnmooring: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' }
-  ]);
+  // Default table data
+  const defaultTableData = [
+    { id: 1, workerName: 'Bryan Matthew Cruz', localMooringCount: '1', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 2, workerName: 'David Emmanuel Reyes', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 3, workerName: 'Junnel, Cusi', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 4, workerName: 'Aljon, Dipasupil', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 5, workerName: 'Phil Allen, Eje', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 6, workerName: 'Rhed, Escalon', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 7, workerName: 'Fortune, Garcia Jr.', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 8, workerName: 'Keith, Javier', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 9, workerName: 'Ericson, Mendoza', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 10, workerName: 'Alec, Sino-ag', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 11, workerName: 'Romeo, Velasquez', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 12, workerName: 'Rodel, Maranan', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' },
+    { id: 13, workerName: 'Alloi, Sino-ag', localMooringCount: '', localUnmooringCount: '', foreignMooringCount: '', foreignUnmooringCount: '', tal: '', sss: '', pagibig: '', philhealth: '', cashAdvance: '', netTotal: '' }
+  ];
+
+  const [tableData, setTableData] = useState(defaultTableData);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [autoSaveStatus, setAutoSaveStatus] = useState('');
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Pricing configuration for Alice's account
+  const [pricingConfig, setPricingConfig] = useState({
+    localMooringPrice: 500,
+    localUnmooringPrice: 500,
+    foreignMooringPrice: 800,
+    foreignUnmooringPrice: 800
+  });
+  const [showPricingConfig, setShowPricingConfig] = useState(false);
 
   // The following states were missing in your code but are referenced later:
   const [availableWorkers, setAvailableWorkers] = useState([]);
   const [showWorkerDropdown, setShowWorkerDropdown] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState('');
   const [individualPayrollData, setIndividualPayrollData] = useState({});
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const loadSavedData = () => {
+      try {
+        const savedTableData = localStorage.getItem('payrollTableData');
+        const savedPricingConfig = localStorage.getItem('payrollPricingConfig');
+        
+        if (savedTableData) {
+          const parsedData = JSON.parse(savedTableData);
+          setTableData(parsedData);
+          console.log('Loaded saved table data:', parsedData);
+        }
+        
+        if (savedPricingConfig) {
+          const parsedPricing = JSON.parse(savedPricingConfig);
+          setPricingConfig(parsedPricing);
+          console.log('Loaded saved pricing config:', parsedPricing);
+        }
+        
+        // Mark initial load as complete
+        setIsInitialLoad(false);
+      } catch (error) {
+        console.error('Error loading saved data:', error);
+        setIsInitialLoad(false);
+      }
+    };
+
+    loadSavedData();
+  }, []);
+
+  // Save data to localStorage whenever tableData or pricingConfig changes
+  useEffect(() => {
+    // Don't save during initial load to prevent overwriting saved data
+    if (isInitialLoad) {
+      return;
+    }
+
+    const saveData = () => {
+      try {
+        localStorage.setItem('payrollTableData', JSON.stringify(tableData));
+        localStorage.setItem('payrollPricingConfig', JSON.stringify(pricingConfig));
+        setAutoSaveStatus('Auto-saved');
+        setTimeout(() => setAutoSaveStatus(''), 2000);
+        console.log('Saved table data to localStorage:', tableData);
+      } catch (error) {
+        console.error('Error saving data:', error);
+        setAutoSaveStatus('Save failed');
+        setTimeout(() => setAutoSaveStatus(''), 3000);
+      }
+    };
+
+    // Only save if we have actual data (not just the initial state)
+    if (tableData.length > 0) {
+      saveData();
+    }
+  }, [tableData, pricingConfig, isInitialLoad]);
+
+  // Function to clear all saved data
+  const clearSavedData = () => {
+    try {
+      localStorage.removeItem('payrollTableData');
+      localStorage.removeItem('payrollPricingConfig');
+      setTableData(defaultTableData);
+      setPricingConfig({
+        localMooringPrice: 500,
+        localUnmooringPrice: 500,
+        foreignMooringPrice: 800,
+        foreignUnmooringPrice: 800
+      });
+      setAutoSaveStatus('Data cleared');
+      setTimeout(() => setAutoSaveStatus(''), 2000);
+    } catch (error) {
+      console.error('Error clearing data:', error);
+    }
+  };
+
 
   useEffect(() => {
     const auth = getAuth();
@@ -186,7 +314,7 @@ const Payroll = () => {
     const newValue = !isManagerView;
     setIsManagerView(newValue);
     // Save Alice's preference to localStorage
-    if (user.name === "Alice Margaretha Santos") {
+    if (user.name === "Alice Margaretha Santos" || user.email === "aliceleo@gmail.com") {
       localStorage.setItem('aliceManagerView', newValue.toString());
     }
   };
@@ -197,17 +325,94 @@ const Payroll = () => {
     localStorage.removeItem('aliceManagerView');
   };
 
-  // Modify the handleCellEdit function
-  const handleCellEdit = (rowIndex, field, value) => {
+  // Calculate total earnings based on operation counts and pricing
+  const calculateTotalEarnings = (row) => {
+    const localMooringCount = parseFloat(row.localMooringCount) || 0;
+    const localUnmooringCount = parseFloat(row.localUnmooringCount) || 0;
+    const foreignMooringCount = parseFloat(row.foreignMooringCount) || 0;
+    const foreignUnmooringCount = parseFloat(row.foreignUnmooringCount) || 0;
+
+    const localMooringEarnings = localMooringCount * pricingConfig.localMooringPrice;
+    const localUnmooringEarnings = localUnmooringCount * pricingConfig.localUnmooringPrice;
+    const foreignMooringEarnings = foreignMooringCount * pricingConfig.foreignMooringPrice;
+    const foreignUnmooringEarnings = foreignUnmooringCount * pricingConfig.foreignUnmooringPrice;
+
+    return localMooringEarnings + localUnmooringEarnings + foreignMooringEarnings + foreignUnmooringEarnings;
+  };
+
+  // Calculate net total after deductions
+  const calculateNetTotal = (row) => {
+    const totalEarnings = calculateTotalEarnings(row);
+    const sss = parseFloat(row.sss) || 0;
+    const pagibig = parseFloat(row.pagibig) || 0;
+    const philhealth = parseFloat(row.philhealth) || 0;
+    const tal = parseFloat(row.tal) || 0;
+    const cashAdvance = parseFloat(row.cashAdvance) || 0;
+
+    const totalDeductions = sss + pagibig + philhealth + tal + cashAdvance;
+    return totalEarnings - totalDeductions;
+  };
+
+  // Calculate current user's payroll data from table
+  const getCurrentUserPayrollData = () => {
+    const currentUserRow = tableData.find(row => row.workerName === user.name);
+    if (!currentUserRow) {
+      return {
+        local: '0',
+        foreign: '0',
+        total: '0',
+        pagibigLoan: '0',
+        cashAdvance: '0',
+        balance: '0',
+        sssPiPh: '0',
+        totalDeductions: '0',
+        finalTotal: '0'
+      };
+    }
+
+    const localMooringCount = parseFloat(currentUserRow.localMooringCount) || 0;
+    const localUnmooringCount = parseFloat(currentUserRow.localUnmooringCount) || 0;
+    const foreignMooringCount = parseFloat(currentUserRow.foreignMooringCount) || 0;
+    const foreignUnmooringCount = parseFloat(currentUserRow.foreignUnmooringCount) || 0;
+
+    const localEarnings = (localMooringCount + localUnmooringCount) * pricingConfig.localMooringPrice;
+    const foreignEarnings = (foreignMooringCount + foreignUnmooringCount) * pricingConfig.foreignMooringPrice;
+    const totalEarnings = localEarnings + foreignEarnings;
+
+    const sss = parseFloat(currentUserRow.sss) || 0;
+    const pagibig = parseFloat(currentUserRow.pagibig) || 0;
+    const philhealth = parseFloat(currentUserRow.philhealth) || 0;
+    const tal = parseFloat(currentUserRow.tal) || 0;
+    const cashAdvance = parseFloat(currentUserRow.cashAdvance) || 0;
+
+    const totalDeductions = sss + pagibig + philhealth + tal;
+    const netTotal = totalEarnings - totalDeductions - cashAdvance;
+
+    return {
+      local: localEarnings.toFixed(2),
+      foreign: foreignEarnings.toFixed(2),
+      total: totalEarnings.toFixed(2),
+      pagibigLoan: pagibig.toFixed(2),
+      cashAdvance: cashAdvance.toFixed(2),
+      balance: (totalEarnings - cashAdvance).toFixed(2),
+      sssPiPh: (sss + philhealth).toFixed(2),
+      totalDeductions: totalDeductions.toFixed(2),
+      finalTotal: netTotal.toFixed(2)
+    };
+  };
+
+  // Simple input handler that doesn't cause re-renders
+  const handleInputChange = useCallback((rowIndex, field, value) => {
+    // Update state without causing re-render of inputs
     setTableData(prevData => {
-      const newTableData = [...prevData];
-      newTableData[rowIndex] = {
-        ...newTableData[rowIndex],
+      const newData = [...prevData];
+      newData[rowIndex] = {
+        ...newData[rowIndex],
         [field]: value
       };
-      return newTableData;
+      return newData;
     });
-  };
+  }, []);
 
   // Handle keyboard navigation for continuous input
   const handleKeyDown = (e, rowIndex, field) => {
@@ -314,74 +519,82 @@ const Payroll = () => {
   };
 
   const handleTableKeyDown = (e, rowIndex, colIndex) => {
-    // Determine available column indices dynamically for the current row
-    const rowInputs = Array.from(document.querySelectorAll(`input[data-row="${rowIndex}"][data-col]`));
-    const colIndices = rowInputs.map(input => parseInt(input.getAttribute('data-col'), 10)).filter(n => !Number.isNaN(n));
-    const minCol = colIndices.length ? Math.min(...colIndices) : 1;
-    const maxCol = colIndices.length ? Math.max(...colIndices) : colIndex;
+    // Only handle navigation keys, allow normal typing
+    if (['Enter', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      // Determine available column indices dynamically for the current row
+      const rowInputs = Array.from(document.querySelectorAll(`input[data-row="${rowIndex}"][data-col]`));
+      const colIndices = rowInputs.map(input => parseInt(input.getAttribute('data-col'), 10)).filter(n => !Number.isNaN(n));
+      const minCol = colIndices.length ? Math.min(...colIndices) : 1;
+      const maxCol = colIndices.length ? Math.max(...colIndices) : colIndex;
 
-    const focusCell = (r, c) => {
-      const input = document.querySelector(`input[data-row="${r}"][data-col="${c}"]`);
-      if (input) {
-        input.focus();
-        if (!input.value) input.select();
-        input.style.backgroundColor = '#fff3cd';
-        setTimeout(() => { input.style.backgroundColor = ''; }, 200);
-      }
-    };
+      const focusCell = (r, c) => {
+        const input = document.querySelector(`input[data-row="${r}"][data-col="${c}"]`);
+        if (input) {
+          input.focus();
+          // Don't auto-select to allow continuous typing
+          input.style.backgroundColor = '#fff3cd';
+          setTimeout(() => { input.style.backgroundColor = ''; }, 200);
+        }
+      };
 
-    if (['Enter', 'ArrowDown'].includes(e.key)) {
-      e.preventDefault();
-      if (rowIndex < tableData.length - 1) {
-        focusCell(rowIndex + 1, colIndex);
-      }
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (rowIndex > 0) {
-        focusCell(rowIndex - 1, colIndex);
-      }
-    } else if (e.key === 'Tab' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      // Move to the next existing column in the same row, skipping gaps
-      let nextCol = colIndex + 1;
-      while (nextCol <= maxCol && !document.querySelector(`input[data-row="${rowIndex}"][data-col="${nextCol}"]`)) {
-        nextCol += 1;
-      }
-      if (nextCol <= maxCol) {
-        focusCell(rowIndex, nextCol);
-      } else if (rowIndex < tableData.length - 1) {
-        // Wrap to the first column on the next row
-        focusCell(rowIndex + 1, minCol);
-      }
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      // Move to the previous existing column in the same row, skipping gaps
-      let prevCol = colIndex - 1;
-      while (prevCol >= minCol && !document.querySelector(`input[data-row="${rowIndex}"][data-col="${prevCol}"]`)) {
-        prevCol -= 1;
-      }
-      if (prevCol >= minCol) {
-        focusCell(rowIndex, prevCol);
-      } else if (rowIndex > 0) {
-        // Wrap to the last column on the previous row
-        const prevRowInputs = Array.from(document.querySelectorAll(`input[data-row="${rowIndex - 1}"][data-col]`));
-        const prevRowCols = prevRowInputs.map(input => parseInt(input.getAttribute('data-col'), 10)).filter(n => !Number.isNaN(n));
-        const prevRowMax = prevRowCols.length ? Math.max(...prevRowCols) : colIndex;
-        focusCell(rowIndex - 1, prevRowMax);
+      if (['Enter', 'ArrowDown'].includes(e.key)) {
+        e.preventDefault();
+        if (rowIndex < tableData.length - 1) {
+          focusCell(rowIndex + 1, colIndex);
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (rowIndex > 0) {
+          focusCell(rowIndex - 1, colIndex);
+        }
+      } else if (e.key === 'Tab' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        // Move to the next existing column in the same row, skipping gaps
+        let nextCol = colIndex + 1;
+        while (nextCol <= maxCol && !document.querySelector(`input[data-row="${rowIndex}"][data-col="${nextCol}"]`)) {
+          nextCol += 1;
+        }
+        if (nextCol <= maxCol) {
+          focusCell(rowIndex, nextCol);
+        } else if (rowIndex < tableData.length - 1) {
+          // Wrap to the first column on the next row
+          focusCell(rowIndex + 1, minCol);
+        }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        // Move to the previous existing column in the same row, skipping gaps
+        let prevCol = colIndex - 1;
+        while (prevCol >= minCol && !document.querySelector(`input[data-row="${rowIndex}"][data-col="${prevCol}"]`)) {
+          prevCol -= 1;
+        }
+        if (prevCol >= minCol) {
+          focusCell(rowIndex, prevCol);
+        } else if (rowIndex > 0) {
+          // Wrap to the last column on the previous row
+          const prevRowInputs = Array.from(document.querySelectorAll(`input[data-row="${rowIndex - 1}"][data-col]`));
+          const prevRowCols = prevRowInputs.map(input => parseInt(input.getAttribute('data-col'), 10)).filter(n => !Number.isNaN(n));
+          const prevRowMax = prevRowCols.length ? Math.max(...prevRowCols) : colIndex;
+          focusCell(rowIndex - 1, prevRowMax);
+        }
       }
     }
+    // Allow all other keys (letters, numbers, etc.) to work normally
   };
 
   // Handle input focus (no auto-select, allow continuous typing)
-  const handleInputFocus = (e) => {
-    // No auto-select to allow continuous typing
-  };
+  const handleInputFocus = useCallback((e) => {
+    // Store the current cursor position to maintain it
+    const input = e.target;
+    const cursorPosition = input.selectionStart;
+    
+    // Use setTimeout to ensure the cursor position is maintained after re-render
+    setTimeout(() => {
+      if (input && input.setSelectionRange) {
+        input.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }, 0);
+  }, []);
 
-  // Handle input blur to ensure data is saved
-  const handleInputBlur = (e, rowIndex, field) => {
-    const value = e.target.value;
-    handleCellEdit(rowIndex, field, value);
-  };
 
   const handleVessTypeChange = (rowIndex, column, type) => {
     const newTableData = [...tableData];
@@ -478,31 +691,82 @@ const Payroll = () => {
         createdByName: user.name,
         localVessType: localVessType,
         foreignVessType: foreignVessType,
-        workers: tableData.map(row => ({
-          id: row.id,
-          workerName: row.workerName,
-          localMooring: row.localMooring || '',
-          localUnmooring: row.localUnmooring || '',
-          foreignMooring: row.foreignMooring || '',
-          foreignUnmooring: row.foreignUnmooring || '',
-          tal: row.tal || '',
-          sss: row.sss || '',
-          pagibig: row.pagibig || '',
-          philhealth: row.philhealth || '',
-          cashAdvance: row.cashAdvance || '',
-          netTotal: row.netTotal || ''
-        })),
+        workers: tableData.map(row => {
+          const localMooringCount = parseFloat(row.localMooringCount) || 0;
+          const localUnmooringCount = parseFloat(row.localUnmooringCount) || 0;
+          const foreignMooringCount = parseFloat(row.foreignMooringCount) || 0;
+          const foreignUnmooringCount = parseFloat(row.foreignUnmooringCount) || 0;
+          
+          const localMooringEarnings = localMooringCount * pricingConfig.localMooringPrice;
+          const localUnmooringEarnings = localUnmooringCount * pricingConfig.localUnmooringPrice;
+          const foreignMooringEarnings = foreignMooringCount * pricingConfig.foreignMooringPrice;
+          const foreignUnmooringEarnings = foreignUnmooringCount * pricingConfig.foreignUnmooringPrice;
+          
+          const totalEarnings = localMooringEarnings + localUnmooringEarnings + foreignMooringEarnings + foreignUnmooringEarnings;
+          
+          const sss = parseFloat(row.sss) || 0;
+          const pagibig = parseFloat(row.pagibig) || 0;
+          const philhealth = parseFloat(row.philhealth) || 0;
+          const tal = parseFloat(row.tal) || 0;
+          const cashAdvance = parseFloat(row.cashAdvance) || 0;
+          
+          const totalDeductions = sss + pagibig + philhealth + tal + cashAdvance;
+          const netTotal = totalEarnings - totalDeductions;
+          
+          return {
+            id: row.id,
+            workerName: row.workerName,
+            localMooringCount: row.localMooringCount || '',
+            localUnmooringCount: row.localUnmooringCount || '',
+            foreignMooringCount: row.foreignMooringCount || '',
+            foreignUnmooringCount: row.foreignUnmooringCount || '',
+            localMooringEarnings: localMooringEarnings,
+            localUnmooringEarnings: localUnmooringEarnings,
+            foreignMooringEarnings: foreignMooringEarnings,
+            foreignUnmooringEarnings: foreignUnmooringEarnings,
+            totalEarnings: totalEarnings,
+            tal: row.tal || '',
+            sss: row.sss || '',
+            pagibig: row.pagibig || '',
+            philhealth: row.philhealth || '',
+            cashAdvance: row.cashAdvance || '',
+            netTotal: netTotal
+          };
+        }),
         totals: {
-          localMooring: tableData.reduce((sum, row) => sum + (parseFloat(row.localMooring) || 0), 0),
-          localUnmooring: tableData.reduce((sum, row) => sum + (parseFloat(row.localUnmooring) || 0), 0),
-          foreignMooring: tableData.reduce((sum, row) => sum + (parseFloat(row.foreignMooring) || 0), 0),
-          foreignUnmooring: tableData.reduce((sum, row) => sum + (parseFloat(row.foreignUnmooring) || 0), 0),
+          localMooringCount: tableData.reduce((sum, row) => sum + (parseFloat(row.localMooringCount) || 0), 0),
+          localUnmooringCount: tableData.reduce((sum, row) => sum + (parseFloat(row.localUnmooringCount) || 0), 0),
+          foreignMooringCount: tableData.reduce((sum, row) => sum + (parseFloat(row.foreignMooringCount) || 0), 0),
+          foreignUnmooringCount: tableData.reduce((sum, row) => sum + (parseFloat(row.foreignUnmooringCount) || 0), 0),
+          totalEarnings: tableData.reduce((sum, row) => {
+            const localMooringCount = parseFloat(row.localMooringCount) || 0;
+            const localUnmooringCount = parseFloat(row.localUnmooringCount) || 0;
+            const foreignMooringCount = parseFloat(row.foreignMooringCount) || 0;
+            const foreignUnmooringCount = parseFloat(row.foreignUnmooringCount) || 0;
+            return sum + (localMooringCount * pricingConfig.localMooringPrice) + 
+                   (localUnmooringCount * pricingConfig.localUnmooringPrice) + 
+                   (foreignMooringCount * pricingConfig.foreignMooringPrice) + 
+                   (foreignUnmooringCount * pricingConfig.foreignUnmooringPrice);
+          }, 0),
           tal: tableData.reduce((sum, row) => sum + (parseFloat(row.tal) || 0), 0),
           sss: tableData.reduce((sum, row) => sum + (parseFloat(row.sss) || 0), 0),
           pagibig: tableData.reduce((sum, row) => sum + (parseFloat(row.pagibig) || 0), 0),
           philhealth: tableData.reduce((sum, row) => sum + (parseFloat(row.philhealth) || 0), 0),
           cashAdvance: tableData.reduce((sum, row) => sum + (parseFloat(row.cashAdvance) || 0), 0),
-          netTotal: tableData.reduce((sum, row) => sum + (parseFloat(row.netTotal) || 0), 0)
+          netTotal: tableData.reduce((sum, row) => {
+            const localMooringCount = parseFloat(row.localMooringCount) || 0;
+            const localUnmooringCount = parseFloat(row.localUnmooringCount) || 0;
+            const foreignMooringCount = parseFloat(row.foreignMooringCount) || 0;
+            const foreignUnmooringCount = parseFloat(row.foreignUnmooringCount) || 0;
+            const totalEarnings = (localMooringCount * pricingConfig.localMooringPrice) + 
+                                 (localUnmooringCount * pricingConfig.localUnmooringPrice) + 
+                                 (foreignMooringCount * pricingConfig.foreignMooringPrice) + 
+                                 (foreignUnmooringCount * pricingConfig.foreignUnmooringPrice);
+            const totalDeductions = (parseFloat(row.sss) || 0) + (parseFloat(row.pagibig) || 0) + 
+                                   (parseFloat(row.philhealth) || 0) + (parseFloat(row.tal) || 0) + 
+                                   (parseFloat(row.cashAdvance) || 0);
+            return sum + (totalEarnings - totalDeductions);
+          }, 0)
         },
         status: 'active',
         lastModified: new Date().toISOString()
@@ -530,17 +794,21 @@ const Payroll = () => {
           workerName: worker.workerName,
           email: `${worker.workerName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
           payrollData: {
-            localMooring: worker.localMooring || '',
-            localUnmooring: worker.localUnmooring || '',
-            foreignMooring: worker.foreignMooring || '',
-            foreignUnmooring: worker.foreignUnmooring || '',
-            total: (parseFloat(worker.localMooring) || 0) + (parseFloat(worker.localUnmooring) || 0) + (parseFloat(worker.foreignMooring) || 0) + (parseFloat(worker.foreignUnmooring) || 0),
+            localMooringCount: worker.localMooringCount || '',
+            localUnmooringCount: worker.localUnmooringCount || '',
+            foreignMooringCount: worker.foreignMooringCount || '',
+            foreignUnmooringCount: worker.foreignUnmooringCount || '',
+            localMooringEarnings: worker.localMooringEarnings || 0,
+            localUnmooringEarnings: worker.localUnmooringEarnings || 0,
+            foreignMooringEarnings: worker.foreignMooringEarnings || 0,
+            foreignUnmooringEarnings: worker.foreignUnmooringEarnings || 0,
+            total: worker.totalEarnings || 0,
             pagibigLoan: worker.pagibig || '',
             cashAdvance: worker.cashAdvance || '',
-            balance: ((parseFloat(worker.localMooring) || 0) + (parseFloat(worker.localUnmooring) || 0) + (parseFloat(worker.foreignMooring) || 0) + (parseFloat(worker.foreignUnmooring) || 0)) - (parseFloat(worker.cashAdvance) || 0),
+            balance: (worker.totalEarnings || 0) - (parseFloat(worker.cashAdvance) || 0),
             sssPiPh: (parseFloat(worker.sss) || 0) + (parseFloat(worker.philhealth) || 0),
             totalDeductions: (parseFloat(worker.sss) || 0) + (parseFloat(worker.pagibig) || 0) + (parseFloat(worker.philhealth) || 0) + (parseFloat(worker.tal) || 0),
-            finalTotal: ((parseFloat(worker.localMooring) || 0) + (parseFloat(worker.localUnmooring) || 0) + (parseFloat(worker.foreignMooring) || 0) + (parseFloat(worker.foreignUnmooring) || 0)) - ((parseFloat(worker.sss) || 0) + (parseFloat(worker.pagibig) || 0) + (parseFloat(worker.philhealth) || 0) + (parseFloat(worker.tal) || 0) + (parseFloat(worker.cashAdvance) || 0))
+            finalTotal: worker.netTotal || 0
           }
         })),
         lastUpdated: new Date().toISOString()
@@ -573,9 +841,87 @@ const Payroll = () => {
           >
             ← Back to Regular View
           </button>
+          <button
+            onClick={() => setShowPricingConfig(!showPricingConfig)}
+            className="pricing-config-button"
+          >
+            ⚙️ Pricing Configuration
+          </button>
         </div>
         <h2>Worker Payroll Management</h2>
       </div>
+      
+      {/* Pricing Configuration Panel */}
+      {showPricingConfig && (
+        <div className="pricing-config-panel">
+          <h3>Vessel Pricing Configuration</h3>
+          <div className="pricing-config-grid">
+            <div className="pricing-config-group">
+              <h4>Local Vessel Pricing</h4>
+              <div className="pricing-input-group">
+                <label>Mooring Price (₱):</label>
+                <input
+                  type="number"
+                  value={pricingConfig.localMooringPrice}
+                  onChange={e => setPricingConfig(prev => ({
+                    ...prev,
+                    localMooringPrice: parseFloat(e.target.value) || 0
+                  }))}
+                  className="pricing-input"
+                />
+              </div>
+              <div className="pricing-input-group">
+                <label>Unmooring Price (₱):</label>
+                <input
+                  type="number"
+                  value={pricingConfig.localUnmooringPrice}
+                  onChange={e => setPricingConfig(prev => ({
+                    ...prev,
+                    localUnmooringPrice: parseFloat(e.target.value) || 0
+                  }))}
+                  className="pricing-input"
+                />
+              </div>
+            </div>
+            
+            <div className="pricing-config-group">
+              <h4>Foreign Vessel Pricing</h4>
+              <div className="pricing-input-group">
+                <label>Mooring Price (₱):</label>
+                <input
+                  type="number"
+                  value={pricingConfig.foreignMooringPrice}
+                  onChange={e => setPricingConfig(prev => ({
+                    ...prev,
+                    foreignMooringPrice: parseFloat(e.target.value) || 0
+                  }))}
+                  className="pricing-input"
+                />
+              </div>
+              <div className="pricing-input-group">
+                <label>Unmooring Price (₱):</label>
+                <input
+                  type="number"
+                  value={pricingConfig.foreignUnmooringPrice}
+                  onChange={e => setPricingConfig(prev => ({
+                    ...prev,
+                    foreignUnmooringPrice: parseFloat(e.target.value) || 0
+                  }))}
+                  className="pricing-input"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="pricing-config-actions">
+            <button
+              onClick={() => setShowPricingConfig(false)}
+              className="pricing-save-button"
+            >
+              Save & Close
+            </button>
+          </div>
+        </div>
+      )}
       <div className="manager-table-container">
         <table className="manager-table">
           <thead>
@@ -603,80 +949,63 @@ const Payroll = () => {
                 <td className="worker-name-cell">{row.workerName}</td>
                 {/* Local Vessel - Mooring */}
                 <td>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
-                    value={row.localMooring}
-                    onChange={e => handleCellEdit(rowIndex, 'localMooring', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 1)}
-                    data-row={rowIndex}
-                    data-col={1}
+                  <UltraSimpleInput
+                    initialValue={row.localMooringCount}
+                    onValueChange={(value) => handleInputChange(rowIndex, 'localMooringCount', value)}
+                    dataRow={rowIndex}
+                    dataCol={1}
                     className="table-input vess-input"
-                    placeholder="Amount"
+                    placeholder="Count"
                   />
                 </td>
                 {/* Local Vessel - Unmooring */}
                 <td>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
-                    value={row.localUnmooring}
-                    onChange={e => handleCellEdit(rowIndex, 'localUnmooring', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 2)}
-                    data-row={rowIndex}
-                    data-col={2}
+                  <UltraSimpleInput
+                    initialValue={row.localUnmooringCount}
+                    onValueChange={(value) => handleInputChange(rowIndex, 'localUnmooringCount', value)}
+                    dataRow={rowIndex}
+                    dataCol={2}
                     className="table-input vess-input"
-                    placeholder="Amount"
+                    placeholder="Count"
                   />
                 </td>
                 {/* Foreign Vessel - Mooring */}
                 <td>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
-                    value={row.foreignMooring}
-                    onChange={e => handleCellEdit(rowIndex, 'foreignMooring', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 3)}
-                    data-row={rowIndex}
-                    data-col={3}
+                  <UltraSimpleInput
+                    initialValue={row.foreignMooringCount}
+                    onValueChange={(value) => handleInputChange(rowIndex, 'foreignMooringCount', value)}
+                    dataRow={rowIndex}
+                    dataCol={3}
                     className="table-input vess-input"
-                    placeholder="Amount"
+                    placeholder="Count"
                   />
                 </td>
                 {/* Foreign Vessel - Unmooring */}
                 <td>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
-                    value={row.foreignUnmooring}
-                    onChange={e => handleCellEdit(rowIndex, 'foreignUnmooring', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 4)}
-                    data-row={rowIndex}
-                    data-col={4}
+                  <UltraSimpleInput
+                    initialValue={row.foreignUnmooringCount}
+                    onValueChange={(value) => handleInputChange(rowIndex, 'foreignUnmooringCount', value)}
+                    dataRow={rowIndex}
+                    dataCol={4}
                     className="table-input vess-input"
-                    placeholder="Amount"
+                    placeholder="Count"
                   />
                 </td>
                 {/* TOTAL */}
                 <td>
                   <input
                     type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
-                    value={
-                      (parseFloat(row.localMooring) || 0) + 
-                      (parseFloat(row.localUnmooring) || 0) + 
-                      (parseFloat(row.foreignMooring) || 0) + 
-                      (parseFloat(row.foreignUnmooring) || 0)
-                    }
+                    inputMode="numeric"
+                    value={(() => {
+                      const localMooringCount = parseFloat(row.localMooringCount) || 0;
+                      const localUnmooringCount = parseFloat(row.localUnmooringCount) || 0;
+                      const foreignMooringCount = parseFloat(row.foreignMooringCount) || 0;
+                      const foreignUnmooringCount = parseFloat(row.foreignUnmooringCount) || 0;
+                      return (localMooringCount * pricingConfig.localMooringPrice) + 
+                             (localUnmooringCount * pricingConfig.localUnmooringPrice) + 
+                             (foreignMooringCount * pricingConfig.foreignMooringPrice) + 
+                             (foreignUnmooringCount * pricingConfig.foreignUnmooringPrice);
+                    })()}
                     readOnly
                     className="table-input"
                     tabIndex={-1}
@@ -684,64 +1013,44 @@ const Payroll = () => {
                 </td>
                 {/* SSS */}
                 <td>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
-                    value={row.sss}
-                    onChange={e => handleCellEdit(rowIndex, 'sss', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 6)}
-                    data-row={rowIndex}
-                    data-col={6}
+                  <UltraSimpleInput
+                    initialValue={row.sss}
+                    onValueChange={(value) => handleInputChange(rowIndex, 'sss', value)}
+                    dataRow={rowIndex}
+                    dataCol={6}
                     className="table-input vess-input"
                     placeholder="Enter amount"
                   />
                 </td>
                 {/* PAG-IBIG */}
                 <td>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
-                    value={row.pagibig}
-                    onChange={e => handleCellEdit(rowIndex, 'pagibig', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 7)}
-                    data-row={rowIndex}
-                    data-col={7}
+                  <UltraSimpleInput
+                    initialValue={row.pagibig}
+                    onValueChange={(value) => handleInputChange(rowIndex, 'pagibig', value)}
+                    dataRow={rowIndex}
+                    dataCol={7}
                     className="table-input vess-input"
                     placeholder="Enter amount"
                   />
                 </td>
                 {/* PhilHealth */}
                 <td>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
-                    value={row.philhealth}
-                    onChange={e => handleCellEdit(rowIndex, 'philhealth', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 8)}
-                    data-row={rowIndex}
-                    data-col={8}
+                  <UltraSimpleInput
+                    initialValue={row.philhealth}
+                    onValueChange={(value) => handleInputChange(rowIndex, 'philhealth', value)}
+                    dataRow={rowIndex}
+                    dataCol={8}
                     className="table-input vess-input"
                     placeholder="Enter amount"
                   />
                 </td>
                 {/* Cash Advance */}
                 <td>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
-                    value={row.cashAdvance}
-                    onChange={e => handleCellEdit(rowIndex, 'cashAdvance', e.target.value)}
-                    onFocus={handleInputFocus}
-                    onKeyDown={e => handleTableKeyDown(e, rowIndex, 9)}
-                    data-row={rowIndex}
-                    data-col={9}
+                  <UltraSimpleInput
+                    initialValue={row.cashAdvance}
+                    onValueChange={(value) => handleInputChange(rowIndex, 'cashAdvance', value)}
+                    dataRow={rowIndex}
+                    dataCol={9}
                     className="table-input vess-input"
                     placeholder="Enter amount"
                   />
@@ -750,54 +1059,90 @@ const Payroll = () => {
                 <td>
                   <input
                     type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*"
-                    value={
-                    (
-                      (parseFloat(row.localMooring) || 0) +
-                      (parseFloat(row.localUnmooring) || 0) +
-                      (parseFloat(row.foreignMooring) || 0) +
-                      (parseFloat(row.foreignUnmooring) || 0)
-                    ) - (
-                      (parseFloat(row.sss) || 0) +
-                      (parseFloat(row.pagibig) || 0) +
-                      (parseFloat(row.philhealth) || 0) +
-                      (parseFloat(row.tal) || 0) +
-                      (parseFloat(row.cashAdvance) || 0)
-                    )
-                  }
-                  readOnly
-                  className="table-input"
-                  tabIndex={-1}
-                />
+                    inputMode="numeric"
+                    value={(() => {
+                      const localMooringCount = parseFloat(row.localMooringCount) || 0;
+                      const localUnmooringCount = parseFloat(row.localUnmooringCount) || 0;
+                      const foreignMooringCount = parseFloat(row.foreignMooringCount) || 0;
+                      const foreignUnmooringCount = parseFloat(row.foreignUnmooringCount) || 0;
+                      const totalEarnings = (localMooringCount * pricingConfig.localMooringPrice) + 
+                                           (localUnmooringCount * pricingConfig.localUnmooringPrice) + 
+                                           (foreignMooringCount * pricingConfig.foreignMooringPrice) + 
+                                           (foreignUnmooringCount * pricingConfig.foreignUnmooringPrice);
+                      const totalDeductions = (parseFloat(row.sss) || 0) + (parseFloat(row.pagibig) || 0) + 
+                                             (parseFloat(row.philhealth) || 0) + (parseFloat(row.tal) || 0) + 
+                                             (parseFloat(row.cashAdvance) || 0);
+                      return totalEarnings - totalDeductions;
+                    })()}
+                    readOnly
+                    className="table-input"
+                    tabIndex={-1}
+                  />
                 </td>
               </tr>
             ))}
             <tr className="grand-total-row">
-              <td colSpan="1">GRAND TOTAL</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
+              <td>GRAND TOTAL</td>
+              <td>{tableData.reduce((sum, row) => sum + (parseFloat(row.localMooringCount) || 0), 0)}</td>
+              <td>{tableData.reduce((sum, row) => sum + (parseFloat(row.localUnmooringCount) || 0), 0)}</td>
+              <td>{tableData.reduce((sum, row) => sum + (parseFloat(row.foreignMooringCount) || 0), 0)}</td>
+              <td>{tableData.reduce((sum, row) => sum + (parseFloat(row.foreignUnmooringCount) || 0), 0)}</td>
+              <td>{tableData.reduce((sum, row) => {
+                const localMooringCount = parseFloat(row.localMooringCount) || 0;
+                const localUnmooringCount = parseFloat(row.localUnmooringCount) || 0;
+                const foreignMooringCount = parseFloat(row.foreignMooringCount) || 0;
+                const foreignUnmooringCount = parseFloat(row.foreignUnmooringCount) || 0;
+                return sum + (localMooringCount * pricingConfig.localMooringPrice) + 
+                       (localUnmooringCount * pricingConfig.localUnmooringPrice) + 
+                       (foreignMooringCount * pricingConfig.foreignMooringPrice) + 
+                       (foreignUnmooringCount * pricingConfig.foreignUnmooringPrice);
+              }, 0)}</td>
+              <td>{tableData.reduce((sum, row) => sum + (parseFloat(row.sss) || 0), 0)}</td>
+              <td>{tableData.reduce((sum, row) => sum + (parseFloat(row.pagibig) || 0), 0)}</td>
+              <td>{tableData.reduce((sum, row) => sum + (parseFloat(row.philhealth) || 0), 0)}</td>
+              <td>{tableData.reduce((sum, row) => sum + (parseFloat(row.cashAdvance) || 0), 0)}</td>
+              <td>{tableData.reduce((sum, row) => {
+                const localMooringCount = parseFloat(row.localMooringCount) || 0;
+                const localUnmooringCount = parseFloat(row.localUnmooringCount) || 0;
+                const foreignMooringCount = parseFloat(row.foreignMooringCount) || 0;
+                const foreignUnmooringCount = parseFloat(row.foreignUnmooringCount) || 0;
+                const totalEarnings = (localMooringCount * pricingConfig.localMooringPrice) + 
+                                     (localUnmooringCount * pricingConfig.localUnmooringPrice) + 
+                                     (foreignMooringCount * pricingConfig.foreignMooringPrice) + 
+                                     (foreignUnmooringCount * pricingConfig.foreignUnmooringPrice);
+                const totalDeductions = (parseFloat(row.sss) || 0) + (parseFloat(row.pagibig) || 0) + 
+                                       (parseFloat(row.philhealth) || 0) + (parseFloat(row.tal) || 0) + 
+                                       (parseFloat(row.cashAdvance) || 0);
+                return sum + (totalEarnings - totalDeductions);
+              }, 0)}</td>
             </tr>
           </tbody>
         </table>
         <div className="save-section">
-          <button
-            onClick={handleSaveToFirestore}
-            disabled={isSaving}
-            className="save-button"
-          >
-            {isSaving ? 'Saving...' : 'Save Payroll Data'}
-          </button>
+          <div className="save-controls">
+            <button
+              onClick={handleSaveToFirestore}
+              disabled={isSaving}
+              className="save-button"
+            >
+              {isSaving ? 'Saving...' : 'Save Payroll Data'}
+            </button>
+            <button
+              onClick={clearSavedData}
+              className="clear-data-button"
+              title="Clear all saved data and reset to defaults"
+            >
+              Clear Saved Data
+            </button>
+          </div>
           {saveMessage && (
             <div className={`save-message ${saveMessage.includes('Error') ? 'error' : 'success'}`}>
               {saveMessage}
+            </div>
+          )}
+          {autoSaveStatus && (
+            <div className={`auto-save-status ${autoSaveStatus.includes('failed') ? 'error' : 'success'}`}>
+              {autoSaveStatus}
             </div>
           )}
         </div>
@@ -849,7 +1194,7 @@ const Payroll = () => {
             </div>
           </div>
         )}
-        {user.name === "Alice Margaretha Santos" && (
+        {(user.name === "Alice Margaretha Santos" || user.email === "aliceleo@gmail.com") && (
           <div className="payroll-manager-toggle">
             <button className="manager-toggle-btn" onClick={handleToggleManagerView}>
               Proceed
@@ -870,15 +1215,15 @@ const Payroll = () => {
             <div className="payroll-details-group-bar payroll-details-group-bar-local" />
             <div className="payroll-details-row">
               <span className="payroll-details-label">LOCAL</span>
-              <span className="payroll-details-value">{individualPayrollData.local || '0'}</span>
+              <span className="payroll-details-value">₱{getCurrentUserPayrollData().local}</span>
             </div>
             <div className="payroll-details-row">
               <span className="payroll-details-label">FOREIGN</span>
-              <span className="payroll-details-value">{individualPayrollData.foreign || '0'}</span>
+              <span className="payroll-details-value">₱{getCurrentUserPayrollData().foreign}</span>
             </div>
             <div className="payroll-details-row payroll-details-row-total">
               <span className="payroll-details-label payroll-details-label-total">TOTAL</span>
-              <span className="payroll-details-value payroll-details-value-total">{individualPayrollData.total || '0'}</span>
+              <span className="payroll-details-value payroll-details-value-total">₱{getCurrentUserPayrollData().total}</span>
             </div>
           </div>
           {/* Second Group */}
@@ -886,15 +1231,15 @@ const Payroll = () => {
             <div className="payroll-details-group-bar payroll-details-group-bar-loan" />
             <div className="payroll-details-row">
               <span className="payroll-details-label">PAG-IBIG LOAN</span>
-              <span className="payroll-details-value">{individualPayrollData.pagibigLoan || '0'}</span>
+              <span className="payroll-details-value">₱{getCurrentUserPayrollData().pagibigLoan}</span>
             </div>
             <div className="payroll-details-row">
               <span className="payroll-details-label">CASH ADVANCE</span>
-              <span className="payroll-details-value">{individualPayrollData.cashAdvance || '0'}</span>
+              <span className="payroll-details-value">₱{getCurrentUserPayrollData().cashAdvance}</span>
             </div>
             <div className="payroll-details-row payroll-details-row-balance">
               <span className="payroll-details-label payroll-details-label-balance">BALANCE</span>
-              <span className="payroll-details-value payroll-details-value-balance">{individualPayrollData.balance || '0'}</span>
+              <span className="payroll-details-value payroll-details-value-balance">₱{getCurrentUserPayrollData().balance}</span>
             </div>
           </div>
           {/* Third Group */}
@@ -902,17 +1247,17 @@ const Payroll = () => {
             <div className="payroll-details-group-bar payroll-details-group-bar-deductions" />
             <div className="payroll-details-row">
               <span className="payroll-details-label">SSS/PI/PH</span>
-              <span className="payroll-details-value">{individualPayrollData.sssPiPh || '0'}</span>
+              <span className="payroll-details-value">₱{getCurrentUserPayrollData().sssPiPh}</span>
             </div>
             <div className="payroll-details-row payroll-details-row-deductions">
               <span className="payroll-details-label payroll-details-label-deductions">TOTAL DEDUCTIONS</span>
-              <span className="payroll-details-value payroll-details-value-deductions">{individualPayrollData.totalDeductions || '0'}</span>
+              <span className="payroll-details-value payroll-details-value-deductions">₱{getCurrentUserPayrollData().totalDeductions}</span>
             </div>
           </div>
         </div>
         <div className="payroll-details-final-total">
           <span className="payroll-details-final-label">TOTAL</span>
-          <span className="payroll-details-final-value">{individualPayrollData.finalTotal || '0'}</span>
+          <span className="payroll-details-final-value">₱{getCurrentUserPayrollData().finalTotal}</span>
         </div>
       </div>
     </div>
@@ -920,7 +1265,7 @@ const Payroll = () => {
 
   return (
     <div className="payroll-center-content">
-      {isManagerView && user.name === "Alice Margaretha Santos" ? (
+      {isManagerView && (user.name === "Alice Margaretha Santos" || user.email === "aliceleo@gmail.com") ? (
         <ManagerView />
       ) : (
         <RegularPayrollView />

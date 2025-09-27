@@ -14,17 +14,36 @@ const containers = [
   },
 ];
 
+const workActivityOptions = [
+  'End of sea passage.',
+  'Vessel arrived and dropped anchor at Batangas Anchorage. Notice of Readiness tendered.',
+  'Awaiting port authorities due to attending to other vessel\'s arrived ahead of ... .',
+  'Medical Quarantined on board.',
+  'Free pratique granted.',
+  'Customs, immigration, other authorities, surveyor, and agent on board.',
+  'Port entrance formalities completed.',
+  'Cargo Sampling.',
+  'Received advise to berth.',
+  'Cargo sample sent ashore for laboratory testing/analysis.',
+  'Start heaving up anchor.',
+  'Pilot on board for docking.',
+  'Anchor aweigh.',
+  'Tugs made fast forward and aft. Assist Midship',
+  'First line ashore.',
+  'All lines made fast. Properly secured portside alongside Chevron terminal Berh 5A.',
+  'Tugs cast off. Pilot off.'
+];
+
 const initialTableData = {
   portLocation: '',
   voyageNo: '',
   vesselName: '',
   purposeOfCall: '',
-  workActivities: Array(7).fill().map(() => ({
-    activity: '',
-    timeScheduled: '',
-    timeStarted: '',
-    timeDone: ''
-  }))
+  workActivities: [
+    { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
+    { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
+    { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' }
+  ]
 };
 
 const Report = () => {
@@ -697,6 +716,14 @@ const Report = () => {
     }));
   };
 
+  // Handle delete row
+  const handleDeleteRow = (index) => {
+    setTableData(prev => ({
+      ...prev,
+      workActivities: prev.workActivities.filter((_, i) => i !== index)
+    }));
+  };
+
   return (
     <div className="report-page-bg" style={{ minHeight: '100vh', width: '100vw' }}>
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '20px' }}>
@@ -705,12 +732,13 @@ const Report = () => {
             background: 'white',
             borderRadius: '20px',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-            padding: '40px',
+            padding: '50px',
             margin: '40px auto',
-            maxWidth: '1000px'
+            maxWidth: '1400px',
+            minWidth: '1200px'
           }}>
             <div style={{
-              maxHeight: '420px',
+              maxHeight: '600px',
               overflowY: 'auto',
               marginBottom: '16px'
             }}>
@@ -722,24 +750,27 @@ const Report = () => {
                 overflow: 'hidden',
                 boxShadow: '0 4px 24px rgba(44,62,80,0.10)',
                 margin: '0 auto',
-                background: 'white'
+                background: 'white',
+                tableLayout: 'fixed'
               }}>
                 <tbody>
                   <tr>
                     <th style={{ 
-                      background: '#5c6ab0', 
-                      color: '#fff', 
+                      background: '#eaf3ff', 
+                      color: '#2d3e5e', 
                       fontWeight: '700', 
-                      fontSize: '1.1rem', 
-                      borderTopLeftRadius: '16px',
-                      padding: '16px 20px',
-                      textAlign: 'left',
-                      letterSpacing: '0.5px'
+                      fontSize: '1rem', 
+                      textAlign: 'center',
+                      padding: '12px 8px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      width: '20%'
                     }}>Port Location</th>
                     <td style={{ 
                       background: '#fff', 
-                      padding: '16px 20px',
-                      border: '1px solid #e9ecef'
+                      padding: '12px 8px',
+                      borderRight: 'none',
+                      width: '30%'
                     }}>
                       {isAliceAuthorized ? (
                         <input
@@ -750,11 +781,16 @@ const Report = () => {
                           onBlur={(e) => handleInputBlur(e, 'portLocation')}
                           style={{ 
                             width: '100%', 
-                            border: 'none', 
+                            border: '2px solid #e3f2fd', 
                             outline: 'none', 
                             fontSize: '1rem',
-                            background: 'transparent',
-                            color: '#2F3B70'
+                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                            color: '#2F3B70',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 8px rgba(47, 59, 112, 0.1)',
+                            fontWeight: '500'
                           }}
                           placeholder="Enter port location"
                         />
@@ -763,19 +799,21 @@ const Report = () => {
                       )}
                     </td>
                     <th style={{ 
-                      background: '#5c6ab0', 
-                      color: '#fff', 
+                      background: '#eaf3ff', 
+                      color: '#2d3e5e', 
                       fontWeight: '700', 
-                      fontSize: '1.1rem',
-                      padding: '16px 20px',
-                      textAlign: 'left',
-                      letterSpacing: '0.5px'
+                      fontSize: '1rem',
+                      textAlign: 'center',
+                      padding: '12px 8px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      width: '20%'
                     }}>Voyage No.:</th>
                     <td style={{ 
                       background: '#fff', 
-                      borderTopRightRadius: '16px', 
-                      padding: '16px 20px',
-                      border: '1px solid #e9ecef'
+                      padding: '12px 8px',
+                      borderRight: 'none',
+                      width: '30%'
                     }}>
                       {isAliceAuthorized ? (
                         <input
@@ -786,11 +824,16 @@ const Report = () => {
                           onBlur={(e) => handleInputBlur(e, 'voyageNo')}
                           style={{ 
                             width: '100%', 
-                            border: 'none', 
+                            border: '2px solid #e3f2fd', 
                             outline: 'none', 
                             fontSize: '1rem',
-                            background: 'transparent',
-                            color: '#2F3B70'
+                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                            color: '#2F3B70',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 8px rgba(47, 59, 112, 0.1)',
+                            fontWeight: '500'
                           }}
                           placeholder="Enter voyage number"
                         />
@@ -801,18 +844,21 @@ const Report = () => {
                   </tr>
                   <tr>
                     <th style={{ 
-                      background: '#5c6ab0', 
-                      color: '#fff', 
+                      background: '#eaf3ff', 
+                      color: '#2d3e5e', 
                       fontWeight: '700', 
-                      fontSize: '1.1rem',
-                      padding: '16px 20px',
-                      textAlign: 'left',
-                      letterSpacing: '0.5px'
+                      fontSize: '1rem',
+                      textAlign: 'center',
+                      padding: '12px 8px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      width: '20%'
                     }}>Vessel Name:</th>
                     <td style={{ 
                       background: '#f8f9fa', 
-                      padding: '16px 20px',
-                      border: '1px solid #e9ecef'
+                      padding: '12px 8px',
+                      borderRight: 'none',
+                      width: '30%'
                     }}>
                       {isAliceAuthorized ? (
                         <input
@@ -823,11 +869,16 @@ const Report = () => {
                           onBlur={(e) => handleInputBlur(e, 'vesselName')}
                           style={{ 
                             width: '100%', 
-                            border: 'none', 
+                            border: '2px solid #e3f2fd', 
                             outline: 'none', 
                             fontSize: '1rem',
-                            background: 'transparent',
-                            color: '#2F3B70'
+                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                            color: '#2F3B70',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 8px rgba(47, 59, 112, 0.1)',
+                            fontWeight: '500'
                           }}
                           placeholder="Enter vessel name"
                         />
@@ -836,18 +887,21 @@ const Report = () => {
                       )}
                     </td>
                     <th style={{ 
-                      background: '#5c6ab0', 
-                      color: '#fff', 
+                      background: '#eaf3ff', 
+                      color: '#2d3e5e', 
                       fontWeight: '700', 
-                      fontSize: '1.1rem',
-                      padding: '16px 20px',
-                      textAlign: 'left',
-                      letterSpacing: '0.5px'
+                      fontSize: '1rem',
+                      textAlign: 'center',
+                      padding: '12px 8px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      width: '20%'
                     }}>Purpose of Call:</th>
                     <td style={{ 
                       background: '#f8f9fa', 
-                      padding: '16px 20px',
-                      border: '1px solid #e9ecef'
+                      padding: '12px 8px',
+                      borderRight: 'none',
+                      width: '30%'
                     }}>
                       {isAliceAuthorized ? (
                         <input
@@ -858,11 +912,16 @@ const Report = () => {
                           onBlur={(e) => handleInputBlur(e, 'purposeOfCall')}
                           style={{ 
                             width: '100%', 
-                            border: 'none', 
+                            border: '2px solid #e3f2fd', 
                             outline: 'none', 
                             fontSize: '1rem',
-                            background: 'transparent',
-                            color: '#2F3B70'
+                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                            color: '#2F3B70',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 8px rgba(47, 59, 112, 0.1)',
+                            fontWeight: '500'
                           }}
                           placeholder="Enter purpose of call"
                         />
@@ -872,7 +931,7 @@ const Report = () => {
                     </td>
                   </tr>
                   <tr className="work-header">
-                    <th colSpan="4" style={{ 
+                    <th colSpan="5" style={{ 
                       background: '#5c6ab0', 
                       color: '#ffe14d', 
                       fontWeight: '800', 
@@ -894,7 +953,8 @@ const Report = () => {
                       textAlign: 'center',
                       padding: '16px 12px',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
+                      letterSpacing: '0.5px',
+                      width: '35%'
                     }}>Work Activity</th>
                     <th style={{ 
                       background: '#eaf3ff', 
@@ -904,7 +964,8 @@ const Report = () => {
                       textAlign: 'center',
                       padding: '16px 12px',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
+                      letterSpacing: '0.5px',
+                      width: '20%'
                     }}>Time Scheduled</th>
                     <th style={{ 
                       background: '#eaf3ff', 
@@ -914,7 +975,8 @@ const Report = () => {
                       textAlign: 'center',
                       padding: '16px 12px',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
+                      letterSpacing: '0.5px',
+                      width: '15%'
                     }}>Time Started</th>
                     <th style={{ 
                       background: '#eaf3ff', 
@@ -924,42 +986,89 @@ const Report = () => {
                       textAlign: 'center',
                       padding: '16px 12px',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
+                      letterSpacing: '0.5px',
+                      width: '15%'
                     }}>Time Done</th>
+                    <th style={{ 
+                      background: '#ff0000', 
+                      color: '#ffffff', 
+                      fontWeight: '900', 
+                      fontSize: '1.2rem', 
+                      textAlign: 'center',
+                      padding: '16px 12px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      width: '15%',
+                      border: '3px solid #000000',
+                      minWidth: '120px'
+                    }}>🗑️ DELETE</th>
                   </tr>
                   {tableData.workActivities.map((activity, index) => (
                     <tr key={index} style={{ 
-                      background: index % 2 === 0 ? '#f8f9fa' : '#fff',
-                      borderBottom: '1px solid #e9ecef'
+                      background: index % 2 === 0 ? '#fff3cd' : '#ffeaa7',
+                      borderBottom: '3px solid #ff6b6b',
+                      borderLeft: '5px solid #ff6b6b',
+                      borderRight: '5px solid #ff6b6b'
                     }}>
                       <td style={{ 
-                        padding: '16px 20px',
-                        borderRight: '1px solid #e9ecef'
+                        padding: '12px 8px',
+                        borderRight: 'none',
+                        width: '35%'
                       }}>
                         {isAliceAuthorized ? (
-                          <input
-                            type="text"
+                          <select
                             value={activity.activity}
                             onChange={(e) => handleInputChange(e, 'activity', index)}
-                            onFocus={handleInputFocus}
-                            onBlur={(e) => handleInputBlur(e, 'activity', index)}
                             style={{ 
                               width: '100%', 
-                              border: 'none', 
+                              border: '2px solid #e3f2fd', 
                               outline: 'none', 
                               fontSize: '1rem', 
-                              background: 'transparent',
-                              color: '#2F3B70'
+                              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                              color: '#2F3B70',
+                              padding: '12px 16px',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              boxShadow: '0 2px 8px rgba(47, 59, 112, 0.1)',
+                              fontWeight: '500'
                             }}
-                            placeholder="Enter work activity"
-                          />
+                            onFocus={(e) => {
+                              e.target.style.borderColor = '#2F3B70';
+                              e.target.style.boxShadow = '0 0 0 3px rgba(47, 59, 112, 0.1)';
+                              e.target.style.transform = 'translateY(-1px)';
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = '#e3f2fd';
+                              e.target.style.boxShadow = '0 2px 8px rgba(47, 59, 112, 0.1)';
+                              e.target.style.transform = 'translateY(0)';
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.borderColor = '#bbdefb';
+                              e.target.style.boxShadow = '0 4px 12px rgba(47, 59, 112, 0.15)';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (document.activeElement !== e.target) {
+                                e.target.style.borderColor = '#e3f2fd';
+                                e.target.style.boxShadow = '0 2px 8px rgba(47, 59, 112, 0.1)';
+                              }
+                            }}
+                          >
+                            <option value="">Select work activity...</option>
+                            {workActivityOptions.map((option, optionIndex) => (
+                              <option key={optionIndex} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
                         ) : (
                           <span style={{ color: '#2F3B70' }}>{activity.activity || ''}</span>
                         )}
                       </td>
                       <td style={{ 
-                        padding: '16px 20px',
-                        borderRight: '1px solid #e9ecef'
+                        padding: '12px 8px',
+                        borderRight: 'none',
+                        width: '20%'
                       }}>
                         {isAliceAuthorized ? (
                           <input
@@ -970,11 +1079,13 @@ const Report = () => {
                             onBlur={(e) => handleInputBlur(e, 'timeScheduled', index)}
                             style={{ 
                               width: '100%', 
-                              border: 'none', 
+                              border: '1px solid #e9ecef', 
                               outline: 'none', 
                               fontSize: '1rem', 
-                              background: 'transparent',
-                              color: '#2F3B70'
+                              background: 'white',
+                              color: '#2F3B70',
+                              padding: '8px 12px',
+                              borderRadius: '4px'
                             }}
                           />
                         ) : (
@@ -982,8 +1093,9 @@ const Report = () => {
                         )}
                       </td>
                       <td style={{ 
-                        padding: '16px 20px',
-                        borderRight: '1px solid #e9ecef'
+                        padding: '12px 8px',
+                        borderRight: 'none',
+                        width: '15%'
                       }}>
                         {isAliceAuthorized ? (
                           <input
@@ -994,11 +1106,13 @@ const Report = () => {
                             onBlur={(e) => handleInputBlur(e, 'timeStarted', index)}
                             style={{ 
                               width: '100%', 
-                              border: 'none', 
+                              border: '1px solid #e9ecef', 
                               outline: 'none', 
                               fontSize: '1rem', 
-                              background: 'transparent',
-                              color: '#2F3B70'
+                              background: 'white',
+                              color: '#2F3B70',
+                              padding: '8px 12px',
+                              borderRadius: '4px'
                             }}
                           />
                         ) : (
@@ -1006,7 +1120,8 @@ const Report = () => {
                         )}
                       </td>
                       <td style={{ 
-                        padding: '16px 20px'
+                        padding: '12px 8px',
+                        width: '15%'
                       }}>
                         {isAliceAuthorized ? (
                           <input
@@ -1017,42 +1132,91 @@ const Report = () => {
                             onBlur={(e) => handleInputBlur(e, 'timeDone', index)}
                             style={{ 
                               width: '100%', 
-                              border: 'none', 
+                              border: '1px solid #e9ecef', 
                               outline: 'none', 
                               fontSize: '1rem', 
-                              background: 'transparent',
-                              color: '#2F3B70'
+                              background: 'white',
+                              color: '#2F3B70',
+                              padding: '8px 12px',
+                              borderRadius: '4px'
                             }}
                           />
                         ) : (
                           <span style={{ color: '#2F3B70' }}>{activity.timeDone || ''}</span>
                         )}
                       </td>
+                      <td style={{ 
+                        padding: '12px 8px',
+                        textAlign: 'center',
+                        backgroundColor: '#ff0000',
+                        border: '3px solid #000000',
+                        width: '15%',
+                        minWidth: '120px'
+                      }}>
+                        <button
+                          onClick={() => {
+                            console.log('Delete button clicked for row:', index);
+                            handleDeleteRow(index);
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '10px 16px',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 4px 12px rgba(220, 53, 69, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            minWidth: '100px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = 'linear-gradient(135deg, #c82333 0%, #a71e2a 100%)';
+                            e.target.style.transform = 'translateY(-2px)';
+                            e.target.style.boxShadow = '0 6px 16px rgba(220, 53, 69, 0.5)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+                            e.target.style.transform = 'translateY(0)';
+                            e.target.style.boxShadow = '0 4px 12px rgba(220, 53, 69, 0.4)';
+                          }}
+                          title="Delete this row"
+                        >
+                          🗑️ DELETE
+                        </button>
+                      </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ marginTop: '16px', textAlign: 'center' }}>
-              <button className="add-row-btn" onClick={handleAddRow}>+</button>
-            </div>
-            <div style={{ marginTop: '32px', textAlign: 'center' }}>
-              <button
-                onClick={saveReportData}
-                disabled={isSaving || !isAliceAuthorized}
-                className="report-save-btn"
-              >
-                {isSaving ? 'Saving...' : 'Save Report'}
-              </button>
-              {saveMessage && (
-                <div
-                  className={`report-save-message ${saveMessage.includes('✅') ? 'success' : 'error'}`}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                <button className="add-row-btn" onClick={handleAddRow}>+</button>
+              </div>
+              <div style={{ marginTop: '32px', textAlign: 'center' }}>
+                <button
+                  onClick={saveReportData}
+                  disabled={isSaving || !isAliceAuthorized}
+                  className="report-save-btn"
                 >
-                  {saveMessage}
-                </div>
-              )}
+                  {isSaving ? 'Saving...' : 'Save Report'}
+                </button>
+                {saveMessage && (
+                  <div
+                    className={`report-save-message ${saveMessage.includes('✅') ? 'success' : 'error'}`}
+                  >
+                    {saveMessage}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
         )}
         {activeContainer === 1 && (
           <div className="report-details-row" style={{

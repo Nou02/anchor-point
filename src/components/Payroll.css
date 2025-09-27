@@ -517,6 +517,7 @@
   table-layout: fixed;
 }
 
+
 .manager-table th {
   background: #1a2a4a;
   color: white;
@@ -636,6 +637,7 @@
 .vess-input {
   width: 100%;
   max-width: 100%;
+  min-width: 60px;
   background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 4px;
@@ -740,6 +742,14 @@
   text-align: center;
 }
 
+.save-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
 .save-button {
   background: #28a745;
   color: white;
@@ -780,6 +790,52 @@
 }
 
 .save-message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.clear-data-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+  transition: all 0.2s ease;
+}
+
+.clear-data-button:hover {
+  background: #c82333;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  transform: translateY(-1px);
+}
+
+.clear-data-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+
+.auto-save-status {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.auto-save-status.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.auto-save-status.error {
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
@@ -970,4 +1026,127 @@
 .manager-toggle-btn:active {
   transform: translateY(0);
   box-shadow: 0 2px 4px rgba(45, 62, 94, 0.2);
+}
+
+/* Pricing Configuration Styles */
+.pricing-config-button {
+  background: #233a6c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(35, 58, 108, 0.2);
+  transition: all 0.2s ease;
+  margin-left: 12px;
+  height: auto;
+  line-height: 1;
+}
+
+.pricing-config-button:hover {
+  background: #1a2a4a;
+  box-shadow: 0 4px 12px rgba(35, 58, 108, 0.3);
+}
+
+.pricing-config-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+}
+
+.pricing-config-panel h3 {
+  color: #2d3e5e;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 20px 0;
+  text-align: center;
+  border-bottom: 2px solid #f8f9fa;
+  padding-bottom: 12px;
+}
+
+.pricing-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.pricing-config-group {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.pricing-config-group h4 {
+  color: #2d3e5e;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  text-align: center;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 8px;
+}
+
+.pricing-input-group {
+  margin-bottom: 16px;
+}
+
+.pricing-input-group label {
+  display: block;
+  color: #495057;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.pricing-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 1rem;
+  color: #495057;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.pricing-input:focus {
+  outline: none;
+  border-color: #2F3B70;
+  box-shadow: 0 0 0 3px rgba(47, 59, 112, 0.1);
+}
+
+.pricing-config-actions {
+  text-align: center;
+  border-top: 1px solid #e9ecef;
+  padding-top: 16px;
+}
+
+.pricing-save-button {
+  background: #233a6c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(35, 58, 108, 0.2);
+  transition: all 0.2s ease;
+}
+
+.pricing-save-button:hover {
+  background: #1a2a4a;
+  box-shadow: 0 4px 12px rgba(35, 58, 108, 0.3);
+  transform: translateY(-1px);
+}
+
+.pricing-save-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(35, 58, 108, 0.2);
 }

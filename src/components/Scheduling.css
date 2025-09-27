@@ -210,6 +210,21 @@
   transform: scale(1.05) translateY(-2px);
 }
 
+.calendar-day.non-clickable {
+  opacity: 0.6;
+  cursor: default !important;
+  background-color: #f8f9fa !important;
+  border-color: #e9ecef !important;
+  color: #adb5bd !important;
+}
+
+.calendar-day.non-clickable:hover {
+  background-color: #f8f9fa !important;
+  border-color: #e9ecef !important;
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
 /* Day name indicator for today */
 .calendar-day .day-name {
   font-size: 0.75rem;

@@ -18,6 +18,7 @@ const Scheduling = () => {
   const [isSaving, setIsSaving] = useState(false); // Track save button state
   const [assignedWorkers, setAssignedWorkers] = useState({}); // Track assigned workers for each appointment
   const [currentDateIndex, setCurrentDateIndex] = useState(0); // Track which selected date is being processed
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Flag to prevent saving during initial load
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();
@@ -90,9 +91,26 @@ const Scheduling = () => {
     setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
   };
 
-  // Handle date selection (toggle multiple)
+  // Check if current user is Alice
+  const isAlice = () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    const userEmail = user ? user.email : '';
+    const matchName = userFullName || userName;
+    
+    // Check for Alice Margaretha Santos
+    const isAliceUser = 
+      matchName === 'Alice Margaretha Santos' || 
+      matchName === 'Alice' ||
+      (matchName && matchName.toLowerCase().includes('alice')) ||
+      (userEmail && userEmail.toLowerCase().includes('alice'));
+    
+    return isAliceUser;
+  };
+
+  // Handle date selection (toggle multiple) - only allow Alice to select dates
   const handleDateClick = (day, isCurrentMonth) => {
-    if (isCurrentMonth && day) {
+    if (isCurrentMonth && day && isAlice()) {
       const clickedDate = new Date(currentYear, currentMonth, day);
       setSelectedDates(prev => {
         const exists = prev.some(date =>
@@ -299,6 +317,41 @@ const Scheduling = () => {
       alert('Error marking appointment as done: ' + err.message);
     }
   };
+
+  // Load saved selected dates from localStorage on component mount
+  useEffect(() => {
+    const loadSavedDates = () => {
+      try {
+        const savedDates = localStorage.getItem('schedulingSelectedDates');
+        if (savedDates) {
+          const parsedDates = JSON.parse(savedDates).map(dateStr => new Date(dateStr));
+          setSelectedDates(parsedDates);
+        }
+        setIsInitialLoad(false); // Mark initial load as complete
+      } catch (error) {
+        console.error('Error loading saved dates:', error);
+        setIsInitialLoad(false);
+      }
+    };
+    loadSavedDates();
+  }, []);
+
+  // Save selected dates to localStorage whenever they change
+  useEffect(() => {
+    if (isInitialLoad) {
+      return; // Don't save during initial load
+    }
+    
+    const saveDates = () => {
+      try {
+        localStorage.setItem('schedulingSelectedDates', JSON.stringify(selectedDates));
+      } catch (error) {
+        console.error('Error saving dates:', error);
+      }
+    };
+    
+    saveDates();
+  }, [selectedDates, isInitialLoad]);
 
   useEffect(() => {
     fetchSavedEntries();
@@ -652,9 +705,13 @@ return (
                         dayData.isCurrentMonth ? 'current-month' : 'other-month'
                       } ${dayData.isToday ? 'today' : ''} ${
                         dayData.isSelected ? 'selected' : ''
-                      }`}
-                      style={{ ...bgColor ? { background: bgColor } : {} }}
+                      } ${!isAlice() && dayData.isCurrentMonth && dayData.day ? 'non-clickable' : ''}`}
+                      style={{ 
+                        ...bgColor ? { background: bgColor } : {},
+                        cursor: isAlice() && dayData.isCurrentMonth && dayData.day ? 'pointer' : 'default'
+                      }}
                       onClick={() => handleDateClick(dayData.day, dayData.isCurrentMonth)}
+                      title={!isAlice() && dayData.isCurrentMonth && dayData.day ? 'Only Alice can select dates' : ''}
                     >
                       <div>{dayData.day}</div>
                     </div>
