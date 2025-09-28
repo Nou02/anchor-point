@@ -1,158 +1,142 @@
-import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import './Report.css';
 
-const containers = [
-  {
-    key: 'report',
-    label: 'Report Table',
-  },
-  {
-    key: 'details',
-    label: 'Suggested Files',
-  },
-];
-
-const workActivityOptions = [
-  'End of sea passage.',
-  'Vessel arrived and dropped anchor at Batangas Anchorage. Notice of Readiness tendered.',
-  'Awaiting port authorities due to attending to other vessel\'s arrived ahead of ... .',
-  'Medical Quarantined on board.',
-  'Free pratique granted.',
-  'Customs, immigration, other authorities, surveyor, and agent on board.',
-  'Port entrance formalities completed.',
-  'Cargo Sampling.',
-  'Received advise to berth.',
-  'Cargo sample sent ashore for laboratory testing/analysis.',
-  'Start heaving up anchor.',
-  'Pilot on board for docking.',
-  'Anchor aweigh.',
-  'Tugs made fast forward and aft. Assist Midship',
-  'First line ashore.',
-  'All lines made fast. Properly secured portside alongside Chevron terminal Berh 5A.',
-  'Tugs cast off. Pilot off.'
-];
-
-const initialTableData = {
-  portLocation: '',
-  voyageNo: '',
-  vesselName: '',
-  purposeOfCall: '',
-  workActivities: [
-    { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
-    { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
-    { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' }
-  ]
-};
-
 const Report = () => {
-  const [appointments, setAppointments] = useState([]);
-  const [expandedId, setExpandedId] = useState(null);
   const [activeContainer, setActiveContainer] = useState(0);
   const [currentUser, setCurrentUser] = useState(null);
   const [isAliceAuthorized, setIsAliceAuthorized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [showYearDropdown, setShowYearDropdown] = useState(false);
-  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
-  
-  // Editable table data
-  const [tableData, setTableData] = useState(initialTableData);
+  const [selectedDates, setSelectedDates] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [tableData, setTableData] = useState({
+    portLocation: '',
+    voyageNo: '',
+    vesselName: '',
+    purposeOfCall: '',
+    workActivities: [
+      { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
+      { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
+      { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' }
+    ]
+  });
 
-  // Check if current user is Alice Santos
   const checkAliceAuthorization = (user) => {
     if (!user) return false;
-    
     const userName = user.displayName || user.email?.split('@')[0] || '';
     const userEmail = user.email || '';
-    
-    // Check for exact name match
-    if (userName === 'Alice Margaretha Santos') return true;
-    
-    // Check for partial name matches
-    const nameContainsAlice = userName.toLowerCase().includes('alice');
-    const emailContainsAlice = userEmail.toLowerCase().includes('alice');
-    
-    return nameContainsAlice || emailContainsAlice || 
-           userEmail.toLowerCase().includes('alice.margaretha') ||
-           userEmail.toLowerCase().includes('alice_margaretha') ||
-           userEmail.toLowerCase().includes('alice.santos') ||
-           userEmail.toLowerCase().includes('alice_santos');
+    return userName === 'Alice Margaretha Santos' || 
+           userName.toLowerCase().includes('alice') ||
+           userEmail.toLowerCase().includes('alice');
   };
 
-  // Get current date in MM-DD-YYYY format for document ID
-  const getCurrentDateId = () => {
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const year = now.getFullYear();
-    return `${month}-${day}-${year}`;
+  const clearWorkActivityData = () => {
+    setTableData({
+      portLocation: '',
+      voyageNo: '',
+      vesselName: '',
+      purposeOfCall: '',
+      workActivities: [
+        { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
+        { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
+        { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' }
+      ]
+    });
+    setSaveMessage('Form cleared successfully!');
+    setTimeout(() => setSaveMessage(''), 3000);
   };
 
-  // Load data from Firestore
-  const loadReportData = async () => {
+  const saveWorkActivityData = async (date, data) => {
     try {
       const db = getFirestore();
-      const currentDateId = getCurrentDateId();
-      const reportDoc = doc(db, 'reports', currentDateId);
-      const reportSnapshot = await getDoc(reportDoc);
+      const dateString = date.toISOString().split('T')[0];
+      const docRef = doc(db, 'workActivities', dateString);
+      await setDoc(docRef, {
+        date: dateString,
+        portLocation: data.portLocation,
+        voyageNo: data.voyageNo,
+        vesselName: data.vesselName,
+        purposeOfCall: data.purposeOfCall,
+        workActivities: data.workActivities,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: currentUser?.email || currentUser?.displayName || 'Unknown'
+      });
+      return true;
+    } catch (error) {
+      console.error('Error saving work activity data:', error);
+      return false;
+    }
+  };
+
+  // Load work activity data from database
+  const loadWorkActivityData = async (date) => {
+    try {
+      const db = getFirestore();
+      const dateString = date.toISOString().split('T')[0];
+      const docRef = doc(db, 'workActivities', dateString);
+      const docSnap = await getDoc(docRef);
       
-      if (reportSnapshot.exists()) {
-        const data = reportSnapshot.data();
+      if (docSnap.exists()) {
+        const data = docSnap.data();
         setTableData({
           portLocation: data.portLocation || '',
           voyageNo: data.voyageNo || '',
           vesselName: data.vesselName || '',
           purposeOfCall: data.purposeOfCall || '',
-          workActivities: data.workActivities || Array(7).fill().map(() => ({
-            activity: '',
-            timeScheduled: '',
-            timeStarted: '',
-            timeDone: ''
-          }))
+          workActivities: data.workActivities || [
+            { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
+            { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
+            { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' }
+          ]
         });
+        console.log('Work activity data loaded successfully for date:', dateString);
+        return true;
+      } else {
+        // Reset to default if no data found
+        setTableData({
+          portLocation: '',
+          voyageNo: '',
+          vesselName: '',
+          purposeOfCall: '',
+          workActivities: [
+            { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
+            { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
+            { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' }
+          ]
+        });
+        return false;
       }
     } catch (error) {
-      console.error('Error loading report data:', error);
+      console.error('Error loading work activity data:', error);
+      return false;
     }
   };
 
-  // Save data to Firestore
-  const saveReportData = async () => {
-    if (!isAliceAuthorized) {
-      setSaveMessage('❌ Only Alice Santos is authorized to save data.');
-      setTimeout(() => setSaveMessage(''), 3000);
-      return;
-    }
-
-    setIsSaving(true);
-    setSaveMessage('');
-
+  // Auto-save function that saves data whenever tableData changes
+  const autoSaveData = async (data) => {
+    if (!selectedDate) return;
+    
     try {
       const db = getFirestore();
-      const currentDateId = getCurrentDateId();
-      const reportDoc = doc(db, 'reports', currentDateId);
+      const dateString = selectedDate.toISOString().split('T')[0];
+      const docRef = doc(db, 'workActivities', dateString);
       
-      await setDoc(reportDoc, {
-        ...tableData,
-        date: currentDateId,
+      await setDoc(docRef, {
+        date: dateString,
+        portLocation: data.portLocation,
+        voyageNo: data.voyageNo,
+        vesselName: data.vesselName,
+        purposeOfCall: data.purposeOfCall,
+        workActivities: data.workActivities,
         lastUpdated: new Date().toISOString(),
-        updatedBy: currentUser.email || currentUser.displayName || 'Unknown'
+        updatedBy: currentUser?.email || currentUser?.displayName || 'Unknown'
       });
-
-      setSaveMessage(`✅ Report data saved successfully for ${currentDateId}!`);
-      setTimeout(() => setSaveMessage(''), 3000);
+      
+      console.log('Data auto-saved for date:', dateString);
     } catch (error) {
-      console.error('Error saving report data:', error);
-      setSaveMessage('❌ Error saving data. Please try again.');
-      setTimeout(() => setSaveMessage(''), 3000);
-    } finally {
-      setIsSaving(false);
+      console.error('Error auto-saving data:', error);
     }
   };
 
@@ -163,14 +147,6 @@ const Report = () => {
         setCurrentUser(user);
         const isAlice = checkAliceAuthorization(user);
         setIsAliceAuthorized(isAlice);
-        // Reset table data if Alice logs in
-        if (isAlice) {
-          setTableData(initialTableData);
-          // Do NOT load previous report data for Alice
-        } else {
-          // For other users, load saved data
-          await loadReportData();
-        }
       } else {
         setCurrentUser(null);
         setIsAliceAuthorized(false);
@@ -180,1822 +156,763 @@ const Report = () => {
   }, []);
 
   useEffect(() => {
-    const fetchAppointments = async () => {
-      const db = getFirestore();
-      const q = collection(db, 'appointments');
-      const querySnapshot = await getDocs(q);
-      const entries = [];
-      querySnapshot.forEach(doc => {
-        entries.push({ id: doc.id, ...doc.data() });
-      });
-      setAppointments(entries);
+    const loadSelectedDates = () => {
+      try {
+        const savedDates = localStorage.getItem('schedulingSelectedDates');
+        if (savedDates) {
+          const parsedDates = JSON.parse(savedDates).map(dateStr => new Date(dateStr));
+          setSelectedDates(parsedDates);
+        }
+      } catch (error) {
+        console.error('Error loading selected dates:', error);
+      }
     };
-    fetchAppointments();
+    
+    loadSelectedDates();
+    const interval = setInterval(loadSelectedDates, 2000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Group appointments by day (YYYY-MM-DD)
-  const grouped = {};
-  appointments.forEach(app => {
-    if (app.date) {
-      const d = new Date(app.date);
-      const key = d.toISOString().slice(0, 10);
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(app);
+  // Load work activity data when a date is selected
+  useEffect(() => {
+    if (selectedDate) {
+      loadWorkActivityData(selectedDate);
     }
-  });
+  }, [selectedDate]);
 
-  // Helper to format date as 'Month DD, YYYY'
-  const formatDay = dateStr => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' });
-  };
+  // Auto-save data whenever tableData changes
+  useEffect(() => {
+    if (selectedDate && tableData) {
+      const timeoutId = setTimeout(() => {
+        autoSaveData(tableData);
+      }, 1000); // Debounce auto-save by 1 second
 
-  // Handle input field changes
-  const handleInputChange = (e, field, index = null) => {
-    const value = e.target.value;
-    
-    if (!isAliceAuthorized) {
-      alert('Only Alice Santos is authorized to edit this table.');
-      return;
+      return () => clearTimeout(timeoutId);
     }
-
-    if (index !== null) {
-      // Update work activity row
-      setTableData(prev => ({
-        ...prev,
-        workActivities: prev.workActivities.map((activity, i) => 
-          i === index ? { ...activity, [field]: value } : activity
-        )
-      }));
-    } else {
-      // Update main fields
-      setTableData(prev => ({
-        ...prev,
-        [field]: value
-      }));
-    }
-  };
-
-  // Handle input focus to maintain focus
-  const handleInputFocus = (e) => {
-    e.target.select();
-  };
-
-  // Handle input blur to save data
-  const handleInputBlur = (e, field, index = null) => {
-    const value = e.target.value;
-    if (index !== null) {
-      setTableData(prev => ({
-        ...prev,
-        workActivities: prev.workActivities.map((activity, i) => 
-          i === index ? { ...activity, [field]: value } : activity
-        )
-      }));
-    } else {
-      setTableData(prev => ({
-        ...prev,
-        [field]: value
-      }));
-    }
-  };
-
-  // Handle appointment click to show details
-  const handleAppointmentClick = (appointment) => {
-    setSelectedAppointment(appointment);
-    setShowAppointmentDetails(true);
-  };
-
-  // Close appointment details
-  const closeAppointmentDetails = () => {
-    setShowAppointmentDetails(false);
-    setSelectedAppointment(null);
-  };
-
-  // Handle year selection
-  const handleYearSelect = (year) => {
-    setSelectedYear(year);
-    setShowYearDropdown(false);
-    setSelectedMonth(0); // Reset to January when year changes
-  };
-
-  // Handle month selection
-  const handleMonthSelect = (month) => {
-    setSelectedMonth(month);
-    setShowMonthDropdown(false);
-  };
-
-  // Get filtered appointments based on selected year and month
-  const getFilteredAppointments = () => {
-    return appointments.filter(appointment => {
-      if (!appointment.date) return false;
-      const appointmentDate = new Date(appointment.date);
-      return appointmentDate.getFullYear() === selectedYear && 
-             appointmentDate.getMonth() === selectedMonth;
-    });
-  };
-
-  // Get available years (show 2025 to 2030 for example)
-  const getAvailableYears = () => {
-    const startYear = 2025;
-    const endYear = 2030;
-    const years = [];
-    for (let y = startYear; y <= endYear; y++) {
-      years.push(y);
-    }
-    return years;
-  };
-
-  // Get available months (always show all months)
-  const getAvailableMonths = () => {
-    return Array.from({ length: 12 }, (_, i) => i); // 0 to 11
-  };
-
-  // Month names for display
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  // Count Foreign and Local vessels for the selected month/year
-  const getVesselCounts = () => {
-    const filteredAppointments = getFilteredAppointments();
-    let foreign = 0;
-    let local = 0;
-    filteredAppointments.forEach(app => {
-      if (app.vesselType && app.vesselType.toLowerCase().includes('foreign')) {
-        foreign++;
-      } else if (app.vesselType && app.vesselType.toLowerCase().includes('local')) {
-        local++;
-      }
-    });
-    return { foreign, local };
-  };
-
-  // Generate time series data for the selected month/year
-  const getTimeSeriesData = () => {
-    const filteredAppointments = getFilteredAppointments();
-    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-    const timeSeriesData = [];
-    
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayAppointments = filteredAppointments.filter(app => {
-        if (!app.date) return false;
-        const appDate = new Date(app.date);
-        return appDate.getDate() === day && 
-               appDate.getMonth() === selectedMonth && 
-               appDate.getFullYear() === selectedYear;
-      });
-      
-      let foreignCount = 0;
-      let localCount = 0;
-      
-      dayAppointments.forEach(app => {
-        if (app.vesselType && app.vesselType.toLowerCase().includes('foreign')) {
-          foreignCount++;
-        } else if (app.vesselType && app.vesselType.toLowerCase().includes('local')) {
-          localCount++;
-        }
-      });
-      
-      timeSeriesData.push({
-        day: day,
-        date: dateKey,
-        foreign: foreignCount,
-        local: localCount,
-        total: foreignCount + localCount
-      });
-    }
-    
-    return timeSeriesData;
-  };
-
-  // Render time series chart
-  const renderTimeSeriesChart = () => {
-    const timeSeriesData = getTimeSeriesData();
-    const chartWidth = 400;
-    const chartHeight = 200;
-    const padding = 40;
-    const chartAreaWidth = chartWidth - (padding * 2);
-    const chartAreaHeight = chartHeight - (padding * 2);
-    
-    if (timeSeriesData.length === 0) return null;
-    
-    const maxValue = Math.max(...timeSeriesData.map(d => Math.max(d.foreign, d.local, d.total)));
-    const scaleY = maxValue > 0 ? chartAreaHeight / maxValue : 1;
-    const scaleX = chartAreaWidth / (timeSeriesData.length - 1);
-    
-    // Generate SVG paths for the lines
-    const foreignPath = timeSeriesData.map((point, index) => {
-      const x = padding + (index * scaleX);
-      const y = padding + chartAreaHeight - (point.foreign * scaleY);
-      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).join(' ');
-    
-    const localPath = timeSeriesData.map((point, index) => {
-      const x = padding + (index * scaleX);
-      const y = padding + chartAreaHeight - (point.local * scaleY);
-      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).join(' ');
-    
-    const totalPath = timeSeriesData.map((point, index) => {
-      const x = padding + (index * scaleX);
-      const y = padding + chartAreaHeight - (point.total * scaleY);
-      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).join(' ');
-    
-    return (
-      <div style={{ marginTop: '32px', width: '100%' }}>
-        <h4 style={{
-          color: '#2F3B70',
-          fontSize: '1.1rem',
-          fontWeight: '700',
-          marginBottom: '20px',
-          textAlign: 'center',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px'
-        }}>
-          Vessel Activity Over Time - {monthNames[selectedMonth]} {selectedYear}
-        </h4>
-        <svg width={chartWidth} height={chartHeight} style={{ 
-          background: 'white',
-          borderRadius: '12px',
-          border: '1px solid #e9ecef'
-        }}>
-          {/* Grid lines */}
-          {Array.from({ length: 6 }, (_, i) => {
-            const y = padding + (i * chartAreaHeight / 5);
-            return (
-              <line
-                key={`grid-${i}`}
-                x1={padding}
-                y1={y}
-                x2={padding + chartAreaWidth}
-                y2={y}
-                stroke="#e9ecef"
-                strokeWidth="1"
-                opacity="0.5"
-              />
-            );
-          })}
-          
-          {/* Y-axis labels */}
-          {Array.from({ length: 6 }, (_, i) => {
-            const y = padding + (i * chartAreaHeight / 5);
-            const value = Math.round(maxValue - (i * maxValue / 5));
-            return (
-              <text
-                key={`y-label-${i}`}
-                x={padding - 10}
-                y={y + 4}
-                textAnchor="end"
-                fontSize="10"
-                fill="#6c757d"
-                fontWeight="500"
-              >
-                {value}
-              </text>
-            );
-          })}
-          
-          {/* X-axis labels (every 5 days) */}
-          {timeSeriesData.map((point, index) => {
-            if (index % 5 === 0 || index === timeSeriesData.length - 1) {
-              const x = padding + (index * scaleX);
-              return (
-                <text
-                  key={`x-label-${index}`}
-                  x={x}
-                  y={chartHeight - 10}
-                  textAnchor="middle"
-                  fontSize="10"
-                  fill="#6c757d"
-                  fontWeight="500"
-                >
-                  {point.day}
-                </text>
-              );
-            }
-            return null;
-          })}
-          
-          {/* Chart lines */}
-          <path
-            d={totalPath}
-            stroke="#2F3B70"
-            strokeWidth="3"
-            fill="none"
-            opacity="0.8"
-          />
-          <path
-            d={foreignPath}
-            stroke="#2F3B70"
-            strokeWidth="2"
-            fill="none"
-            opacity="0.9"
-          />
-          <path
-            d={localPath}
-            stroke="#ff3c3c"
-            strokeWidth="2"
-            fill="none"
-            opacity="0.9"
-          />
-          
-          {/* Data points */}
-          {timeSeriesData.map((point, index) => {
-            const x = padding + (index * scaleX);
-            const yForeign = padding + chartAreaHeight - (point.foreign * scaleY);
-            const yLocal = padding + chartAreaHeight - (point.local * scaleY);
-            const yTotal = padding + chartAreaHeight - (point.total * scaleY);
-            
-            return (
-              <g key={`points-${index}`}>
-                {point.total > 0 && (
-                  <circle
-                    cx={x}
-                    cy={yTotal}
-                    r="4"
-                    fill="#2F3B70"
-                    opacity="0.8"
-                  />
-                )}
-                {point.foreign > 0 && (
-                  <circle
-                    cx={x}
-                    cy={yForeign}
-                    r="3"
-                    fill="#2F3B70"
-                    opacity="0.9"
-                  />
-                )}
-                {point.local > 0 && (
-                  <circle
-                    cx={x}
-                    cy={yLocal}
-                    r="3"
-                    fill="#ff3c3c"
-                    opacity="0.9"
-                  />
-                )}
-              </g>
-            );
-          })}
-        </svg>
-        
-        {/* Chart legend */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '24px',
-          marginTop: '16px',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '0.9rem',
-            color: '#2F3B70',
-            fontWeight: '500'
-          }}>
-            <div style={{
-              width: '12px',
-              height: '12px',
-              background: '#2F3B70',
-              borderRadius: '50%',
-              opacity: '0.8'
-            }}></div>
-            <span>Total Vessels</span>
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '0.9rem',
-            color: '#2F3B70',
-            fontWeight: '500'
-          }}>
-            <div style={{
-              width: '12px',
-              height: '12px',
-              background: '#2F3B70',
-              borderRadius: '50%',
-              opacity: '0.9'
-            }}></div>
-            <span>Foreign</span>
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '0.9rem',
-            color: '#ff3c3c',
-            fontWeight: '500'
-          }}>
-            <div style={{
-              width: '12px',
-              height: '12px',
-              background: '#ff3c3c',
-              borderRadius: '50%',
-              opacity: '0.9'
-            }}></div>
-            <span>Local</span>
-          </div>
-        </div>
-        
-        {/* Summary Statistics */}
-        <div style={{
-          marginTop: '24px',
-          padding: '20px',
-          background: '#f8f9fa',
-          borderRadius: '12px',
-          border: '1px solid #e9ecef'
-        }}>
-          <h5 style={{
-            color: '#2F3B70',
-            fontSize: '1rem',
-            fontWeight: '700',
-            marginBottom: '16px',
-            textAlign: 'center',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            Monthly Summary
-          </h5>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '16px'
-          }}>
-            <div style={{
-              textAlign: 'center',
-              padding: '12px',
-              background: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e9ecef'
-            }}>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: '800',
-                color: '#2F3B70',
-                marginBottom: '4px'
-              }}>
-                {getVesselCounts().foreign + getVesselCounts().local}
-              </div>
-              <div style={{
-                fontSize: '0.8rem',
-                color: '#6c757d',
-                fontWeight: '500'
-              }}>
-                Total Vessels
-              </div>
-            </div>
-            <div style={{
-              textAlign: 'center',
-              padding: '12px',
-              background: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e9ecef'
-            }}>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: '800',
-                color: '#2F3B70',
-                marginBottom: '4px'
-              }}>
-                {getVesselCounts().foreign}
-              </div>
-              <div style={{
-                fontSize: '0.8rem',
-                color: '#6c757d',
-                fontWeight: '500'
-              }}>
-                Foreign
-              </div>
-            </div>
-            <div style={{
-              textAlign: 'center',
-              padding: '12px',
-              background: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e9ecef'
-            }}>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: '800',
-                color: '#ff3c3c',
-                marginBottom: '4px'
-              }}>
-                {getVesselCounts().local}
-              </div>
-              <div style={{
-                fontSize: '0.8rem',
-                color: '#6c757d',
-                fontWeight: '500'
-              }}>
-                Local
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Handle add row button click
-  const handleAddRow = () => {
-    if (!isAliceAuthorized) {
-      alert('Only Alice Santos is authorized to add rows.');
-      return;
-    }
-    
-    setTableData(prev => ({
-      ...prev,
-      workActivities: [...prev.workActivities, { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' }]
-    }));
-  };
-
-  // Handle delete row
-  const handleDeleteRow = (index) => {
-    setTableData(prev => ({
-      ...prev,
-      workActivities: prev.workActivities.filter((_, i) => i !== index)
-    }));
-  };
+  }, [tableData, selectedDate]);
 
   return (
-    <div className="report-page-bg" style={{ minHeight: '100vh', width: '100vw' }}>
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '20px' }}>
+    <div className="report-page-bg" style={{ minHeight: '100vh', width: '100vw', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', padding: '20px' }}>
         {activeContainer === 0 && (
-          <div className="report-main-container" style={{
+          <div style={{
             background: 'white',
             borderRadius: '20px',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
             padding: '50px',
             margin: '40px auto',
             maxWidth: '1400px',
-            minWidth: '1200px'
+            minWidth: '1200px',
+            height: 'calc(100vh - 80px)',
+            overflow: 'auto'
           }}>
-            <div style={{
-              maxHeight: '600px',
-              overflowY: 'auto',
-              marginBottom: '16px'
-            }}>
-              <table className="report-table" style={{
-                width: '100%',
-                borderCollapse: 'separate',
-                borderSpacing: 0,
+            {/* Selected Dates from Scheduling */}
+            {selectedDates.length > 0 ? (
+              <div style={{
+                background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
                 borderRadius: '16px',
-                overflow: 'hidden',
-                boxShadow: '0 4px 24px rgba(44,62,80,0.10)',
-                margin: '0 auto',
-                background: 'white',
-                tableLayout: 'fixed'
+                padding: '30px',
+                border: '1px solid #dee2e6',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                marginBottom: '30px'
               }}>
-                <tbody>
-                  <tr>
-                    <th style={{ 
-                      background: '#eaf3ff', 
-                      color: '#2d3e5e', 
-                      fontWeight: '700', 
-                      fontSize: '1rem', 
-                      textAlign: 'center',
-                      padding: '12px 8px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      width: '20%'
-                    }}>Port Location</th>
-                    <td style={{ 
-                      background: '#fff', 
-                      padding: '12px 8px',
-                      borderRight: 'none',
-                      width: '30%'
-                    }}>
-                      {isAliceAuthorized ? (
-                        <input
-                          type="text"
-                          value={tableData.portLocation}
-                          onChange={(e) => handleInputChange(e, 'portLocation')}
-                          onFocus={handleInputFocus}
-                          onBlur={(e) => handleInputBlur(e, 'portLocation')}
-                          style={{ 
-                            width: '100%', 
-                            border: '2px solid #e3f2fd', 
-                            outline: 'none', 
-                            fontSize: '1rem',
-                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                            color: '#2F3B70',
-                            padding: '12px 16px',
-                            borderRadius: '8px',
-                            transition: 'all 0.3s ease',
-                            boxShadow: '0 2px 8px rgba(47, 59, 112, 0.1)',
-                            fontWeight: '500'
-                          }}
-                          placeholder="Enter port location"
-                        />
-                      ) : (
-                        <span style={{ color: '#2F3B70' }}>{tableData.portLocation || ''}</span>
-                      )}
-                    </td>
-                    <th style={{ 
-                      background: '#eaf3ff', 
-                      color: '#2d3e5e', 
-                      fontWeight: '700', 
-                      fontSize: '1rem',
-                      textAlign: 'center',
-                      padding: '12px 8px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      width: '20%'
-                    }}>Voyage No.:</th>
-                    <td style={{ 
-                      background: '#fff', 
-                      padding: '12px 8px',
-                      borderRight: 'none',
-                      width: '30%'
-                    }}>
-                      {isAliceAuthorized ? (
-                        <input
-                          type="text"
-                          value={tableData.voyageNo}
-                          onChange={(e) => handleInputChange(e, 'voyageNo')}
-                          onFocus={handleInputFocus}
-                          onBlur={(e) => handleInputBlur(e, 'voyageNo')}
-                          style={{ 
-                            width: '100%', 
-                            border: '2px solid #e3f2fd', 
-                            outline: 'none', 
-                            fontSize: '1rem',
-                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                            color: '#2F3B70',
-                            padding: '12px 16px',
-                            borderRadius: '8px',
-                            transition: 'all 0.3s ease',
-                            boxShadow: '0 2px 8px rgba(47, 59, 112, 0.1)',
-                            fontWeight: '500'
-                          }}
-                          placeholder="Enter voyage number"
-                        />
-                      ) : (
-                        <span style={{ color: '#2F3B70' }}>{tableData.voyageNo || ''}</span>
-                      )}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th style={{ 
-                      background: '#eaf3ff', 
-                      color: '#2d3e5e', 
-                      fontWeight: '700', 
-                      fontSize: '1rem',
-                      textAlign: 'center',
-                      padding: '12px 8px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      width: '20%'
-                    }}>Vessel Name:</th>
-                    <td style={{ 
-                      background: '#f8f9fa', 
-                      padding: '12px 8px',
-                      borderRight: 'none',
-                      width: '30%'
-                    }}>
-                      {isAliceAuthorized ? (
-                        <input
-                          type="text"
-                          value={tableData.vesselName}
-                          onChange={(e) => handleInputChange(e, 'vesselName')}
-                          onFocus={handleInputFocus}
-                          onBlur={(e) => handleInputBlur(e, 'vesselName')}
-                          style={{ 
-                            width: '100%', 
-                            border: '2px solid #e3f2fd', 
-                            outline: 'none', 
-                            fontSize: '1rem',
-                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                            color: '#2F3B70',
-                            padding: '12px 16px',
-                            borderRadius: '8px',
-                            transition: 'all 0.3s ease',
-                            boxShadow: '0 2px 8px rgba(47, 59, 112, 0.1)',
-                            fontWeight: '500'
-                          }}
-                          placeholder="Enter vessel name"
-                        />
-                      ) : (
-                        <span style={{ color: '#2F3B70' }}>{tableData.vesselName || ''}</span>
-                      )}
-                    </td>
-                    <th style={{ 
-                      background: '#eaf3ff', 
-                      color: '#2d3e5e', 
-                      fontWeight: '700', 
-                      fontSize: '1rem',
-                      textAlign: 'center',
-                      padding: '12px 8px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      width: '20%'
-                    }}>Purpose of Call:</th>
-                    <td style={{ 
-                      background: '#f8f9fa', 
-                      padding: '12px 8px',
-                      borderRight: 'none',
-                      width: '30%'
-                    }}>
-                      {isAliceAuthorized ? (
-                        <input
-                          type="text"
-                          value={tableData.purposeOfCall}
-                          onChange={(e) => handleInputChange(e, 'purposeOfCall')}
-                          onFocus={handleInputFocus}
-                          onBlur={(e) => handleInputBlur(e, 'purposeOfCall')}
-                          style={{ 
-                            width: '100%', 
-                            border: '2px solid #e3f2fd', 
-                            outline: 'none', 
-                            fontSize: '1rem',
-                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                            color: '#2F3B70',
-                            padding: '12px 16px',
-                            borderRadius: '8px',
-                            transition: 'all 0.3s ease',
-                            boxShadow: '0 2px 8px rgba(47, 59, 112, 0.1)',
-                            fontWeight: '500'
-                          }}
-                          placeholder="Enter purpose of call"
-                        />
-                      ) : (
-                        <span style={{ color: '#2F3B70' }}>{tableData.purposeOfCall || ''}</span>
-                      )}
-                    </td>
-                  </tr>
-                  <tr className="work-header">
-                    <th colSpan="5" style={{ 
-                      background: '#5c6ab0', 
-                      color: '#ffe14d', 
-                      fontWeight: '800', 
-                      fontSize: '1.3rem', 
-                      textAlign: 'center', 
-                      letterSpacing: '1px', 
-                      padding: '20px',
-                      textTransform: 'uppercase'
-                    }}>
-                      Work Activity
-                    </th>
-                  </tr>
-                  <tr className="work-subheader">
-                    <th style={{ 
-                      background: '#eaf3ff', 
-                      color: '#2d3e5e', 
-                      fontWeight: '700', 
-                      fontSize: '1rem', 
-                      textAlign: 'center',
-                      padding: '16px 12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      width: '35%'
-                    }}>Work Activity</th>
-                    <th style={{ 
-                      background: '#eaf3ff', 
-                      color: '#2d3e5e', 
-                      fontWeight: '700', 
-                      fontSize: '1rem', 
-                      textAlign: 'center',
-                      padding: '16px 12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      width: '20%'
-                    }}>Time Scheduled</th>
-                    <th style={{ 
-                      background: '#eaf3ff', 
-                      color: '#2d3e5e', 
-                      fontWeight: '700', 
-                      fontSize: '1rem', 
-                      textAlign: 'center',
-                      padding: '16px 12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      width: '15%'
-                    }}>Time Started</th>
-                    <th style={{ 
-                      background: '#eaf3ff', 
-                      color: '#2d3e5e', 
-                      fontWeight: '700', 
-                      fontSize: '1rem', 
-                      textAlign: 'center',
-                      padding: '16px 12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      width: '15%'
-                    }}>Time Done</th>
-                    <th style={{ 
-                      background: '#ff0000', 
-                      color: '#ffffff', 
-                      fontWeight: '900', 
-                      fontSize: '1.2rem', 
-                      textAlign: 'center',
-                      padding: '16px 12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      width: '15%',
-                      border: '3px solid #000000',
-                      minWidth: '120px'
-                    }}>🗑️ DELETE</th>
-                  </tr>
-                  {tableData.workActivities.map((activity, index) => (
-                    <tr key={index} style={{ 
-                      background: index % 2 === 0 ? '#fff3cd' : '#ffeaa7',
-                      borderBottom: '3px solid #ff6b6b',
-                      borderLeft: '5px solid #ff6b6b',
-                      borderRight: '5px solid #ff6b6b'
-                    }}>
-                      <td style={{ 
-                        padding: '12px 8px',
-                        borderRight: 'none',
-                        width: '35%'
+                <h3 style={{
+                  color: '#2F3B70',
+                  fontSize: '1.4rem',
+                  fontWeight: '700',
+                  marginBottom: '25px',
+                  textAlign: 'center',
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
+                }}>
+                  Selected Dates from Scheduling
+                </h3>
+                
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '15px'
+                }}>
+                  {selectedDates.map((date, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                        borderRadius: '12px',
+                        padding: '20px',
+                        border: '2px solid #2196f3',
+                        boxShadow: '0 4px 15px rgba(33, 150, 243, 0.15)',
+                        textAlign: 'center',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      onClick={() => setSelectedDate(date)}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'translateY(-4px) scale(1.02)';
+                        e.target.style.boxShadow = '0 8px 25px rgba(33, 150, 243, 0.25)';
+                        e.target.style.borderColor = '#1976d2';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'translateY(0) scale(1)';
+                        e.target.style.boxShadow = '0 4px 15px rgba(33, 150, 243, 0.15)';
+                        e.target.style.borderColor = '#2196f3';
+                      }}
+                    >
+                      <div style={{
+                        fontSize: '1.2rem',
+                        fontWeight: '700',
+                        color: '#1976d2',
+                        marginBottom: '10px',
+                        textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
                       }}>
-                        {isAliceAuthorized ? (
-                          <select
-                            value={activity.activity}
-                            onChange={(e) => handleInputChange(e, 'activity', index)}
+                        {date.toDateString()}
+                      </div>
+                      <div style={{
+                        fontSize: '0.95rem',
+                        color: '#6c757d',
+                        fontWeight: '500',
+                        lineHeight: '1.4'
+                      }}>
+                        {date.toLocaleDateString('en-US', { 
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '60px 20px',
+                background: 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)',
+                borderRadius: '16px',
+                border: '2px solid #ffc107',
+                boxShadow: '0 4px 20px rgba(255, 193, 7, 0.2)',
+                marginBottom: '30px'
+              }}>
+                <div style={{
+                  fontSize: '1.6rem',
+                  color: '#856404',
+                  marginBottom: '20px',
+                  fontWeight: '700',
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
+                }}>
+                  No Dates Selected
+                </div>
+                <div style={{
+                  fontSize: '1.1rem',
+                  color: '#856404',
+                  lineHeight: '1.6',
+                  fontWeight: '500'
+                }}>
+                  Please select dates in the Scheduling tab first.
+                </div>
+              </div>
+            )}
+
+            {/* Work Activity Table - appears when a date is selected */}
+            {selectedDate && (
+              <div style={{
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                borderRadius: '16px',
+                padding: '30px',
+                marginTop: '20px',
+                border: '1px solid #dee2e6',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '20px'
+                }}>
+                  <h3 style={{
+                    color: '#2F3B70',
+                    fontSize: '1.4rem',
+                    fontWeight: '700',
+                    margin: 0,
+                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    Work Activity for {selectedDate.toDateString()}
+                  </h3>
+                  <button
+                    onClick={() => setSelectedDate(null)}
+                    style={{
+                      background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '10px 20px',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+
+                {/* General Information Fields */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '20px',
+                  marginBottom: '30px'
+                }}>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      color: '#2F3B70',
+                      marginBottom: '8px'
+                    }}>
+                      PORT LOCATION
+                    </label>
+                    <input
+                      type="text"
+                      value={tableData.portLocation}
+                      onChange={(e) => setTableData({...tableData, portLocation: e.target.value})}
+                      style={{ 
+                        width: '100%', 
+                        padding: '12px',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        fontSize: '0.9rem'
+                      }}
+                      placeholder="Enter port location"
+                    />
+                  </div>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      color: '#2F3B70',
+                      marginBottom: '8px'
+                    }}>
+                      VOYAGE NO.
+                    </label>
+                    <input
+                      type="text"
+                      value={tableData.voyageNo}
+                      onChange={(e) => setTableData({...tableData, voyageNo: e.target.value})}
+                      style={{ 
+                        width: '100%', 
+                        padding: '12px',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        fontSize: '0.9rem'
+                      }}
+                      placeholder="Enter voyage number"
+                    />
+                  </div>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      color: '#2F3B70',
+                      marginBottom: '8px'
+                    }}>
+                      VESSEL NAME
+                    </label>
+                    <input
+                      type="text"
+                      value={tableData.vesselName}
+                      onChange={(e) => setTableData({...tableData, vesselName: e.target.value})}
+                      style={{ 
+                        width: '100%', 
+                        padding: '12px',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        fontSize: '0.9rem'
+                      }}
+                      placeholder="Enter vessel name"
+                    />
+                  </div>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      color: '#2F3B70',
+                      marginBottom: '8px'
+                    }}>
+                      PURPOSE OF CALL
+                    </label>
+                    <input
+                      type="text"
+                      value={tableData.purposeOfCall}
+                      onChange={(e) => setTableData({...tableData, purposeOfCall: e.target.value})}
+                      style={{ 
+                        width: '100%', 
+                        padding: '12px',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        fontSize: '0.9rem'
+                      }}
+                      placeholder="Enter purpose of call"
+                    />
+                  </div>
+                </div>
+
+                {/* WORK ACTIVITY Banner */}
+                <div style={{
+                  background: '#2F3B70',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  marginBottom: '25px',
+                  textAlign: 'center',
+                  position: 'relative',
+                  boxShadow: '0 4px 20px rgba(47, 59, 112, 0.3)',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    color: '#FFD700',
+                    fontSize: '1.3rem',
+                    fontWeight: '700', 
+                    textTransform: 'uppercase',
+                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                    letterSpacing: '1px'
+                  }}>
+                    WORK ACTIVITY
+                  </div>
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '0',
+                    left: '0',
+                    right: '0',
+                    height: '3px',
+                    background: '#FFD700',
+                    boxShadow: '0 2px 8px rgba(255, 215, 0, 0.5)'
+                  }}></div>
+                </div>
+
+                {/* Work Activity Table */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                  borderRadius: '12px',
+                  border: '1px solid #dee2e6',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)'
+                }}>
+                  {/* Table Header */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '3fr 1fr 1fr 1fr 80px',
+                    background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                    borderBottom: '2px solid #dee2e6'
+                  }}>
+                    <div style={{
+                      padding: '18px 15px',
+                      fontWeight: '700', 
+                      color: '#2F3B70',
+                      textAlign: 'left',
+                      borderRight: '1px solid #dee2e6',
+                      textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                      fontSize: '0.95rem'
+                    }}>
+                      WORK ACTIVITY
+                    </div>
+                    <div style={{
+                      padding: '18px 15px',
+                      fontWeight: '700', 
+                      color: '#2F3B70',
+                      textAlign: 'center',
+                      borderRight: '1px solid #dee2e6',
+                      textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                      fontSize: '0.95rem'
+                    }}>
+                      TIME SCHEDULED
+                    </div>
+                    <div style={{
+                      padding: '18px 15px',
+                      fontWeight: '700', 
+                      color: '#2F3B70',
+                      textAlign: 'center',
+                      borderRight: '1px solid #dee2e6',
+                      textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                      fontSize: '0.95rem'
+                    }}>
+                      TIME STARTED
+                    </div>
+                    <div style={{
+                      padding: '18px 15px',
+                      fontWeight: '700', 
+                      color: '#2F3B70',
+                      textAlign: 'center',
+                      borderRight: '1px solid #dee2e6',
+                      textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                      fontSize: '0.95rem'
+                    }}>
+                      TIME DONE
+                    </div>
+                    <div style={{
+                      padding: '18px 15px',
+                      minWidth: '80px'
+                    }}>
+                    </div>
+                  </div>
+
+                  {/* Work Activity Rows */}
+                  {tableData.workActivities.map((activity, index) => (
+                    <div key={index} style={{
+                      display: 'grid',
+                      gridTemplateColumns: '3fr 1fr 1fr 1fr 80px',
+                      borderBottom: '1px solid #dee2e6',
+                      background: index % 2 === 0 ? 'rgba(248, 249, 250, 0.5)' : 'white',
+                      transition: 'all 0.2s ease'
+                    }}>
+                      <div style={{
+                        padding: '18px 15px',
+                        borderRight: '1px solid #dee2e6',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        minHeight: '80px'
+                      }}>
+                        <select
+                          value={activity.activity}
+                          onChange={(e) => {
+                            const newActivities = [...tableData.workActivities];
+                            newActivities[index].activity = e.target.value;
+                            setTableData({...tableData, workActivities: newActivities});
+                          }}
+                          style={{ 
+                            width: '100%', 
+                            padding: '12px',
+                            border: '2px solid #e9ecef',
+                            borderRadius: '8px',
+                            fontSize: '0.9rem',
+                            whiteSpace: 'normal',
+                            wordWrap: 'break-word',
+                            overflow: 'visible',
+                            textOverflow: 'unset',
+                            height: 'auto',
+                            minHeight: '60px',
+                            lineHeight: '1.4',
+                            resize: 'vertical',
+                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                            color: '#333',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                          }}
+                        >
+                          <option value="">Select work activity...</option>
+                          <option value="Vessel arrival and berthing">Vessel arrival and berthing</option>
+                          <option value="Cargo loading/unloading operations">Cargo loading/unloading operations</option>
+                          <option value="Port clearance procedures">Port clearance procedures</option>
+                          <option value="Customs and immigration">Customs and immigration</option>
+                          <option value="Fuel bunkering">Fuel bunkering</option>
+                          <option value="Fresh water supply">Fresh water supply</option>
+                          <option value="Waste disposal">Waste disposal</option>
+                          <option value="Crew change operations">Crew change operations</option>
+                          <option value="Maintenance and repairs">Maintenance and repairs</option>
+                          <option 
+                            value={`Awaiting port authorities due to attending to other vessel's arrived ahead of ${tableData.vesselName}`}
                             style={{ 
-                              width: '100%', 
-                              border: '2px solid #e3f2fd', 
-                              outline: 'none', 
-                              fontSize: '1rem', 
-                              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                              color: '#2F3B70',
-                              padding: '12px 16px',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              transition: 'all 0.3s ease',
-                              boxShadow: '0 2px 8px rgba(47, 59, 112, 0.1)',
-                              fontWeight: '500'
-                            }}
-                            onFocus={(e) => {
-                              e.target.style.borderColor = '#2F3B70';
-                              e.target.style.boxShadow = '0 0 0 3px rgba(47, 59, 112, 0.1)';
-                              e.target.style.transform = 'translateY(-1px)';
-                            }}
-                            onBlur={(e) => {
-                              e.target.style.borderColor = '#e3f2fd';
-                              e.target.style.boxShadow = '0 2px 8px rgba(47, 59, 112, 0.1)';
-                              e.target.style.transform = 'translateY(0)';
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.borderColor = '#bbdefb';
-                              e.target.style.boxShadow = '0 4px 12px rgba(47, 59, 112, 0.15)';
-                            }}
-                            onMouseLeave={(e) => {
-                              if (document.activeElement !== e.target) {
-                                e.target.style.borderColor = '#e3f2fd';
-                                e.target.style.boxShadow = '0 2px 8px rgba(47, 59, 112, 0.1)';
-                              }
+                              whiteSpace: 'normal', 
+                              wordWrap: 'break-word',
+                              padding: '5px',
+                              lineHeight: '1.4'
                             }}
                           >
-                            <option value="">Select work activity...</option>
-                            {workActivityOptions.map((option, optionIndex) => (
-                              <option key={optionIndex} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span style={{ color: '#2F3B70' }}>{activity.activity || ''}</span>
-                        )}
-                      </td>
-                      <td style={{ 
-                        padding: '12px 8px',
-                        borderRight: 'none',
-                        width: '20%'
+                            Awaiting port authorities due to attending to other vessel's arrived ahead of {tableData.vesselName}
+                          </option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div style={{
+                        padding: '18px 15px',
+                        borderRight: '1px solid #dee2e6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
                       }}>
-                        {isAliceAuthorized ? (
-                          <input
-                            type="time"
-                            value={activity.timeScheduled}
-                            onChange={(e) => handleInputChange(e, 'timeScheduled', index)}
-                            onFocus={handleInputFocus}
-                            onBlur={(e) => handleInputBlur(e, 'timeScheduled', index)}
-                            style={{ 
-                              width: '100%', 
-                              border: '1px solid #e9ecef', 
-                              outline: 'none', 
-                              fontSize: '1rem', 
-                              background: 'white',
-                              color: '#2F3B70',
-                              padding: '8px 12px',
-                              borderRadius: '4px'
-                            }}
-                          />
-                        ) : (
-                          <span style={{ color: '#2F3B70' }}>{activity.timeScheduled || ''}</span>
-                        )}
-                      </td>
-                      <td style={{ 
-                        padding: '12px 8px',
-                        borderRight: 'none',
-                        width: '15%'
+                        <input
+                          type="time"
+                          value={activity.timeScheduled}
+                          onChange={(e) => {
+                            const newActivities = [...tableData.workActivities];
+                            newActivities[index].timeScheduled = e.target.value;
+                            setTableData({...tableData, workActivities: newActivities});
+                          }}
+                          style={{ 
+                            width: '100%', 
+                            padding: '10px',
+                            border: '2px solid #e9ecef',
+                            borderRadius: '8px',
+                            fontSize: '0.9rem',
+                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                          }}
+                          placeholder="--:--"
+                        />
+                        <span style={{ color: '#6c757d', fontSize: '1.2rem' }}></span>
+                      </div>
+                      <div style={{
+                        padding: '18px 15px',
+                        borderRight: '1px solid #dee2e6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
                       }}>
-                        {isAliceAuthorized ? (
-                          <input
-                            type="time"
-                            value={activity.timeStarted}
-                            onChange={(e) => handleInputChange(e, 'timeStarted', index)}
-                            onFocus={handleInputFocus}
-                            onBlur={(e) => handleInputBlur(e, 'timeStarted', index)}
-                            style={{ 
-                              width: '100%', 
-                              border: '1px solid #e9ecef', 
-                              outline: 'none', 
-                              fontSize: '1rem', 
-                              background: 'white',
-                              color: '#2F3B70',
-                              padding: '8px 12px',
-                              borderRadius: '4px'
-                            }}
-                          />
-                        ) : (
-                          <span style={{ color: '#2F3B70' }}>{activity.timeStarted || ''}</span>
-                        )}
-                      </td>
-                      <td style={{ 
-                        padding: '12px 8px',
-                        width: '15%'
+                        <input
+                          type="time"
+                          value={activity.timeStarted}
+                          onChange={(e) => {
+                            const newActivities = [...tableData.workActivities];
+                            newActivities[index].timeStarted = e.target.value;
+                            setTableData({...tableData, workActivities: newActivities});
+                          }}
+                          style={{ 
+                            width: '100%', 
+                            padding: '8px',
+                            border: '1px solid #ddd',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem'
+                          }}
+                          placeholder="--:--"
+                        />
+                        <span style={{ color: '#6c757d' }}></span>
+                      </div>
+                      <div style={{
+                        padding: '15px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
                       }}>
-                        {isAliceAuthorized ? (
-                          <input
-                            type="time"
-                            value={activity.timeDone}
-                            onChange={(e) => handleInputChange(e, 'timeDone', index)}
-                            onFocus={handleInputFocus}
-                            onBlur={(e) => handleInputBlur(e, 'timeDone', index)}
-                            style={{ 
-                              width: '100%', 
-                              border: '1px solid #e9ecef', 
-                              outline: 'none', 
-                              fontSize: '1rem', 
-                              background: 'white',
-                              color: '#2F3B70',
-                              padding: '8px 12px',
-                              borderRadius: '4px'
-                            }}
-                          />
-                        ) : (
-                          <span style={{ color: '#2F3B70' }}>{activity.timeDone || ''}</span>
-                        )}
-                      </td>
-                      <td style={{ 
-                        padding: '12px 8px',
-                        textAlign: 'center',
-                        backgroundColor: '#ff0000',
-                        border: '3px solid #000000',
-                        width: '15%',
-                        minWidth: '120px'
+                        <input
+                          type="time"
+                          value={activity.timeDone}
+                          onChange={(e) => {
+                            const newActivities = [...tableData.workActivities];
+                            newActivities[index].timeDone = e.target.value;
+                            setTableData({...tableData, workActivities: newActivities});
+                          }}
+                          style={{ 
+                            width: '100%', 
+                            padding: '8px',
+                            border: '1px solid #ddd',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem'
+                          }}
+                          placeholder="--:--"
+                        />
+                        <span style={{ color: '#6c757d' }}></span>
+                      </div>
+                      <div style={{
+                        padding: '18px 10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderLeft: '1px solid #dee2e6'
                       }}>
                         <button
                           onClick={() => {
-                            console.log('Delete button clicked for row:', index);
-                            handleDeleteRow(index);
+                            const newActivities = tableData.workActivities.filter((_, i) => i !== index);
+                            setTableData({...tableData, workActivities: newActivities});
                           }}
                           style={{
                             background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '8px',
-                            padding: '10px 16px',
-                            fontSize: '1rem',
-                            fontWeight: '700',
+                            borderRadius: '6px',
+                            padding: '8px 12px',
                             cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            fontWeight: '600',
+                            boxShadow: '0 2px 8px rgba(220, 53, 69, 0.3)',
                             transition: 'all 0.3s ease',
-                            boxShadow: '0 4px 12px rgba(220, 53, 69, 0.4)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            minWidth: '100px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
+                            minWidth: '60px'
                           }}
-                          onMouseEnter={(e) => {
-                            e.target.style.background = 'linear-gradient(135deg, #c82333 0%, #a71e2a 100%)';
-                            e.target.style.transform = 'translateY(-2px)';
-                            e.target.style.boxShadow = '0 6px 16px rgba(220, 53, 69, 0.5)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
-                            e.target.style.transform = 'translateY(0)';
-                            e.target.style.boxShadow = '0 4px 12px rgba(220, 53, 69, 0.4)';
-                          }}
-                          title="Delete this row"
                         >
-                          🗑️ DELETE
+                          Delete
                         </button>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                  </tbody>
-                </table>
-              </div>
-              <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                <button className="add-row-btn" onClick={handleAddRow}>+</button>
-              </div>
-              <div style={{ marginTop: '32px', textAlign: 'center' }}>
-                <button
-                  onClick={saveReportData}
-                  disabled={isSaving || !isAliceAuthorized}
-                  className="report-save-btn"
-                >
-                  {isSaving ? 'Saving...' : 'Save Report'}
-                </button>
-                {saveMessage && (
-                  <div
-                    className={`report-save-message ${saveMessage.includes('✅') ? 'success' : 'error'}`}
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '30px',
+                  gap: '20px'
+                }}>
+                  {/* Left spacer */}
+                  <div style={{ flex: 1 }}></div>
+                  
+                  {/* Add Button - Center */}
+                  <button
+                    onClick={() => {
+                      const newActivities = [...tableData.workActivities];
+                      newActivities.push({ activity: '', timeScheduled: '', timeStarted: '', timeDone: '' });
+                      setTableData({...tableData, workActivities: newActivities});
+                    }}
+                    style={{
+                      background: '#FFD700',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '60px',
+                      height: '60px',
+                      cursor: 'pointer',
+                      fontSize: '1.8rem',
+                      fontWeight: 'bold',
+                      boxShadow: '0 4px 15px rgba(255, 215, 0, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.3s ease',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'translateY(-3px) scale(1.05)';
+                      e.target.style.boxShadow = '0 6px 20px rgba(255, 215, 0, 0.6)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'translateY(0) scale(1)';
+                      e.target.style.boxShadow = '0 4px 15px rgba(255, 215, 0, 0.4)';
+                    }}
                   >
+                    +
+                  </button>
+                
+                  {/* Action Buttons Group - Right */}
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '15px',
+                    alignItems: 'center',
+                    flex: 1,
+                    justifyContent: 'flex-end'
+                  }}>
+                    <button
+                      onClick={clearWorkActivityData}
+                      style={{
+                        background: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '14px 28px',
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        boxShadow: '0 6px 20px rgba(220, 53, 69, 0.4)',
+                        transition: 'all 0.3s ease',
+                        minWidth: '150px',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = '0 8px 25px rgba(220, 53, 69, 0.5)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = '0 6px 20px rgba(220, 53, 69, 0.4)';
+                      }}
+                    >
+                      CLEAR
+                    </button>
+                    
+                    <button
+                      onClick={async () => {
+                        if (!selectedDate) {
+                          alert('Please select a date first');
+                          return;
+                        }
+                        
+                        setIsSaving(true);
+                        try {
+                          await autoSaveData(tableData);
+                          setSaveMessage('Data saved successfully!');
+                          setTimeout(() => setSaveMessage(''), 3000);
+                        } catch (error) {
+                          console.error('Error saving data:', error);
+                          alert('Failed to save data. Please try again.');
+                        } finally {
+                          setIsSaving(false);
+                        }
+                      }}
+                      style={{
+                        background: isSaving ? '#6c757d' : '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '14px 28px',
+                        cursor: isSaving ? 'not-allowed' : 'pointer',
+                        fontSize: '0.95rem',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        boxShadow: isSaving 
+                          ? '0 4px 15px rgba(108, 117, 125, 0.3)'
+                          : '0 6px 20px rgba(40, 167, 69, 0.4)',
+                        opacity: isSaving ? 0.7 : 1,
+                        minWidth: '180px',
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      disabled={isSaving}
+                      onMouseEnter={(e) => {
+                        if (!isSaving) {
+                          e.target.style.transform = 'translateY(-2px)';
+                          e.target.style.boxShadow = '0 8px 25px rgba(40, 167, 69, 0.5)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSaving) {
+                          e.target.style.transform = 'translateY(0)';
+                          e.target.style.boxShadow = '0 6px 20px rgba(40, 167, 69, 0.4)';
+                        }
+                      }}
+                    >
+                      {isSaving ? 'SAVING...' : 'SAVE REPORT'}
+                    </button>
+                  </div>
+                </div>
+                
+                {saveMessage && (
+                  <div style={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    padding: '20px 30px',
+                    background: 'linear-gradient(135deg, #d4edda, #c3e6cb)',
+                    color: '#155724',
+                    borderRadius: '12px',
+                    fontSize: '1.1rem',
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                    border: '2px solid #c3e6cb',
+                    zIndex: 1000,
+                    minWidth: '300px',
+                    animation: 'fadeInOut 3s ease-in-out'
+                  }}>
                     {saveMessage}
                   </div>
                 )}
               </div>
-            </div>
-        )}
-        {activeContainer === 1 && (
-          <div className="report-details-row" style={{
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'flex-start',
-            gap: '32px',
-            justifyContent: 'center',
-            padding: '20px'
-          }}>
-            <div className="suggested-files-container" style={{
-              background: 'white',
-              borderRadius: '20px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-              padding: '40px',
-              maxWidth: '500px',
-              minHeight: '600px',
-              margin: '0',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              flex: '1',
-              height: '600px',
-              overflowY: 'auto'
-            }}>
-              <h3 className="suggested-files-title" style={{
-                color: '#2F3B70',
-                fontWeight: '800',
-                fontSize: '1.5rem',
-                marginBottom: '32px',
-                letterSpacing: '1px',
-                textTransform: 'uppercase'
-              }}>Suggested files</h3>
-              <div style={{
-                marginBottom: '24px',
-                padding: '20px',
-                background: '#f8f9fa',
-                borderRadius: '12px',
-                border: '1px solid #e9ecef'
-              }}>
-                <h4 style={{
-                  color: '#2F3B70',
-                  fontWeight: '600',
-                  fontSize: '1rem',
-                  marginBottom: '16px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}>
-                  Filter by Period
-                </h4>
-                <div style={{
-                  display: 'flex',
-                  gap: '12px',
-                  flexWrap: 'wrap'
-                }}>
-                  {/* Year Selection */}
-                  <div style={{
-                    position: 'relative',
-                    minWidth: '120px'
-                  }}>
-                    <button
-                      onClick={() => setShowYearDropdown(!showYearDropdown)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        background: 'white',
-                        border: '2px solid #e9ecef',
-                        borderRadius: '8px',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        color: '#2F3B70',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={e => { e.target.style.borderColor = '#2F3B70'; }}
-                      onMouseLeave={e => { e.target.style.borderColor = '#e9ecef'; }}
-                    >
-                      {selectedYear}
-                      <span style={{ fontSize: '0.8rem', color: '#6c757d' }}>▼</span>
-                    </button>
-                    {showYearDropdown && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: '0',
-                        right: '0',
-                        background: 'white',
-                        border: '2px solid #e9ecef',
-                        borderRadius: '8px',
-                        marginTop: '4px',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                        zIndex: 1000,
-                        maxHeight: '150px',
-                        overflowY: 'auto'
-                      }}>
-                        {getAvailableYears().map((year) => (
-                          <div
-                            key={year}
-                            style={{
-                              padding: '8px 12px',
-                              cursor: 'pointer',
-                              borderBottom: '1px solid #f8f9fa',
-                              transition: 'all 0.2s ease',
-                              fontWeight: year === selectedYear ? '600' : '400',
-                              color: year === selectedYear ? '#2F3B70' : '#6c757d',
-                              background: year === selectedYear ? '#e3f2fd' : 'transparent'
-                            }}
-                            onClick={() => handleYearSelect(year)}
-                            onMouseEnter={e => { e.target.style.background = '#f8f9fa'; }}
-                            onMouseLeave={e => { e.target.style.background = year === selectedYear ? '#e3f2fd' : 'transparent'; }}
-                          >
-                            {year}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {/* Month Selection */}
-                  <div style={{
-                    position: 'relative',
-                    minWidth: '140px'
-                  }}>
-                    <button
-                      onClick={() => setShowMonthDropdown(!showMonthDropdown)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        background: 'white',
-                        border: '2px solid #e9ecef',
-                        borderRadius: '8px',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        color: '#2F3B70',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={e => { e.target.style.borderColor = '#2F3B70'; }}
-                      onMouseLeave={e => { e.target.style.borderColor = '#e9ecef'; }}
-                    >
-                      {monthNames[selectedMonth]}
-                      <span style={{ fontSize: '0.8rem', color: '#6c757d' }}>▼</span>
-                    </button>
-                    {showMonthDropdown && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: '0',
-                        right: '0',
-                        background: 'white',
-                        border: '2px solid #e9ecef',
-                        borderRadius: '8px',
-                        marginTop: '4px',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                        zIndex: 1000,
-                        maxHeight: '200px',
-                        overflowY: 'auto'
-                      }}>
-                        {getAvailableMonths().map((month) => (
-                          <div
-                            key={month}
-                            style={{
-                              padding: '8px 12px',
-                              cursor: 'pointer',
-                              borderBottom: '1px solid #f8f9fa',
-                              transition: 'all 0.2s ease',
-                              fontWeight: month === selectedMonth ? '600' : '400',
-                              color: month === selectedMonth ? '#2F3B70' : '#6c757d',
-                              background: month === selectedMonth ? '#e3f2fd' : 'transparent'
-                            }}
-                            onClick={() => handleMonthSelect(month)}
-                            onMouseEnter={e => { e.target.style.background = '#f8f9fa'; }}
-                            onMouseLeave={e => { e.target.style.background = month === selectedMonth ? '#e3f2fd' : 'transparent'; }}
-                          >
-                            {monthNames[month]}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {(() => {
-                // Filter appointments based on selected year and month
-                const filteredAppointments = getFilteredAppointments();
-                // Group filtered appointments by date
-                const filteredGrouped = filteredAppointments.reduce((acc, appointment) => {
-                  const date = appointment.date ? appointment.date.split('T')[0] : '';
-                  if (!acc[date]) {
-                    acc[date] = [];
-                  }
-                  acc[date].push(appointment);
-                  return acc;
-                }, {});
-                if (Object.keys(filteredGrouped).length === 0) {
-                  return (
-                    <div className="suggested-files-empty" style={{
-                      color: '#6c757d',
-                      fontSize: '1.1rem',
-                      textAlign: 'center',
-                      marginTop: '40px',
-                      fontStyle: 'italic'
-                    }}>
-                      No appointments found for {monthNames[selectedMonth]} {selectedYear}.
-                    </div>
-                  );
-                }
-                return Object.keys(filteredGrouped).sort((a, b) => new Date(b) - new Date(a)).map(dayKey => (
-                  <div key={dayKey} className="suggested-file-card" style={{
-                    background: '#f8f9fa',
-                    borderRadius: '16px',
-                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
-                    padding: '0',
-                    marginBottom: '24px',
-                    maxWidth: '100%',
-                    marginLeft: '0',
-                    marginRight: '0',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    border: '1px solid #e9ecef'
-                  }}>
-                    <div className="suggested-file-header" style={{
-                      padding: '24px 28px 16px 28px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '16px'
-                    }}>
-                      <span role="img" aria-label="file" className="suggested-file-icon" style={{
-                        fontSize: '2.5rem',
-                        color: '#2F3B70',
-                        flexShrink: '0'
-                      }}>📄</span>
-                      <div>
-                        <div className="suggested-file-date" style={{
-                          fontWeight: '700',
-                          fontSize: '1.2rem',
-                          color: '#2F3B70',
-                          marginBottom: '4px'
-                        }}>{formatDay(dayKey)}</div>
-                        <div className="suggested-file-meta" style={{
-                          color: '#6c757d',
-                          fontSize: '1rem',
-                          fontWeight: '500'
-                        }}>You modified • {new Date(dayKey).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}</div>
-                      </div>
-                    </div>
-                    <div className="suggested-file-divider" style={{
-                      height: '2px',
-                      background: '#2F3B70',
-                      width: '100%',
-                      opacity: '0.3'
-                    }}></div>
-                    <div className="suggested-file-list" style={{
-                      padding: '16px 28px 24px 28px'
-                    }}>
-                      <ul className="suggested-file-ul" style={{
-                        listStyle: 'none',
-                        margin: '0',
-                        padding: '0'
-                      }}>
-                        {filteredGrouped[dayKey].map((app, idx) => (
-                          <li key={app.id} className="suggested-file-li" style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            marginBottom: '12px',
-                            color: '#2F3B70',
-                            fontSize: '1.1rem',
-                            gap: '12px',
-                            padding: '8px 12px',
-                            borderRadius: '8px',
-                            transition: 'all 0.2s ease',
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => handleAppointmentClick(app)}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = '#e9ecef';
-                            e.currentTarget.style.transform = 'translateX(4px)';
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.transform = 'translateX(0)';
-                          }}>
-                            <span role="img" aria-label="doc" className="suggested-file-doc-icon" style={{
-                              fontSize: '1.4rem',
-                              color: '#5c6ab0'
-                            }}>📄</span>
-                            <span className="suggested-file-appointment" style={{
-                              fontWeight: '600'
-                            }}>Appointment {idx + 1}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-            <div className="additional-container" style={{
-              background: 'white',
-              borderRadius: '20px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-              minWidth: '400px',
-              minHeight: '600px',
-              padding: '40px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              flex: '1',
-              maxHeight: '600px',
-              overflowY: 'auto'
-            }}>
-              <div className="analytics-title" style={{
-                fontSize: '1.5rem',
-                fontWeight: '800',
-                color: '#2F3B70',
-                marginBottom: '32px',
-                letterSpacing: '1px',
-                textTransform: 'uppercase'
-              }}>Analytics</div>
-              <div className="analytics-chart-area" style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '20px',
-                justifyContent: 'flex-start',
-                width: '100%'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '40px',
-                  justifyContent: 'center',
-                  width: '100%'
-                }}>
-                  {(() => {
-                    const { foreign, local } = getVesselCounts();
-                    const total = foreign + local;
-                    const foreignPercent = total ? (foreign / total) * 100 : 0;
-                    const localPercent = total ? (local / total) * 100 : 0;
-                    // Pie chart math
-                    const radius = 120;
-                    const cx = 140;
-                    const cy = 140;
-                    const foreignAngle = (foreignPercent / 100) * 360;
-                    const localAngle = (localPercent / 100) * 360;
-                    // Foreign arc
-                    const foreignRadians = (foreignAngle - 90) * Math.PI / 180;
-                    const fx = cx + radius * Math.cos(foreignRadians);
-                    const fy = cy + radius * Math.sin(foreignRadians);
-                    // Local arc
-                    const localRadians = (localAngle - 90) * Math.PI / 180;
-                    const lx = cx + radius * Math.cos(localRadians);
-                    const ly = cy + radius * Math.sin(localRadians);
-                    // Large arc flag
-                    const largeArcFlag = foreignPercent > 50 ? 1 : 0;
-                    // Pie path for local vessel
-                    const localPath = total === 0
-                      ? ''
-                      : `M${cx},${cy} L${cx},${cy - radius} A${radius},${radius} 0 ${largeArcFlag},1 ${fx},${fy} Z`;
-                    return (
-                      <svg width="280" height="280" viewBox="0 0 280 280" style={{
-                        filter: 'drop-shadow(0 4px 16px rgba(47, 59, 112, 0.2))'
-                      }}>
-                        {/* Foreign Vessel Pie */}
-                        <circle r={radius} cx={cx} cy={cy} fill="#2F3B70" />
-                        {/* Local Vessel Pie */}
-                        {local > 0 && (
-                          <path
-                            d={`M${cx},${cy} L${cx},${cy - radius} A${radius},${radius} 0 ${localPercent > 50 ? 1 : 0},1 ${cx + radius * Math.cos((localAngle - 90) * Math.PI / 180)},${cy + radius * Math.sin((localAngle - 90) * Math.PI / 180)} Z`}
-                            fill="#ff3c3c"
-                          />
-                        )}
-                        {/* Foreign count */}
-                        <text x={cx - 60} y={cy + 10} textAnchor="middle" fontSize="2.5rem" fill="#fff" fontWeight="bold">{foreign}</text>
-                        {/* Local count */}
-                        <text x={cx + 60} y={cy + 40} textAnchor="middle" fontSize="2.5rem" fill="#fff" fontWeight="bold">{local}</text>
-                      </svg>
-                    );
-                  })()}
-                  <div className="analytics-legend" style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '24px'
-                  }}>
-                    <div className="analytics-legend-item" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '16px',
-                      fontSize: '1.1rem',
-                      color: '#2F3B70',
-                      fontWeight: '600',
-                      padding: '12px 16px',
-                      borderRadius: '12px',
-                      background: '#f8f9fa',
-                      border: '1px solid #e9ecef'
-                    }}>
-                      <span className="analytics-legend-dot" style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: '#2F3B70',
-                        display: 'inline-block',
-                        boxShadow: '0 2px 8px rgba(47, 59, 112, 0.3)'
-                      }}></span>
-                      <span className="analytics-legend-label" style={{
-                        color: '#2F3B70',
-                        fontWeight: '600',
-                        fontSize: '1.1rem'
-                      }}>Foreign Vessel</span>
-                    </div>
-                    <div className="analytics-legend-item" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '16px',
-                      fontSize: '1.1rem',
-                      color: '#2F3B70',
-                      fontWeight: '600',
-                      padding: '12px 16px',
-                      borderRadius: '12px',
-                      background: '#f8f9fa',
-                      border: '1px solid #e9ecef'
-                    }}>
-                      <span className="analytics-legend-dot" style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: '#ff3c3c',
-                        display: 'inline-block',
-                        boxShadow: '0 2px 8px rgba(255, 60, 60, 0.3)'
-                      }}></span>
-                      <span className="analytics-legend-label" style={{
-                        color: '#2F3B70',
-                        fontWeight: '600',
-                        fontSize: '1.1rem'
-                      }}>Local Vessel</span>
-                    </div>
-                  </div>
-                </div>
-                {renderTimeSeriesChart()}
-              </div>
-            </div>
+            )}
           </div>
         )}
-        {/* Appointment Details Modal */}
-        {showAppointmentDetails && selectedAppointment && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000,
-            padding: '20px'
-          }}>
-            <div style={{
-              background: 'white',
-              borderRadius: '20px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-              padding: '40px',
-              maxWidth: '800px',
-              width: '100%',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              position: 'relative'
-            }}>
-              {/* Close Button */}
-              <button
-                onClick={closeAppointmentDetails}
-                style={{
-                  position: 'absolute',
-                  top: '20px',
-                  right: '20px',
-                  background: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '40px',
-                  height: '40px',
-                  fontSize: '1.2rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = '#5a6268';
-                  e.target.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = '#6c757d';
-                  e.target.style.transform = 'scale(1)';
-                }}
-              >
-                ×
-              </button>
-
-              {/* Modal Header */}
-              <div style={{
-                marginBottom: '32px',
-                borderBottom: '2px solid #e9ecef',
-                paddingBottom: '20px'
-              }}>
-                <h2 style={{
-                  color: '#2F3B70',
-                  fontSize: '1.8rem',
-                  fontWeight: '800',
-                  margin: '0 0 8px 0',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px'
-                }}>
-                  Appointment Details
-                </h2>
-                <p style={{
-                  color: '#6c757d',
-                  fontSize: '1.1rem',
-                  margin: '0',
-                  fontWeight: '500'
-                }}>
-                  {selectedAppointment.date ? new Date(selectedAppointment.date).toDateString() : 'No date specified'}
-                </p>
-              </div>
-
-              {/* Client Information Section */}
-              <div style={{
-                marginBottom: '32px',
-                background: '#f8f9fa',
-                borderRadius: '16px',
-                padding: '24px',
-                border: '1px solid #e9ecef'
-              }}>
-                <h3 style={{
-                  color: '#2F3B70',
-                  fontSize: '1.3rem',
-                  fontWeight: '700',
-                  margin: '0 0 20px 0',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}>
-                  Client Information
-                </h3>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                  gap: '20px'
-                }}>
-                  <div>
-                    <strong style={{ color: '#2F3B70', display: 'block', marginBottom: '8px' }}>Name:</strong>
-                    <span style={{ color: '#2F3B70' }}>{selectedAppointment.name || 'Not specified'}</span>
-                  </div>
-                  <div>
-                    <strong style={{ color: '#2F3B70', display: 'block', marginBottom: '8px' }}>Time:</strong>
-                    <span style={{ color: '#2F3B70' }}>{selectedAppointment.time || 'Not specified'}</span>
-                  </div>
-                  <div>
-                    <strong style={{ color: '#2F3B70', display: 'block', marginBottom: '8px' }}>Type of Service:</strong>
-                    <span style={{ color: '#2F3B70' }}>{selectedAppointment.serviceType || 'Not specified'}</span>
-                  </div>
-                  <div>
-                    <strong style={{ color: '#2F3B70', display: 'block', marginBottom: '8px' }}>Vessel Type:</strong>
-                    <span style={{ color: '#2F3B70' }}>{selectedAppointment.vesselType || 'Not specified'}</span>
-                  </div>
-                  <div>
-                    <strong style={{ color: '#2F3B70', display: 'block', marginBottom: '8px' }}>Created By:</strong>
-                    <span style={{ color: '#2F3B70' }}>{selectedAppointment.userEmail || 'Not specified'}</span>
-                  </div>
-                  {selectedAppointment.assignedWorkers && selectedAppointment.assignedWorkers.length > 0 && (
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <strong style={{ color: '#2F3B70', display: 'block', marginBottom: '8px' }}>Assigned Workers:</strong>
-                      <div style={{ 
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '8px',
-                        marginTop: '4px'
-                      }}>
-                        {selectedAppointment.assignedWorkers.map((worker, workerIdx) => (
-                          <span key={workerIdx} style={{ 
-                            display: 'inline-block',
-                            padding: '6px 12px',
-                            background: '#2F3B70',
-                            color: 'white',
-                            borderRadius: '16px',
-                            fontSize: '0.9rem',
-                            fontWeight: '500'
-                          }}>
-                            {worker}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Report Information Section */}
-              <div style={{
-                background: '#f8f9fa',
-                borderRadius: '16px',
-                padding: '24px',
-                border: '1px solid #e9ecef'
-              }}>
-                <h3 style={{
-                  color: '#2F3B70',
-                  fontSize: '1.3rem',
-                  fontWeight: '700',
-                  margin: '0 0 20px 0',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}>
-                  Report Information
-                </h3>
-                
-                {/* Basic Information */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                  gap: '20px',
-                  marginBottom: '24px'
-                }}>
-                  <div>
-                    <strong style={{ color: '#2F3B70', display: 'block', marginBottom: '8px' }}>Port Location:</strong>
-                    <span style={{ color: '#2F3B70' }}>{tableData.portLocation || 'Not specified'}</span>
-                  </div>
-                  <div>
-                    <strong style={{ color: '#2F3B70', display: 'block', marginBottom: '8px' }}>Voyage No.:</strong>
-                    <span style={{ color: '#2F3B70' }}>{tableData.voyageNo || 'Not specified'}</span>
-                  </div>
-                  <div>
-                    <strong style={{ color: '#2F3B70', display: 'block', marginBottom: '8px' }}>Vessel Name:</strong>
-                    <span style={{ color: '#2F3B70' }}>{tableData.vesselName || 'Not specified'}</span>
-                  </div>
-                  <div>
-                    <strong style={{ color: '#2F3B70', display: 'block', marginBottom: '8px' }}>Purpose of Call:</strong>
-                    <span style={{ color: '#2F3B70' }}>{tableData.purposeOfCall || 'Not specified'}</span>
-                  </div>
-                </div>
-
-                {/* Work Activities Table */}
-                <div>
-                  <h4 style={{
-                    color: '#2F3B70',
-                    fontSize: '1.1rem',
-                    fontWeight: '600',
-                    margin: '0 0 16px 0',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Work Activities
-                  </h4>
-                  <div style={{
-                    background: 'white',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    border: '1px solid #e9ecef'
-                  }}>
-                    <table style={{
-                      width: '100%',
-                      borderCollapse: 'collapse'
-                    }}>
-                      <thead>
-                        <tr style={{
-                          background: '#eaf3ff'
-                        }}>
-                          <th style={{
-                            padding: '12px 16px',
-                            textAlign: 'left',
-                            fontWeight: '600',
-                            color: '#2F3B70',
-                            borderBottom: '1px solid #e9ecef'
-                          }}>Work Activity</th>
-                          <th style={{
-                            padding: '12px 16px',
-                            textAlign: 'center',
-                            fontWeight: '600',
-                            color: '#2F3B70',
-                            borderBottom: '1px solid #e9ecef'
-                          }}>Time Scheduled</th>
-                          <th style={{
-                            padding: '12px 16px',
-                            textAlign: 'center',
-                            fontWeight: '600',
-                            color: '#2F3B70',
-                            borderBottom: '1px solid #e9ecef'
-                          }}>Time Started</th>
-                          <th style={{
-                            padding: '12px 16px',
-                            textAlign: 'center',
-                            fontWeight: '600',
-                            color: '#2F3B70',
-                            borderBottom: '1px solid #e9ecef'
-                          }}>Time Done</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tableData.workActivities.map((activity, index) => (
-                          <tr key={index} style={{
-                            background: index % 2 === 0 ? '#f8f9fa' : 'white'
-                          }}>
-                            <td style={{
-                              padding: '12px 16px',
-                              borderBottom: '1px solid #e9ecef',
-                              color: '#2F3B70'
-                            }}>{activity.activity || 'Not specified'}</td>
-                            <td style={{
-                              padding: '12px 16px',
-                              textAlign: 'center',
-                              borderBottom: '1px solid #e9ecef',
-                              color: '#2F3B70'
-                            }}>{activity.timeScheduled || 'Not specified'}</td>
-                            <td style={{
-                              padding: '12px 16px',
-                              textAlign: 'center',
-                              borderBottom: '1px solid #e9ecef',
-                              color: '#2F3B70'
-                            }}>{activity.timeStarted || 'Not specified'}</td>
-                            <td style={{
-                              padding: '12px 16px',
-                              textAlign: 'center',
-                              borderBottom: '1px solid #e9ecef',
-                              color: '#2F3B70'
-                            }}>{activity.timeDone || 'Not specified'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        <div className="report-nav-btns" style={{ marginTop: '18px', textAlign: 'right' }}>
-          <button
-            className="report-nav-btn"
-            onClick={() => setActiveContainer((activeContainer - 1 + containers.length) % containers.length)}
-            disabled={activeContainer === 0}
-            style={{
-              background: '#eaf3ff',
-              color: '#b0b7d1',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '8px 18px',
-              fontWeight: 'bold',
-              fontSize: '1rem',
-              marginRight: '8px',
-              cursor: activeContainer === 0 ? 'not-allowed' : 'pointer',
-              opacity: activeContainer === 0 ? 0.6 : 1,
-            }}
-          >
-            &#8592; Previous
-          </button>
-          <button
-            className="report-nav-btn"
-            onClick={() => setActiveContainer((activeContainer + 1) % containers.length)}
-            disabled={activeContainer === containers.length - 1}
-            style={{
-              background: '#ffe14d',
-              color: '#222',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '8px 18px',
-              fontWeight: 'bold',
-              fontSize: '1rem',
-              cursor: activeContainer === containers.length - 1 ? 'not-allowed' : 'pointer',
-              opacity: activeContainer === containers.length - 1 ? 0.6 : 1,
-            }}
-          >
-            Next &#8594;
-          </button>
-        </div>
       </div>
     </div>
   );

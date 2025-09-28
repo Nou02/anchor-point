@@ -498,3 +498,34 @@
   color: #721c24;
   border: 1px solid #f5c6cb;
 }
+
+/* Animation for floating delete button */
+@keyframes slideInFromRight {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+}
