@@ -154,9 +154,22 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
     <div className="login-signup-split-bg">
       <div className="login-left-panel">
         <div className="form-section">
+          <div className="logo-section">
+            <img
+              src={require('../assets/anchorpoint.png')}
+              alt="Anchor Logo"
+              className="anchor-logo hero-logo"
+            />
+            <h1 className="right-title hero-title">
+              <span className="leo-text">Anchor</span> <span className="marines-text">Point</span>
+            </h1>
+            <div className="right-quote hero-quote">
+              L.E.O Marines – Anchoring Trust, Navigating Excellence since 2011
+            </div>
+          </div>
           {isLogin ? (
             <form onSubmit={handleLogin}>
-              <h2 className="login-title">Log in to your account</h2>
+              <h2 className="login-title">Login</h2>
               <input name="usernameOrEmail" type="text" placeholder="Username or Email" value={loginData.usernameOrEmail} onChange={handleLoginChange} required className="input-field" />
               <PasswordInput
                 value={loginData.password}
@@ -170,9 +183,9 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
           ) : (
             <form onSubmit={handleSignUp}>
               <h2 className="login-title">Sign up</h2>
-              <input name="username" type="text" placeholder="Username (Juan A. Dela Cruz)" value={signUpData.username} onChange={handleSignUpChange} required className="input-field" />
-              <input name="email" type="email" placeholder="Email (juandelacruz@gmail.com)" value={signUpData.email} onChange={handleSignUpChange} className="input-field" />
-              <input name="phone" type="text" placeholder="Phone Number (09123456789)" value={signUpData.phone} onChange={handleSignUpChange} required className="input-field" />
+              <input name="username" type="text" placeholder="Username" value={signUpData.username} onChange={handleSignUpChange} required className="input-field" />
+              <input name="email" type="email" placeholder="Email" value={signUpData.email} onChange={handleSignUpChange} className="input-field" />
+              <input name="phone" type="text" placeholder="Phone Number" value={signUpData.phone} onChange={handleSignUpChange} required className="input-field" />
               <PasswordInput
                 value={signUpData.password}
                 onChange={e => setSignUpData({ ...signUpData, password: e.target.value })}
@@ -190,17 +203,6 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
         </div>
       </div>
       <div className="login-right-panel">
-        <div className="right-content hero-content">
-          <img
-            src={require('../assets/anchorpoint.png')}
-            alt="Anchor Logo"
-            className="anchor-logo hero-logo"
-          />
-          <h1 className="right-title hero-title">L.E.O Marines</h1>
-          <div className="right-quote hero-quote">
-            L.E.O Marines – Anchoring Trust, Navigating Excellence since 2011
-          </div>
-        </div>
       </div>
     </div>
   );
