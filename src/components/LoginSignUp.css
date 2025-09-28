@@ -31,7 +31,6 @@
   transition: all 0.3s ease;
   position: relative;
   border-radius: 20px 0 0 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
 
 .login-right-panel {
@@ -47,7 +46,6 @@
   min-height: 0;
   overflow: hidden;
   border-radius: 0 20px 20px 0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
 
 .right-content {
