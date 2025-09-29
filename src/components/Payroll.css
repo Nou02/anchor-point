@@ -532,15 +532,17 @@
   white-space: nowrap;
 }
 
-/* Vessel column headers - allow text wrapping */
+/* Vessel column headers - allow text wrapping and better fitting */
 .manager-table th:nth-child(2),
 .manager-table th:nth-child(3),
 .manager-table th:nth-child(4),
 .manager-table th:nth-child(5) {
   white-space: normal;
-  line-height: 1.2;
-  font-size: 0.9rem;
+  line-height: 1.1;
+  font-size: 0.8rem;
   word-wrap: break-word;
+  padding: 8px 4px;
+  text-align: center;
 }
 
 /* Column width distribution */
@@ -568,17 +570,18 @@
 .manager-table td:nth-child(3),
 .manager-table td:nth-child(4),
 .manager-table td:nth-child(5) {
-  width: 10%;
-  font-size: 0.85rem;
-  line-height: 1.2;
+  width: 12%;
+  font-size: 0.8rem;
+  line-height: 1.1;
   white-space: normal;
   word-wrap: break-word;
+  padding: 6px 4px;
 }
 
 /* TOTAL column - smaller */
 .manager-table th:nth-child(6),
 .manager-table td:nth-child(6) {
-  width: 7%;
+  width: 5%;
 }
 
 /* SSS, PAG-IBIG, PhilHealth, Cash Advance columns */
@@ -590,7 +593,9 @@
 .manager-table td:nth-child(8),
 .manager-table td:nth-child(9),
 .manager-table td:nth-child(10) {
-  width: 9%;
+  width: 8%;
+  font-size: 0.8rem;
+  padding: 6px 4px;
 }
 
 /* NET TOTAL column - smaller */
@@ -866,16 +871,17 @@
   .manager-table td:nth-child(3),
   .manager-table td:nth-child(4),
   .manager-table td:nth-child(5) {
-    width: 10%;
-    min-width: 60px;
+    width: 12%;
+    min-width: 70px;
+    font-size: 0.75rem;
   }
   
   .manager-table th:nth-child(6),
   .manager-table th:nth-child(11),
   .manager-table td:nth-child(6),
   .manager-table td:nth-child(11) {
-    width: 7%;
-    min-width: 50px;
+    width: 5%;
+    min-width: 40px;
   }
   
   .manager-table th:nth-child(7),
@@ -886,8 +892,9 @@
   .manager-table td:nth-child(8),
   .manager-table td:nth-child(9),
   .manager-table td:nth-child(10) {
-    width: 9%;
-    min-width: 60px;
+    width: 8%;
+    min-width: 55px;
+    font-size: 0.75rem;
   }
   
   .vess-input {
@@ -947,16 +954,17 @@
   .manager-table td:nth-child(3),
   .manager-table td:nth-child(4),
   .manager-table td:nth-child(5) {
-    width: 10%;
-    min-width: 50px;
+    width: 12%;
+    min-width: 60px;
+    font-size: 0.7rem;
   }
   
   .manager-table th:nth-child(6),
   .manager-table th:nth-child(11),
   .manager-table td:nth-child(6),
   .manager-table td:nth-child(11) {
-    width: 7%;
-    min-width: 40px;
+    width: 5%;
+    min-width: 35px;
   }
   
   .manager-table th:nth-child(7),
@@ -967,8 +975,9 @@
   .manager-table td:nth-child(8),
   .manager-table td:nth-child(9),
   .manager-table td:nth-child(10) {
-    width: 9%;
-    min-width: 50px;
+    width: 8%;
+    min-width: 45px;
+    font-size: 0.7rem;
   }
   
   .vess-input {

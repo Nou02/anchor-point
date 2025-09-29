@@ -30,39 +30,84 @@ const WORKERS_LIST = [
   "Alloi, Sino-ag"
 ];
 
-// Ultra-simple input that never re-renders
+// Ultra-stable input that NEVER re-renders - Complete React bypass
 const UltraSimpleInput = ({ 
   initialValue, 
   onValueChange, 
+  onBlur,
   placeholder, 
   className, 
   dataRow, 
   dataCol 
 }) => {
   const inputRef = useRef(null);
+  const isInitialized = useRef(false);
+  const lastValue = useRef(initialValue);
+  const changeHandlerRef = useRef(null);
+  const blurHandlerRef = useRef(null);
   
   // Set initial value only once, never again
   useEffect(() => {
-    if (inputRef.current && initialValue !== undefined) {
+    if (inputRef.current && initialValue !== undefined && !isInitialized.current) {
       inputRef.current.value = initialValue;
+      lastValue.current = initialValue;
+      isInitialized.current = true;
     }
   }, []); // Empty dependency array - only runs once
 
-  const handleChange = (e) => {
+  // Store handlers in refs to prevent re-renders
+  changeHandlerRef.current = (e) => {
+    // Direct DOM manipulation - no React state updates during typing
+    const value = e.target.value;
+    lastValue.current = value;
+    
+    // Call onChange immediately without any delays
     if (onValueChange) {
-      onValueChange(e.target.value);
+      onValueChange(value);
     }
   };
+
+  blurHandlerRef.current = (e) => {
+    // Call onBlur to commit the value
+    if (onBlur) {
+      onBlur();
+    }
+  };
+
+  // Use direct event listeners to prevent re-renders
+  useEffect(() => {
+    const input = inputRef.current;
+    if (input) {
+      const handleChange = (e) => changeHandlerRef.current?.(e);
+      const handleBlur = (e) => blurHandlerRef.current?.(e);
+      
+      input.addEventListener('input', handleChange);
+      input.addEventListener('blur', handleBlur);
+      
+      return () => {
+        input.removeEventListener('input', handleChange);
+        input.removeEventListener('blur', handleBlur);
+      };
+    }
+  }, []);
 
   return (
     <input
       ref={inputRef}
       type="text"
-      onChange={handleChange}
       data-row={dataRow}
       data-col={dataCol}
       className={className}
       placeholder={placeholder}
+      autoComplete="off"
+      spellCheck="false"
+      style={{ 
+        background: 'transparent',
+        border: 'none',
+        outline: 'none',
+        width: '100%',
+        height: '100%'
+      }}
     />
   );
 };
@@ -401,17 +446,119 @@ const Payroll = () => {
     };
   };
 
-  // Simple input handler that doesn't cause re-renders
+  // Store pending updates in a Map to avoid React re-renders
+  const pendingUpdates = useRef(new Map());
+  const updateTimeout = useRef(null);
+  
+  // Store pricing updates in a separate Map to avoid React re-renders
+  const pendingPricingUpdates = useRef(new Map());
+  const pricingUpdateTimeout = useRef(null);
+  
+  // Ultra-simple input handler that NEVER causes re-renders
   const handleInputChange = useCallback((rowIndex, field, value) => {
-    // Update state without causing re-render of inputs
-    setTableData(prevData => {
-      const newData = [...prevData];
-      newData[rowIndex] = {
-        ...newData[rowIndex],
-        [field]: value
-      };
-      return newData;
-    });
+    // Store the value in a Map instead of React state
+    const key = `${rowIndex}-${field}`;
+    pendingUpdates.current.set(key, value);
+    
+    // Clear any existing timeout
+    if (updateTimeout.current) {
+      clearTimeout(updateTimeout.current);
+    }
+    
+    // Set a very long timeout to batch updates (only when user stops typing for 5 seconds)
+    updateTimeout.current = setTimeout(() => {
+      // Batch commit all pending updates
+      const updates = Array.from(pendingUpdates.current.entries());
+      if (updates.length > 0) {
+        setTableData(prevData => {
+          const newData = [...prevData];
+          updates.forEach(([key, value]) => {
+            const [rowIndexStr, field] = key.split('-');
+            const rowIndex = parseInt(rowIndexStr);
+            if (newData[rowIndex]) {
+              newData[rowIndex] = {
+                ...newData[rowIndex],
+                [field]: value
+              };
+            }
+          });
+          return newData;
+        });
+        pendingUpdates.current.clear();
+      }
+    }, 5000); // 5 second delay to batch updates
+  }, []);
+  
+  // Handle blur to commit pending updates immediately
+  const handleInputBlur = useCallback((rowIndex, field) => {
+    const key = `${rowIndex}-${field}`;
+    const value = pendingUpdates.current.get(key);
+    
+    if (value !== undefined) {
+      setTableData(prevData => {
+        const newData = [...prevData];
+        if (newData[rowIndex]) {
+          newData[rowIndex] = {
+            ...newData[rowIndex],
+            [field]: value
+          };
+        }
+        return newData;
+      });
+      pendingUpdates.current.delete(key);
+    }
+  }, []);
+
+  // Pricing input handler that NEVER causes re-renders
+  const handlePricingInputChange = useCallback((field, value) => {
+    // Store the value in a Map instead of React state
+    pendingPricingUpdates.current.set(field, value);
+    
+    // Clear any existing timeout
+    if (pricingUpdateTimeout.current) {
+      clearTimeout(pricingUpdateTimeout.current);
+    }
+    
+    // Set a very long timeout to batch updates (only when user stops typing for 5 seconds)
+    pricingUpdateTimeout.current = setTimeout(() => {
+      // Batch commit all pending pricing updates
+      const updates = Array.from(pendingPricingUpdates.current.entries());
+      if (updates.length > 0) {
+        setPricingConfig(prevConfig => {
+          const newConfig = { ...prevConfig };
+          updates.forEach(([field, value]) => {
+            newConfig[field] = parseFloat(value) || 0;
+          });
+          return newConfig;
+        });
+        pendingPricingUpdates.current.clear();
+      }
+    }, 5000); // 5 second delay to batch updates
+  }, []);
+
+  // Handle pricing blur to commit pending updates immediately
+  const handlePricingInputBlur = useCallback((field) => {
+    const value = pendingPricingUpdates.current.get(field);
+    
+    if (value !== undefined) {
+      setPricingConfig(prevConfig => ({
+        ...prevConfig,
+        [field]: parseFloat(value) || 0
+      }));
+      pendingPricingUpdates.current.delete(field);
+    }
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (updateTimeout.current) {
+        clearTimeout(updateTimeout.current);
+      }
+      if (pricingUpdateTimeout.current) {
+        clearTimeout(pricingUpdateTimeout.current);
+      }
+    };
   }, []);
 
   // Handle keyboard navigation for continuous input
@@ -845,7 +992,7 @@ const Payroll = () => {
             onClick={() => setShowPricingConfig(!showPricingConfig)}
             className="pricing-config-button"
           >
-            ⚙️ Pricing Configuration
+            Pricing Configuration
           </button>
         </div>
         <h2>Worker Payroll Management</h2>
@@ -860,26 +1007,22 @@ const Payroll = () => {
               <h4>Local Vessel Pricing</h4>
               <div className="pricing-input-group">
                 <label>Mooring Price (₱):</label>
-                <input
-                  type="number"
-                  value={pricingConfig.localMooringPrice}
-                  onChange={e => setPricingConfig(prev => ({
-                    ...prev,
-                    localMooringPrice: parseFloat(e.target.value) || 0
-                  }))}
+                <UltraSimpleInput
+                  initialValue={pricingConfig.localMooringPrice}
+                  onValueChange={(value) => handlePricingInputChange('localMooringPrice', value)}
+                  onBlur={() => handlePricingInputBlur('localMooringPrice')}
                   className="pricing-input"
+                  placeholder="Enter price"
                 />
               </div>
               <div className="pricing-input-group">
                 <label>Unmooring Price (₱):</label>
-                <input
-                  type="number"
-                  value={pricingConfig.localUnmooringPrice}
-                  onChange={e => setPricingConfig(prev => ({
-                    ...prev,
-                    localUnmooringPrice: parseFloat(e.target.value) || 0
-                  }))}
+                <UltraSimpleInput
+                  initialValue={pricingConfig.localUnmooringPrice}
+                  onValueChange={(value) => handlePricingInputChange('localUnmooringPrice', value)}
+                  onBlur={() => handlePricingInputBlur('localUnmooringPrice')}
                   className="pricing-input"
+                  placeholder="Enter price"
                 />
               </div>
             </div>
@@ -888,26 +1031,22 @@ const Payroll = () => {
               <h4>Foreign Vessel Pricing</h4>
               <div className="pricing-input-group">
                 <label>Mooring Price (₱):</label>
-                <input
-                  type="number"
-                  value={pricingConfig.foreignMooringPrice}
-                  onChange={e => setPricingConfig(prev => ({
-                    ...prev,
-                    foreignMooringPrice: parseFloat(e.target.value) || 0
-                  }))}
+                <UltraSimpleInput
+                  initialValue={pricingConfig.foreignMooringPrice}
+                  onValueChange={(value) => handlePricingInputChange('foreignMooringPrice', value)}
+                  onBlur={() => handlePricingInputBlur('foreignMooringPrice')}
                   className="pricing-input"
+                  placeholder="Enter price"
                 />
               </div>
               <div className="pricing-input-group">
                 <label>Unmooring Price (₱):</label>
-                <input
-                  type="number"
-                  value={pricingConfig.foreignUnmooringPrice}
-                  onChange={e => setPricingConfig(prev => ({
-                    ...prev,
-                    foreignUnmooringPrice: parseFloat(e.target.value) || 0
-                  }))}
+                <UltraSimpleInput
+                  initialValue={pricingConfig.foreignUnmooringPrice}
+                  onValueChange={(value) => handlePricingInputChange('foreignUnmooringPrice', value)}
+                  onBlur={() => handlePricingInputBlur('foreignUnmooringPrice')}
                   className="pricing-input"
+                  placeholder="Enter price"
                 />
               </div>
             </div>
@@ -952,6 +1091,7 @@ const Payroll = () => {
                   <UltraSimpleInput
                     initialValue={row.localMooringCount}
                     onValueChange={(value) => handleInputChange(rowIndex, 'localMooringCount', value)}
+                    onBlur={() => handleInputBlur(rowIndex, 'localMooringCount')}
                     dataRow={rowIndex}
                     dataCol={1}
                     className="table-input vess-input"
@@ -963,6 +1103,7 @@ const Payroll = () => {
                   <UltraSimpleInput
                     initialValue={row.localUnmooringCount}
                     onValueChange={(value) => handleInputChange(rowIndex, 'localUnmooringCount', value)}
+                    onBlur={() => handleInputBlur(rowIndex, 'localUnmooringCount')}
                     dataRow={rowIndex}
                     dataCol={2}
                     className="table-input vess-input"
@@ -974,6 +1115,7 @@ const Payroll = () => {
                   <UltraSimpleInput
                     initialValue={row.foreignMooringCount}
                     onValueChange={(value) => handleInputChange(rowIndex, 'foreignMooringCount', value)}
+                    onBlur={() => handleInputBlur(rowIndex, 'foreignMooringCount')}
                     dataRow={rowIndex}
                     dataCol={3}
                     className="table-input vess-input"
@@ -985,6 +1127,7 @@ const Payroll = () => {
                   <UltraSimpleInput
                     initialValue={row.foreignUnmooringCount}
                     onValueChange={(value) => handleInputChange(rowIndex, 'foreignUnmooringCount', value)}
+                    onBlur={() => handleInputBlur(rowIndex, 'foreignUnmooringCount')}
                     dataRow={rowIndex}
                     dataCol={4}
                     className="table-input vess-input"
@@ -1016,6 +1159,7 @@ const Payroll = () => {
                   <UltraSimpleInput
                     initialValue={row.sss}
                     onValueChange={(value) => handleInputChange(rowIndex, 'sss', value)}
+                    onBlur={() => handleInputBlur(rowIndex, 'sss')}
                     dataRow={rowIndex}
                     dataCol={6}
                     className="table-input vess-input"
@@ -1027,6 +1171,7 @@ const Payroll = () => {
                   <UltraSimpleInput
                     initialValue={row.pagibig}
                     onValueChange={(value) => handleInputChange(rowIndex, 'pagibig', value)}
+                    onBlur={() => handleInputBlur(rowIndex, 'pagibig')}
                     dataRow={rowIndex}
                     dataCol={7}
                     className="table-input vess-input"
@@ -1038,6 +1183,7 @@ const Payroll = () => {
                   <UltraSimpleInput
                     initialValue={row.philhealth}
                     onValueChange={(value) => handleInputChange(rowIndex, 'philhealth', value)}
+                    onBlur={() => handleInputBlur(rowIndex, 'philhealth')}
                     dataRow={rowIndex}
                     dataCol={8}
                     className="table-input vess-input"
@@ -1049,6 +1195,7 @@ const Payroll = () => {
                   <UltraSimpleInput
                     initialValue={row.cashAdvance}
                     onValueChange={(value) => handleInputChange(rowIndex, 'cashAdvance', value)}
+                    onBlur={() => handleInputBlur(rowIndex, 'cashAdvance')}
                     dataRow={rowIndex}
                     dataCol={9}
                     className="table-input vess-input"

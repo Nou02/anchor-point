@@ -4,8 +4,9 @@ import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, update
 import { getAuth } from 'firebase/auth';
 import '../firebase/config'; // Make sure this imports your firebase config
 
-
 const Scheduling = () => {
+  // Initialize Firestore database
+  const db = getFirestore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState([]); // Array of selected dates
   const [view, setView] = useState('calendar'); // 'calendar' or 'table'
@@ -81,6 +82,15 @@ const Scheduling = () => {
     );
   };
 
+  // Check if a day is in the past
+  const isPastDate = (day) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkDate = new Date(currentYear, currentMonth, day);
+    checkDate.setHours(0, 0, 0, 0);
+    return checkDate < today;
+  };
+
   // Navigate to previous month
   const goToPreviousMonth = () => {
     setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
@@ -112,6 +122,18 @@ const Scheduling = () => {
   const handleDateClick = (day, isCurrentMonth) => {
     if (isCurrentMonth && day && isAlice()) {
       const clickedDate = new Date(currentYear, currentMonth, day);
+      
+      // Check if the clicked date is in the past
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      clickedDate.setHours(0, 0, 0, 0);
+      
+      if (clickedDate < today) {
+        // Don't allow selection of past dates
+        alert('Cannot select dates that have already passed');
+        return;
+      }
+      
       setSelectedDates(prev => {
         const exists = prev.some(date =>
           date.getDate() === clickedDate.getDate() &&
@@ -120,11 +142,16 @@ const Scheduling = () => {
         );
         if (exists) {
           // Remove if already selected
-          return prev.filter(date =>
+          const newDates = prev.filter(date =>
             !(date.getDate() === clickedDate.getDate() &&
               date.getMonth() === clickedDate.getMonth() &&
               date.getFullYear() === clickedDate.getFullYear())
           );
+          // If all dates are cleared, also clear from Firebase
+          if (newDates.length === 0) {
+            saveSelectedDatesToFirebase([]);
+          }
+          return newDates;
         } else {
           // Add new selected date
           return [...prev, clickedDate];
@@ -216,6 +243,93 @@ const Scheduling = () => {
     const day = dateObj.getDate();
     const year = dateObj.getFullYear();
     return `availabilityId(${month}, ${day}, ${year})`;
+  };
+
+  // Save selected dates to Firebase
+  const saveSelectedDatesToFirebase = async (dates) => {
+    const db = getFirestore();
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      console.log('No user logged in, skipping Firebase save');
+      return;
+    }
+    
+    try {
+      const userId = user.uid;
+      const userEmail = user.email;
+      
+      // Convert dates to ISO strings for storage
+      const datesData = {
+        selectedDates: dates.map(date => date.toISOString()),
+        userId: userId,
+        userEmail: userEmail,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: userEmail
+      };
+      
+      // Save to user's selected dates document
+      const docRef = doc(db, 'selectedDates', userId);
+      await setDoc(docRef, datesData, { merge: true });
+      
+      console.log('Selected dates saved to Firebase for user:', userEmail);
+    } catch (error) {
+      console.error('Error saving selected dates to Firebase:', error);
+    }
+  };
+
+  // Load selected dates from Firebase
+  const loadSelectedDatesFromFirebase = async () => {
+    const db = getFirestore();
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      console.log('No user logged in, skipping Firebase load');
+      return [];
+    }
+    
+    try {
+      const userId = user.uid;
+      const docRef = doc(db, 'selectedDates', userId);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.selectedDates && Array.isArray(data.selectedDates)) {
+          // Convert ISO strings back to Date objects
+          const parsedDates = data.selectedDates.map(dateStr => new Date(dateStr));
+          console.log('Selected dates loaded from Firebase for user:', user.email);
+          return parsedDates;
+        }
+      }
+      
+      console.log('No selected dates found in Firebase for user:', user.email);
+      return [];
+    } catch (error) {
+      console.error('Error loading selected dates from Firebase:', error);
+      return [];
+    }
+  };
+
+  // Check and remove passed dates
+  const removePassedDates = (dates) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of today for accurate comparison
+    
+    const validDates = dates.filter(date => {
+      const dateOnly = new Date(date);
+      dateOnly.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+      return dateOnly >= today; // Keep dates that are today or in the future
+    });
+    
+    const removedCount = dates.length - validDates.length;
+    if (removedCount > 0) {
+      console.log(`Removed ${removedCount} passed date(s) from selection`);
+    }
+    
+    return validDates;
   };
 
   // Fetch saved availability from Firestore
@@ -318,15 +432,42 @@ const Scheduling = () => {
     }
   };
 
-  // Load saved selected dates from localStorage on component mount
+  // Load saved selected dates from Firebase and localStorage on component mount
   useEffect(() => {
-    const loadSavedDates = () => {
+    const loadSavedDates = async () => {
       try {
-        const savedDates = localStorage.getItem('schedulingSelectedDates');
-        if (savedDates) {
-          const parsedDates = JSON.parse(savedDates).map(dateStr => new Date(dateStr));
-          setSelectedDates(parsedDates);
+        // First try to load from Firebase
+        const firebaseDates = await loadSelectedDatesFromFirebase();
+        
+        let datesToSet = [];
+        
+        if (firebaseDates.length > 0) {
+          // Use Firebase data if available
+          datesToSet = firebaseDates;
+          console.log('Loaded selected dates from Firebase');
+        } else {
+          // Fallback to localStorage if no Firebase data
+          const savedDates = localStorage.getItem('schedulingSelectedDates');
+          if (savedDates) {
+            const parsedDates = JSON.parse(savedDates).map(dateStr => new Date(dateStr));
+            datesToSet = parsedDates;
+            console.log('Loaded selected dates from localStorage');
+          }
         }
+        
+        // Clean up passed dates before setting
+        const cleanedDates = removePassedDates(datesToSet);
+        
+        // If dates were cleaned up, save the cleaned version back to Firebase
+        if (cleanedDates.length !== datesToSet.length) {
+          setSelectedDates(cleanedDates);
+          await saveSelectedDatesToFirebase(cleanedDates);
+          // Also update localStorage
+          localStorage.setItem('schedulingSelectedDates', JSON.stringify(cleanedDates));
+        } else {
+          setSelectedDates(cleanedDates);
+        }
+        
         setIsInitialLoad(false); // Mark initial load as complete
       } catch (error) {
         console.error('Error loading saved dates:', error);
@@ -336,15 +477,19 @@ const Scheduling = () => {
     loadSavedDates();
   }, []);
 
-  // Save selected dates to localStorage whenever they change
+  // Save selected dates to Firebase and localStorage whenever they change
   useEffect(() => {
     if (isInitialLoad) {
       return; // Don't save during initial load
     }
     
-    const saveDates = () => {
+    const saveDates = async () => {
       try {
+        // Save to localStorage (for backward compatibility)
         localStorage.setItem('schedulingSelectedDates', JSON.stringify(selectedDates));
+        
+        // Save to Firebase
+        await saveSelectedDatesToFirebase(selectedDates);
       } catch (error) {
         console.error('Error saving dates:', error);
       }
@@ -358,6 +503,29 @@ const Scheduling = () => {
     fetchSavedAvailability();
     // eslint-disable-next-line
   }, [selectedDates]);
+
+  // Periodic cleanup of passed dates
+  useEffect(() => {
+    const cleanupPassedDates = () => {
+      setSelectedDates(prev => {
+        const cleanedDates = removePassedDates(prev);
+        if (cleanedDates.length !== prev.length) {
+          // Save cleaned dates to Firebase and localStorage
+          saveSelectedDatesToFirebase(cleanedDates);
+          localStorage.setItem('schedulingSelectedDates', JSON.stringify(cleanedDates));
+        }
+        return cleanedDates;
+      });
+    };
+
+    // Run cleanup immediately
+    cleanupPassedDates();
+
+    // Set up interval to check every hour
+    const interval = setInterval(cleanupPassedDates, 60 * 60 * 1000); // 1 hour
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Get logged-in user's name and full name from Firestore if needed
   useEffect(() => {
@@ -423,14 +591,21 @@ const Scheduling = () => {
     return vesselMap;
   };
 
-  // Handle crew availability toggle
-  const handleAvailabilityToggle = (workerName, dayIndex) => {
+  // Handle crew availability toggle - only Alice can change availability
+  const handleAvailabilityToggle = async (workerName, dayIndex) => {
+    // Only allow Alice to change availability
+    if (!isAlice()) {
+      alert('Only Alice can change worker availability.');
+      return;
+    }
+
+    const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
+    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
+    const dayKey = dayNames[dayIndex];
+    
+    // Update local state
     setCrewAvailability(prev => {
-      const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
       const currentAvailability = prev[workerKey] || {};
-      const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
-      const dayKey = dayNames[dayIndex];
-      
       return {
         ...prev,
         [workerKey]: {
@@ -439,6 +614,32 @@ const Scheduling = () => {
         }
       };
     });
+
+    // Immediately save to database
+    try {
+      const today = new Date();
+      const availabilityDocName = buildAvailabilityDocId(today);
+      const updatedAvailability = {
+        ...crewAvailability,
+        [workerKey]: {
+          ...crewAvailability[workerKey],
+          [dayKey]: !crewAvailability[workerKey]?.[dayKey]
+        }
+      };
+
+      const data = {
+        ...updatedAvailability,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: 'Alice'
+      };
+
+      await setDoc(doc(db, 'availability', availabilityDocName), data, { merge: true });
+      setSavedAvailability(data);
+      console.log('Availability updated and saved to database');
+    } catch (err) {
+      console.error('Error saving availability:', err);
+      alert('Error saving availability: ' + err.message);
+    }
   };
 
   // Get available workers for a specific date
@@ -520,11 +721,19 @@ const Scheduling = () => {
       setSelectedDates([]);
       setFormData({});
       setAssignedWorkers({});
+      // Clear from Firebase as well
+      saveSelectedDatesToFirebase([]);
     }
   };
 
   // Check if current user can edit a specific worker's availability
   const canEditWorkerAvailability = (workerName) => {
+    // Only Alice can change worker availability
+    return isAlice();
+  };
+
+  // Check if a worker row corresponds to the current logged-in user
+  const isCurrentUserRow = (workerName) => {
     const auth = getAuth();
     const user = auth.currentUser;
     const userEmail = user ? user.email : '';
@@ -641,6 +850,29 @@ return (
   <div className="scheduling-container">
     {/* Semi-transparent overlay */}
     <div className="scheduling-overlay" />
+    
+    {/* Alice message at the top */}
+    {isAlice() && (
+      <div style={{
+        backgroundColor: '#d4edda',
+        border: '1px solid #c3e6cb',
+        borderRadius: '8px',
+        padding: '12px 16px',
+        margin: '16px',
+        textAlign: 'center',
+        position: 'relative',
+        zIndex: 10
+      }}>
+        <div style={{
+          color: '#155724',
+          fontWeight: '600',
+          fontSize: '1rem'
+        }}>
+          Alice - You can change worker availability by clicking on the availability cells
+        </div>
+      </div>
+    )}
+    
     {/* Main content area: calendar or table */}
     <div className="scheduling-content">
       {view === 'calendar' ? (
@@ -698,6 +930,9 @@ return (
                     }
                   }
 
+                  const isPast = dayData.isCurrentMonth && dayData.day && isPastDate(dayData.day);
+                  const canClick = isAlice() && dayData.isCurrentMonth && dayData.day && !isPast;
+                  
                   return (
                     <div
                       key={index}
@@ -705,13 +940,19 @@ return (
                         dayData.isCurrentMonth ? 'current-month' : 'other-month'
                       } ${dayData.isToday ? 'today' : ''} ${
                         dayData.isSelected ? 'selected' : ''
-                      } ${!isAlice() && dayData.isCurrentMonth && dayData.day ? 'non-clickable' : ''}`}
+                      } ${!canClick && dayData.isCurrentMonth && dayData.day ? 'non-clickable' : ''} ${
+                        isPast ? 'past-date' : ''
+                      }`}
                       style={{ 
                         ...bgColor ? { background: bgColor } : {},
-                        cursor: isAlice() && dayData.isCurrentMonth && dayData.day ? 'pointer' : 'default'
+                        cursor: canClick ? 'pointer' : 'default'
                       }}
                       onClick={() => handleDateClick(dayData.day, dayData.isCurrentMonth)}
-                      title={!isAlice() && dayData.isCurrentMonth && dayData.day ? 'Only Alice can select dates' : ''}
+                      title={
+                        !isAlice() && dayData.isCurrentMonth && dayData.day ? 'Only Alice can select dates' :
+                        isPast ? 'This date has already passed' :
+                        ''
+                      }
                     >
                       <div>{dayData.day}</div>
                     </div>
@@ -1160,7 +1401,7 @@ return (
                 return workers.map((worker, idx) => {
                   const canEdit = canEditWorkerAvailability(worker.name);
                   const canCarlaEdit = canCarlaEditWorkerAvailability(worker.name);
-                  const isCurrentUser = canEdit; // Highlight if it's the current user's row
+                  const isCurrentUser = isCurrentUserRow(worker.name); // Highlight if it's the current user's row
                   const finalCanEdit = canEdit || canCarlaEdit; // Allow editing if either condition is met
                   
                   return (
@@ -1211,7 +1452,7 @@ return (
                               color: availabilityStatus === 'assigned' ? 'white' : availabilityStatus === true ? '#856404' : availabilityStatus === false ? '#721c24' : '#6c757d'
                             }}
                             onClick={finalCanEdit && !isPastDay ? () => handleAvailabilityToggle(worker.name, i) : undefined}
-                            title={finalCanEdit && !isPastDay ? `Click to mark ${availabilityStatus ? 'unavailable' : 'available'} for ${['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'][i]}` : isPastDay ? 'Past day - no editing allowed' : 'You can only edit your own availability'}
+                            title={finalCanEdit && !isPastDay ? `Click to mark ${availabilityStatus ? 'unavailable' : 'available'} for ${['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'][i]}` : isPastDay ? 'Past day - no editing allowed' : 'Only Alice can change worker availability'}
                           >
                             <div style={{ fontWeight: '700', marginBottom: '4px' }}>
                               {availabilityStatus === 'assigned' ? 'On Duty' : availabilityStatus === true ? 'Available' : availabilityStatus === false ? 'Not Available' : 'Past Day'}
