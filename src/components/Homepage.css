@@ -85,6 +85,18 @@
   font-weight: bold;
 }
 
+/* Center Title */
+.center-title {
+  text-align: center;
+  width: 100%;
+  color: #232b45;
+  font-size: 3rem;
+  font-weight: 800;
+  margin: 0 auto;
+  letter-spacing: 0.5px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .hero-text h1 {
