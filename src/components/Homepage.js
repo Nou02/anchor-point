@@ -93,17 +93,14 @@ const Homepage = () => {
       case 'home':
       default:
         return (
-          <div className="main-content">
-            <div className="content-overlay">
+          <div className="main-content" style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', overflow: 'hidden' }}>
+            <video autoPlay loop muted playsInline style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}>
+              <source src={require('../assets/lnding.mp4')} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            <div className="content-overlay" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
               <div className="hero-text">
-                <h1>
-                  View Ship Schedules,<br />
-                  Crew Assignments, and<br />
-                  Docking Times.
-                </h1>
-              </div>
-              <div className="cta-button">
-                <span className="arrow-icon">→</span>
+                <h1 className="center-title"></h1>
               </div>
             </div>
           </div>
