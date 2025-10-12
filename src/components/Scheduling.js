@@ -593,7 +593,7 @@ const Scheduling = () => {
 
   // Handle crew availability toggle - only Alice can change availability
   const handleAvailabilityToggle = async (workerName, dayIndex) => {
-    // Only allow Alice to change availability
+    // Only allow Alice to change availability (Alice now has full control over scheduling)
     if (!isAlice()) {
       alert('Only Alice can change worker availability.');
       return;
@@ -765,35 +765,10 @@ const Scheduling = () => {
     return false;
   };
 
-  // Check if Carla can edit a specific worker's availability
-  const canCarlaEditWorkerAvailability = (workerName) => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    const userEmail = user ? user.email : '';
-    const matchName = userFullName || userName;
-    
-    // Check if current user is Carla
-    const isCarla = 
-      matchName === 'Carla Dela Peña' || 
-      matchName === 'Carla' ||
-      (matchName && matchName.toLowerCase().includes('carla')) ||
-      (userEmail && userEmail.toLowerCase().includes('carla'));
-    
-    if (!isCarla) return false;
-    
-    // Check if worker has marked themselves as unavailable
-    const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
-    const workerAvailability = savedAvailability[workerKey] || {};
-    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
-    
-    // Check if worker has marked any day as unavailable
-    for (const dayKey of dayNames) {
-      if (workerAvailability[dayKey] === false) {
-        return false; // Carla cannot edit if worker has marked themselves unavailable
-      }
-    }
-    
-    return true; // Carla can edit if worker hasn't marked themselves unavailable
+  // Check if Alice can edit a specific worker's availability (Alice has full control)
+  const canAliceEditWorkerAvailability = (workerName) => {
+    // Alice has full control over all worker availability
+    return isAlice();
   };
 
   // Get availability status for a worker and day
@@ -991,30 +966,30 @@ return (
                 </ul>
                 <p>You can schedule multiple appointments for each selected date.</p>
               </div>
-              {/* Only show Client Information container if user is Carla Dela Peña */}
+              {/* Only show Client Information container if user is Alice Margaretha Santos */}
               {(() => {
-                // Check if the logged-in user is Carla Dela Peña (including partial matches)
+                // Check if the logged-in user is Alice Margaretha Santos (including partial matches)
                 const auth = getAuth();
                 const currentUser = auth.currentUser;
                 const userEmail = currentUser ? currentUser.email : '';
                 
-                const isCarlaDelaPena = 
-                  userFullName === 'Carla Dela Peña' || 
-                  userName === 'Carla Dela Peña' ||
-                  userFullName === 'Carla' || 
-                  userName === 'Carla' ||
-                  (userFullName && userFullName.toLowerCase().includes('carla')) ||
-                  (userName && userName.toLowerCase().includes('carla')) ||
-                  (userEmail && userEmail.toLowerCase().includes('carla'));
+                const isAliceMargarethaSantos = 
+                  userFullName === 'Alice Margaretha Santos' || 
+                  userName === 'Alice Margaretha Santos' ||
+                  userFullName === 'Alice' || 
+                  userName === 'Alice' ||
+                  (userFullName && userFullName.toLowerCase().includes('alice')) ||
+                  (userName && userName.toLowerCase().includes('alice')) ||
+                  (userEmail && userEmail.toLowerCase().includes('alice'));
                 
                 // Debug logging to help identify the issue
                 console.log('Debug - userFullName:', userFullName);
                 console.log('Debug - userName:', userName);
                 console.log('Debug - userEmail:', userEmail);
-                console.log('Debug - isCarlaDelaPena:', isCarlaDelaPena);
+                console.log('Debug - isAliceMargarethaSantos:', isAliceMargarethaSantos);
                 
-                // Only render the container if user is Carla Dela Peña
-                if (isCarlaDelaPena) {
+                // Only render the container if user is Alice Margaretha Santos
+                if (isAliceMargarethaSantos) {
                   return (
                     <div className="selected-dates-container">
                       <h4>Client Information</h4>
@@ -1400,9 +1375,9 @@ return (
                 // Show all workers in the table
                 return workers.map((worker, idx) => {
                   const canEdit = canEditWorkerAvailability(worker.name);
-                  const canCarlaEdit = canCarlaEditWorkerAvailability(worker.name);
+                  const canAliceEdit = canAliceEditWorkerAvailability(worker.name);
                   const isCurrentUser = isCurrentUserRow(worker.name); // Highlight if it's the current user's row
-                  const finalCanEdit = canEdit || canCarlaEdit; // Allow editing if either condition is met
+                  const finalCanEdit = canEdit || canAliceEdit; // Allow editing if either condition is met
                   
                   return (
                     <tr key={worker.name}>
