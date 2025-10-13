@@ -123,6 +123,18 @@ const Payroll = () => {
     initials: '',
     date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   });
+  // Helper functions to detect Carla and Alice users
+  const isCarlaUser = (u) => {
+    const name = (u && u.name) ? u.name.toString().toLowerCase() : '';
+    const email = (u && u.email) ? u.email.toString().toLowerCase() : '';
+    return name === 'carla dela peña' || name === 'carla' || name.includes('carla') || email.includes('carla');
+  };
+
+  const isAliceUser = (u) => {
+    const name = (u && u.name) ? u.name.toString().toLowerCase() : '';
+    const email = (u && u.email) ? u.email.toString().toLowerCase() : '';
+    return name === 'alice margaretha santos' || name === 'alice' || name.includes('alice') || email.includes('alice');
+  };
   const [isManagerView, setIsManagerView] = useState(false);
   const [localVessType, setLocalVessType] = useState('Mooring');
   const [foreignVessType, setForeignVessType] = useState('Mooring');
@@ -294,7 +306,8 @@ const Payroll = () => {
   // Load individual worker payroll data
   useEffect(() => {
     const loadIndividualPayrollData = async () => {
-      if (user.name && user.name !== "Alice Margaretha Santos") {
+      // Load individual payroll data for non-manager users. Carla is manager and will not use this path.
+      if (user.name && !isCarlaUser(user)) {
         try {
           const db = getFirestore();
           
@@ -358,16 +371,16 @@ const Payroll = () => {
   const handleToggleManagerView = () => {
     const newValue = !isManagerView;
     setIsManagerView(newValue);
-    // Save Alice's preference to localStorage
-    if (user.name === "Alice Margaretha Santos" || user.email === "aliceleo@gmail.com") {
-      localStorage.setItem('aliceManagerView', newValue.toString());
+    // Save Carla's preference to localStorage
+    if (isCarlaUser(user)) {
+      localStorage.setItem('carlaManagerView', newValue.toString());
     }
   };
 
   const handleBackToRegularView = () => {
     setIsManagerView(false);
     // Clear the stored preference when going back to regular view
-    localStorage.removeItem('aliceManagerView');
+    localStorage.removeItem('carlaManagerView');
   };
 
   // Calculate total earnings based on operation counts and pricing
@@ -1341,7 +1354,7 @@ const Payroll = () => {
             </div>
           </div>
         )}
-        {(user.name === "Alice Margaretha Santos" || user.email === "aliceleo@gmail.com") && (
+        {isCarlaUser(user) && (
           <div className="payroll-manager-toggle">
             <button className="manager-toggle-btn" onClick={handleToggleManagerView}>
               Proceed
@@ -1412,7 +1425,7 @@ const Payroll = () => {
 
   return (
     <div className="payroll-center-content">
-      {isManagerView && (user.name === "Alice Margaretha Santos" || user.email === "aliceleo@gmail.com") ? (
+      {isManagerView && isCarlaUser(user) ? (
         <ManagerView />
       ) : (
         <RegularPayrollView />
