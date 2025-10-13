@@ -13,6 +13,8 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
 
   const auth = getAuth();
 
@@ -30,7 +32,7 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
           throw new Error('Passwords do not match');
         }
         await createUserWithEmailAndPassword(auth, email, password);
-        onSignUp({ email, password });
+        onSignUp({ name, email, phone, password });
       }
     } catch (err) {
       setError(err.message);
@@ -79,11 +81,6 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
               <p className="hero-quote">"Navigating Excellence Through Innovation"</p>
             </div>
 
-            {/* Form Title */}
-            <h2 className="login-title">
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </h2>
-
             {/* Error Message */}
             {error && (
               <div className="error-message">
@@ -100,6 +97,17 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
 
             {/* Main Form */}
             <form onSubmit={handleSubmit}>
+              {!isLogin && (
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="input-field"
+                  required
+                />
+              )}
+
               <input
                 type="email"
                 placeholder="Email Address"
@@ -108,6 +116,17 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
                 className="input-field"
                 required
               />
+
+              {!isLogin && (
+                <input
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="input-field"
+                  required
+                />
+              )}
 
               <div className="password-input-wrapper">
                 <input
@@ -122,8 +141,12 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
                   type="button"
                   className="eye-icon"
                   onClick={togglePasswordVisibility}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <ellipse cx="11" cy="11" rx="8" ry="5" stroke="#222" strokeWidth="2"/>
+                    <circle cx="11" cy="11" r="2" fill={showPassword ? "#222" : "none"} stroke="#222" strokeWidth="2"/>
+                  </svg>
                 </button>
               </div>
 
@@ -141,8 +164,13 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
                     type="button"
                     className="eye-icon"
                     onClick={togglePasswordVisibility}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                    {/* Minimalist eye SVG */}
+                    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                      <ellipse cx="11" cy="11" rx="8" ry="5" stroke="#222" strokeWidth="2"/>
+                      <circle cx="11" cy="11" r="2" fill={showPassword ? "#222" : "none"} stroke="#222" strokeWidth="2"/>
+                    </svg>
                   </button>
                 </div>
               )}
