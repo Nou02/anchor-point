@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import api from '../services/api';
 import './Report.css';
 
 const Report = () => {
@@ -16,6 +17,7 @@ const Report = () => {
     voyageNo: '',
     vesselName: '',
     purposeOfCall: '',
+    controlId: '',
     workActivities: [
       { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
       { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
@@ -32,19 +34,44 @@ const Report = () => {
            userEmail.toLowerCase().includes('alice');
   };
 
-  const clearWorkActivityData = () => {
+  const clearWorkActivityData = async () => {
+    // Clear the form data
     setTableData({
       portLocation: '',
       voyageNo: '',
       vesselName: '',
       purposeOfCall: '',
+      controlId: '',
       workActivities: [
         { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
         { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
         { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' }
       ]
     });
-    setSaveMessage('Form cleared successfully!');
+
+    // Also clear the Control ID from localStorage
+    localStorage.removeItem('reportControlId');
+
+    // Delete from Excel if we have a selected date
+    if (selectedDate) {
+      try {
+        const dateString = selectedDate.toISOString().split('T')[0];
+        console.log('Deleting Excel data for date:', dateString);
+        
+        await api.delete('/excel/delete-report', {
+          data: { date: dateString }
+        });
+        
+        console.log('Excel data deleted successfully for date:', dateString);
+        setSaveMessage('Form cleared and Excel data deleted successfully!');
+      } catch (excelError) {
+        console.error('Error deleting from Excel (continuing with form clear):', excelError);
+        setSaveMessage('Form cleared successfully! (Excel delete failed)');
+      }
+    } else {
+      setSaveMessage('Form cleared successfully!');
+    }
+    
     setTimeout(() => setSaveMessage(''), 3000);
   };
 
@@ -53,16 +80,54 @@ const Report = () => {
       const db = getFirestore();
       const dateString = date.toISOString().split('T')[0];
       const docRef = doc(db, 'workActivities', dateString);
+      
+      // Save to Firebase
       await setDoc(docRef, {
         date: dateString,
         portLocation: data.portLocation,
         voyageNo: data.voyageNo,
         vesselName: data.vesselName,
         purposeOfCall: data.purposeOfCall,
+        controlId: data.controlId,
         workActivities: data.workActivities,
         lastUpdated: new Date().toISOString(),
         updatedBy: currentUser?.email || currentUser?.displayName || 'Unknown'
       });
+
+      // Also save to Excel if we have the required data
+      console.log('Checking Excel save requirements:', {
+        vesselName: data.vesselName,
+        voyageNo: data.voyageNo,
+        purposeOfCall: data.purposeOfCall,
+        controlId: data.controlId
+      });
+      
+      if (data.vesselName && data.voyageNo && data.purposeOfCall && data.controlId) {
+        try {
+          console.log('Attempting to save to Excel...');
+          const response = await api.post('/excel/save-report', {
+            date: dateString,
+            vesselName: data.vesselName,
+            voyageNo: data.voyageNo,
+            purposeOfCall: data.purposeOfCall,
+            controlId: data.controlId
+          });
+          console.log('Excel save response:', response.data);
+          console.log('Report data saved to Excel successfully');
+        } catch (excelError) {
+          console.error('Error saving to Excel (continuing with Firebase save):', excelError);
+          console.error('Excel error details:', excelError.response?.data || excelError.message);
+          // Don't fail the entire save if Excel save fails
+        }
+      } else {
+        console.log('Skipping Excel save - missing required fields:', {
+          hasVesselName: !!data.vesselName,
+          hasVoyageNo: !!data.voyageNo,
+          hasPurposeOfCall: !!data.purposeOfCall,
+          hasControlId: !!data.controlId
+        });
+      }
+
       return true;
     } catch (error) {
       console.error('Error saving work activity data:', error);
@@ -85,6 +150,7 @@ const Report = () => {
           voyageNo: data.voyageNo || '',
           vesselName: data.vesselName || '',
           purposeOfCall: data.purposeOfCall || '',
+          controlId: data.controlId || '',
           workActivities: data.workActivities || [
             { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
             { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
@@ -100,6 +166,7 @@ const Report = () => {
           voyageNo: '',
           vesselName: '',
           purposeOfCall: '',
+          controlId: '',
           workActivities: [
             { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
             { activity: '', timeScheduled: '', timeStarted: '', timeDone: '' },
@@ -129,6 +196,7 @@ const Report = () => {
         voyageNo: data.voyageNo,
         vesselName: data.vesselName,
         purposeOfCall: data.purposeOfCall,
+        controlId: data.controlId,
         workActivities: data.workActivities,
         lastUpdated: new Date().toISOString(),
         updatedBy: currentUser?.email || currentUser?.displayName || 'Unknown'
@@ -173,6 +241,47 @@ const Report = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Load Control ID from localStorage on component mount
+  useEffect(() => {
+    const savedControlId = localStorage.getItem('reportControlId');
+    if (savedControlId) {
+      setTableData(prevData => ({
+        ...prevData,
+        controlId: savedControlId
+      }));
+    }
+  }, []);
+
+  // Save Control ID to localStorage whenever it changes
+  useEffect(() => {
+    if (tableData.controlId !== '') {
+      localStorage.setItem('reportControlId', tableData.controlId);
+    }
+  }, [tableData.controlId]);
+
+  // Navigation helpers for selected dates
+  const goToPreviousSelectedDate = () => {
+    if (!selectedDates || selectedDates.length === 0) return;
+    if (!selectedDate) return; // nothing selected yet
+    const currentIndex = selectedDates.findIndex(d => d.toDateString() === selectedDate.toDateString());
+    if (currentIndex > 0) {
+      setSelectedDate(selectedDates[currentIndex - 1]);
+    }
+  };
+
+  const goToNextSelectedDate = () => {
+    if (!selectedDates || selectedDates.length === 0) return;
+    if (!selectedDate) {
+      // If no date selected yet, move to the first available date
+      setSelectedDate(selectedDates[0]);
+      return;
+    }
+    const currentIndex = selectedDates.findIndex(d => d.toDateString() === selectedDate.toDateString());
+    if (currentIndex >= 0 && currentIndex < selectedDates.length - 1) {
+      setSelectedDate(selectedDates[currentIndex + 1]);
+    }
+  };
+
   // Load work activity data when a date is selected
   useEffect(() => {
     if (selectedDate) {
@@ -204,7 +313,8 @@ const Report = () => {
             maxWidth: '1400px',
             minWidth: '1200px',
             height: 'calc(100vh - 80px)',
-            overflow: 'auto'
+            overflow: 'auto',
+            paddingBottom: '200px' // spacer so floating buttons never overlap
           }}>
             {/* Selected Dates from Scheduling */}
             {selectedDates.length > 0 ? (
@@ -366,6 +476,30 @@ const Report = () => {
                   gap: '20px',
                   marginBottom: '30px'
                 }}>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      color: '#2F3B70',
+                      marginBottom: '8px'
+                    }}>
+                      CONTROL ID
+                    </label>
+                    <input
+                      type="text"
+                      value={tableData.controlId}
+                      onChange={(e) => setTableData({...tableData, controlId: e.target.value})}
+                      style={{ 
+                        width: '100%', 
+                        padding: '12px',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        fontSize: '0.9rem'
+                      }}
+                      placeholder="Enter control id"
+                    />
+                  </div>
                   <div>
                     <label style={{
                       display: 'block',
@@ -838,12 +972,18 @@ const Report = () => {
                         
                         setIsSaving(true);
                         try {
-                          await autoSaveData(tableData);
-                          setSaveMessage('Data saved successfully!');
+                          // Save to both Firebase and Excel
+                          const success = await saveWorkActivityData(selectedDate, tableData);
+                          if (success) {
+                            setSaveMessage('Data saved successfully to Firebase and Excel!');
+                          } else {
+                            setSaveMessage('Failed to save data. Please try again.');
+                          }
                           setTimeout(() => setSaveMessage(''), 3000);
                         } catch (error) {
                           console.error('Error saving data:', error);
-                          alert('Failed to save data. Please try again.');
+                          setSaveMessage('Failed to save data. Please try again.');
+                          setTimeout(() => setSaveMessage(''), 3000);
                         } finally {
                           setIsSaving(false);
                         }
@@ -914,6 +1054,51 @@ const Report = () => {
           </div>
         )}
       </div>
+      {/* Always-visible navigation buttons (lower right) */}
+      {(() => {
+        const hasDates = selectedDates && selectedDates.length > 0;
+        let atStart = true;
+        let atEnd = true;
+        if (hasDates && selectedDate) {
+          const idx = selectedDates.findIndex(d => d.toDateString() === selectedDate.toDateString());
+          atStart = idx <= 0;
+          atEnd = idx === -1 || idx >= selectedDates.length - 1;
+        }
+        return (
+          <div className="report-nav-btns">
+            <button
+              className="report-nav-btn"
+              onClick={goToPreviousSelectedDate}
+              disabled={!hasDates || !selectedDate || atStart}
+              style={{ opacity: (!hasDates || !selectedDate || atStart) ? 0.6 : 1 }}
+            >
+              &#8592; Previous
+            </button>
+            <button
+              className="report-nav-btn"
+              onClick={() => {
+                if (selectedDates && selectedDates.length > 0) {
+                  if (!selectedDate) {
+                    // First press: do not open the work activity table; go to analytics
+                    localStorage.setItem('activeMenu', 'analytics');
+                    window.location.reload();
+                    return;
+                  }
+                  const idx = selectedDates.findIndex(d => d.toDateString() === selectedDate.toDateString());
+                  if (idx >= 0 && idx < selectedDates.length - 1) {
+                    setSelectedDate(selectedDates[idx + 1]);
+                    return;
+                  }
+                }
+                localStorage.setItem('activeMenu', 'analytics');
+                window.location.reload();
+              }}
+            >
+              Next &#8594;
+            </button>
+          </div>
+        );
+      })()}
     </div>
   );
 };

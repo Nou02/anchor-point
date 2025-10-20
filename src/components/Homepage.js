@@ -6,6 +6,7 @@ import Report from './Report';
 import Payroll from './Payroll';
 import Sidebar from './Sidebar';
 import InfoContent from './InfoContent';
+import Analytics from './Analytics';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -73,6 +74,7 @@ const Homepage = () => {
     { id: 'home', label: 'Home'},
     { id: 'scheduling', label: 'Scheduling'},
     { id: 'reports', label: 'Reports'},
+    { id: 'analytics', label: 'Analytics'},
     { id: 'payroll', label: 'Payroll'},
     { id: 'weather', label: 'Weather'}
   ];
@@ -88,6 +90,8 @@ const Homepage = () => {
         return <Weather />;
       case 'reports':
         return <Report />;
+      case 'analytics':
+        return <Analytics />;
       case 'payroll':
         return <Payroll />;
       case 'home':
@@ -111,7 +115,7 @@ const Homepage = () => {
   return (
     <div className="homepage">
       <Sidebar
-        activeMenu={activeMenu}
+        activeMenu={activeMenu === 'analytics' ? 'reports' : activeMenu}
         setActiveMenu={handleMenuClick}
         menuItems={menuItems}
         handleLogout={handleLogout}

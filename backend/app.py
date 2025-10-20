@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 from datetime import datetime
+from openpyxl import load_workbook
 
 app = Flask(__name__)
 CORS(app)
@@ -205,6 +206,275 @@ def get_crew():
         "success": True,
         "crew": mock_crew
     })
+
+# ========================
+# Excel utilities & routes
+# ========================
+EXCEL_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
+EXCEL_FILENAME = 'Vessels Log.xlsx'
+EXCEL_PATH = os.path.join(EXCEL_DIR, EXCEL_FILENAME)
+
+# Also save to public folder for Analytics access
+PUBLIC_EXCEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'public', EXCEL_FILENAME)
+
+def _load_workbook_or_404(path):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Excel file not found at {path}")
+    return load_workbook(filename=path)
+
+@app.route('/api/excel/read', methods=['GET'])
+def read_excel_as_json():
+    """Read first worksheet into JSON rows using header row."""
+    try:
+        wb = _load_workbook_or_404(EXCEL_PATH)
+        ws = wb.active
+
+        rows = list(ws.iter_rows(values_only=True))
+        if not rows:
+            return jsonify({"success": True, "headers": [], "rows": []})
+
+        headers = [str(h).strip() if h is not None else '' for h in rows[0]]
+        data_rows = []
+        for row in rows[1:]:
+            obj = {}
+            for i, value in enumerate(row):
+                key = headers[i] if i < len(headers) else f"col_{i+1}"
+                obj[key] = value
+            data_rows.append(obj)
+
+        return jsonify({"success": True, "headers": headers, "rows": data_rows})
+    except FileNotFoundError as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/excel/append', methods=['POST'])
+def append_excel_row():
+    """Append a row to the first worksheet.
+    Accepts either {"row": [...]} or {"object": {header: value}}.
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        if not payload:
+            return jsonify({"success": False, "error": "Missing JSON body"}), 400
+
+        wb = _load_workbook_or_404(EXCEL_PATH)
+        ws = wb.active
+
+        headers = []
+        if ws.max_row >= 1:
+            headers = [str(c.value).strip() if c.value is not None else '' for c in ws[1]]
+
+        if 'row' in payload and isinstance(payload['row'], list):
+            values = payload['row']
+        elif 'object' in payload and isinstance(payload['object'], dict) and headers:
+            values = [payload['object'].get(h, None) for h in headers]
+        else:
+            return jsonify({"success": False, "error": "Provide 'row' array or 'object' matching headers"}), 400
+
+        ws.append(values)
+        wb.save(EXCEL_PATH)
+        wb.save(PUBLIC_EXCEL_PATH)
+
+        return jsonify({"success": True, "appended": values, "totalRows": ws.max_row})
+    except FileNotFoundError as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/excel/save-report', methods=['POST'])
+def save_report_to_excel():
+    """Save report data to the correct year sheet based on the date.
+    Expects: {
+        "date": "2024-01-15",
+        "vesselName": "VESSEL NAME",
+        "voyageNo": "VOYAGE123",
+        "purposeOfCall": "W/MOORING BUOY",
+        "controlId": "CTRL001"
+    }
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        if not payload:
+            return jsonify({"success": False, "error": "Missing JSON body"}), 400
+
+        # Extract data from payload
+        date_str = payload.get('date')
+        vessel_name = payload.get('vesselName', '')
+        voyage_no = payload.get('voyageNo', '')
+        purpose_of_call = payload.get('purposeOfCall', '')
+        control_id = payload.get('controlId', '')
+
+        if not date_str:
+            return jsonify({"success": False, "error": "Date is required"}), 400
+
+        # Determine the year and sheet name
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            year = date_obj.year
+            sheet_name = str(year)
+        except ValueError:
+            return jsonify({"success": False, "error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        # Load workbook
+        wb = _load_workbook_or_404(EXCEL_PATH)
+        
+        # Check if sheet exists, if not create it
+        if sheet_name not in wb.sheetnames:
+            ws = wb.create_sheet(sheet_name)
+            # Add headers based on year
+            if year == 2023:
+                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date']
+            elif year == 2024:
+                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date']
+            else:  # 2025 and future years
+                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date']
+            
+            ws.append(headers)
+        else:
+            ws = wb[sheet_name]
+
+        # Get the next row number (No. column)
+        next_row = ws.max_row + 1
+        row_number = next_row - 1  # Subtract 1 because header row is row 1
+
+        # Prepare the row data based on year structure
+        if year == 2023:
+            # 2023 structure: No., Vessel, Service (control numbers), ID, Date
+            row_data = [
+                row_number,
+                vessel_name,
+                purpose_of_call,  # Service column
+                control_id,       # Control Number column
+                voyage_no,        # Voyage Number column
+                date_str          # Date column
+            ]
+        elif year == 2024:
+            # 2024 structure: No., Vessel, Service (empty), Control Number, Voyage Number, Date
+            row_data = [
+                row_number,
+                vessel_name,
+                purpose_of_call,  # Service column
+                control_id,       # Control Number column
+                voyage_no,        # Voyage Number column
+                date_str          # Date column
+            ]
+        else:
+            # 2025+ structure: No., Vessel, Service, Control Number, Voyage Number, Date
+            row_data = [
+                row_number,
+                vessel_name,
+                purpose_of_call,  # Service column
+                control_id,       # Control Number column
+                voyage_no,        # Voyage Number column
+                date_str          # Date column
+            ]
+
+        # Append the row
+        ws.append(row_data)
+        
+        # Save the workbook to both locations
+        wb.save(EXCEL_PATH)
+        wb.save(PUBLIC_EXCEL_PATH)
+
+        return jsonify({
+            "success": True, 
+            "message": f"Report saved to {sheet_name} sheet in both backend and public folders",
+            "sheet": sheet_name,
+            "rowNumber": row_number,
+            "data": {
+                "vesselName": vessel_name,
+                "voyageNo": voyage_no,
+                "purposeOfCall": purpose_of_call,
+                "controlId": control_id,
+                "date": date_str
+            }
+        })
+
+    except FileNotFoundError as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/excel/delete-report', methods=['DELETE'])
+def delete_report_from_excel():
+    """Delete report data from Excel file by date.
+    Expects: {
+        "date": "2024-01-15"
+    }
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        if not payload:
+            return jsonify({"success": False, "error": "Missing JSON body"}), 400
+
+        # Extract date from payload
+        date_str = payload.get('date')
+        if not date_str:
+            return jsonify({"success": False, "error": "Date is required"}), 400
+
+        # Determine the year and sheet name
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            year = date_obj.year
+            sheet_name = str(year)
+        except ValueError:
+            return jsonify({"success": False, "error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        # Load workbook
+        wb = _load_workbook_or_404(EXCEL_PATH)
+        
+        # Check if sheet exists
+        if sheet_name not in wb.sheetnames:
+            return jsonify({"success": False, "error": f"Sheet {sheet_name} not found"}), 404
+
+        ws = wb[sheet_name]
+        deleted_rows = []
+
+        # Find and delete rows matching the date
+        # Start from the end to avoid index shifting issues
+        for row_idx in range(ws.max_row, 1, -1):
+            # Check if this row contains the target date
+            date_cell = None
+            if year == 2023:
+                date_cell = ws.cell(row=row_idx, column=5)  # Date column for 2023
+            elif year == 2024:
+                date_cell = ws.cell(row=row_idx, column=6)  # Date column for 2024
+            else:  # 2025+
+                date_cell = ws.cell(row=row_idx, column=6)  # Date column for 2025+
+
+            if date_cell and date_cell.value:
+                # Convert cell value to string and compare
+                cell_date_str = str(date_cell.value).strip()
+                if cell_date_str == date_str or cell_date_str == date_obj.strftime('%Y-%m-%d'):
+                    # Delete this row
+                    ws.delete_rows(row_idx)
+                    deleted_rows.append(row_idx)
+                    print(f"Deleted row {row_idx} from sheet {sheet_name}")
+
+        if not deleted_rows:
+            return jsonify({
+                "success": True, 
+                "message": f"No data found for date {date_str} in sheet {sheet_name}",
+                "deletedRows": 0
+            })
+
+        # Save the workbook to both locations
+        wb.save(EXCEL_PATH)
+        wb.save(PUBLIC_EXCEL_PATH)
+
+        return jsonify({
+            "success": True, 
+            "message": f"Deleted {len(deleted_rows)} row(s) from {sheet_name} sheet",
+            "sheet": sheet_name,
+            "deletedRows": len(deleted_rows),
+            "deletedRowNumbers": deleted_rows
+        })
+
+    except FileNotFoundError as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
     print("🚢 AnchorPoint API Server Starting...")
