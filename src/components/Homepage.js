@@ -36,7 +36,7 @@ const Homepage = () => {
     localStorage.setItem('activeMenu', activeMenu);
   }, [activeMenu]);
 
-  // Only show info button for Alice Margaretha Santos
+  // Show info button for Alice Margaretha Santos and Carla Dela Peña
   useEffect(() => {
     const checkUser = async () => {
       const auth = getAuth();
@@ -56,7 +56,14 @@ const Homepage = () => {
           }
         } catch {}
       }
-      setShowInfoButton(displayName === 'Alice Margaretha Santos');
+      // Show info button for both Alice and Carla
+      const isAlice = displayName === 'Alice Margaretha Santos' || 
+                     displayName === 'Alice' ||
+                     (displayName && displayName.toLowerCase().includes('alice'));
+      const isCarla = displayName === 'Carla Dela Peña' || 
+                     displayName === 'Carla' ||
+                     (displayName && displayName.toLowerCase().includes('carla'));
+      setShowInfoButton(isAlice || isCarla);
     };
     checkUser();
   }, []);
