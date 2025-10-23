@@ -114,13 +114,51 @@ const Homepage = () => {
     setActiveMenu(menu);
   };
 
-  const menuItems = [
-    { id: 'home', label: 'Home'},
-    { id: 'scheduling', label: 'Scheduling'},
-    { id: 'reports', label: 'Reports'},
-    { id: 'analytics', label: 'Analytics'},
-    { id: 'payroll', label: 'Payroll'}
-  ];
+  // Create menu items based on user type
+  const createMenuItems = () => {
+    const baseMenu = [
+      { id: 'home', label: 'Home', icon: 'home' }
+    ];
+
+    if (!userProfile) {
+      return baseMenu;
+    }
+
+    const displayName = userProfile.fullName || '';
+    const isCarla = displayName === 'Carla Dela Peña' || 
+                   displayName === 'Carla' ||
+                   (displayName && displayName.toLowerCase().includes('carla'));
+    const isAlice = displayName === 'Alice Margaretha Santos' || 
+                   displayName === 'Alice' ||
+                   (displayName && displayName.toLowerCase().includes('alice'));
+    const isWorker = !isCarla && !isAlice;
+
+    if (isCarla) {
+      // Carla: Only Home and Payroll (no Scheduling, no Reports, no Analytics)
+      return [
+        ...baseMenu,
+        { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
+      ];
+    } else if (isWorker) {
+      // Workers: Only Home, Scheduling, and Payroll (no Reports, no Analytics)
+      return [
+        ...baseMenu,
+        { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
+        { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
+      ];
+    } else {
+      // Alice and other users: Full access to all sections
+      return [
+        ...baseMenu,
+        { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
+        { id: 'reports', label: 'Reports', icon: 'description' },
+        { id: 'analytics', label: 'Analytics', icon: 'analytics' },
+        { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
+      ];
+    }
+  };
+
+  const menuItems = createMenuItems();
 
   const renderContent = () => {
     if (showInfo) {
@@ -129,6 +167,28 @@ const Homepage = () => {
     if (showNotifications) {
       return <NotificationContent />;
     }
+
+    // Check if user has access to the requested menu item
+    const hasAccess = menuItems.some(item => item.id === activeMenu);
+    
+    if (!hasAccess) {
+      // Redirect to home if user doesn't have access to the requested section
+      setActiveMenu('home');
+      return (
+        <div className="main-content" style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', overflow: 'hidden' }}>
+          <video autoPlay loop muted playsInline style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}>
+            <source src={require('../assets/lnding.mp4')} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          <div className="content-overlay" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
+            <div className="hero-text">
+              <h1 className="center-title"></h1>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     switch (activeMenu) {
       case 'scheduling':
         return <Scheduling />;

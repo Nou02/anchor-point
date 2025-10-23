@@ -990,6 +990,191 @@ const Payroll = () => {
     }
   };
 
+  // Alice Approval View Component
+  const AliceApprovalView = () => {
+    const [pendingPayrollData, setPendingPayrollData] = useState(null);
+    const [isApproving, setIsApproving] = useState(false);
+    const [approvalMessage, setApprovalMessage] = useState('');
+
+    // Load pending payroll data for Alice to approve
+    useEffect(() => {
+      const loadPendingPayrollData = async () => {
+        try {
+          const db = getFirestore();
+          const currentDate = new Date();
+          const month = currentDate.getMonth() + 1;
+          const date = currentDate.getDate();
+          const year = currentDate.getFullYear();
+          const payrollId = `payroll(${month},${date},${year})`;
+          
+          // Try to get today's payroll data
+          const payrollRef = doc(db, 'payrolls', payrollId);
+          const payrollDoc = await getDoc(payrollRef);
+          
+          if (payrollDoc.exists()) {
+            const payrollData = payrollDoc.data();
+            // Only show if not already approved
+            if (payrollData.status !== 'approved') {
+              setPendingPayrollData(payrollData);
+            }
+          } else {
+            // If today's data doesn't exist, get the most recent unapproved data
+            const q = query(collection(db, 'payrolls'), where('status', '!=', 'approved'));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+              const sortedDocs = querySnapshot.docs.sort((a, b) => 
+                new Date(b.data().date) - new Date(a.data().date)
+              );
+              setPendingPayrollData(sortedDocs[0].data());
+            }
+          }
+        } catch (error) {
+          console.error('Error loading pending payroll data:', error);
+        }
+      };
+
+      loadPendingPayrollData();
+    }, []);
+
+    const handleApprovePayroll = async () => {
+      if (!pendingPayrollData) return;
+      
+      setIsApproving(true);
+      setApprovalMessage('');
+      
+      try {
+        const db = getFirestore();
+        const currentDate = new Date();
+        const month = currentDate.getMonth() + 1;
+        const date = currentDate.getDate();
+        const year = currentDate.getFullYear();
+        const payrollId = `payroll(${month},${date},${year})`;
+        
+        // Update payroll status to approved
+        const payrollRef = doc(db, 'payrolls', payrollId);
+        await updateDoc(payrollRef, {
+          status: 'approved',
+          approvedBy: user.email,
+          approvedByName: user.name,
+          approvedAt: new Date().toISOString()
+        });
+        
+        // Update workers payroll data to reflect approved status
+        const workersPayrollId = `workerspayroll(${month},${date},${year})`;
+        const workersPayrollRef = doc(db, 'workerPayrolls', workersPayrollId);
+        await updateDoc(workersPayrollRef, {
+          status: 'approved',
+          approvedBy: user.email,
+          approvedByName: user.name,
+          approvedAt: new Date().toISOString()
+        });
+        
+        setApprovalMessage('Payroll approved successfully! Changes are now reflected for all workers.');
+        setTimeout(() => setApprovalMessage(''), 5000);
+        
+        // Reload the data to show updated status
+        setPendingPayrollData(null);
+        
+      } catch (error) {
+        console.error('Error approving payroll:', error);
+        setApprovalMessage('Error approving payroll. Please try again.');
+        setTimeout(() => setApprovalMessage(''), 5000);
+      } finally {
+        setIsApproving(false);
+      }
+    };
+
+    if (!pendingPayrollData) {
+      return (
+        <div className="alice-approval-view">
+          <div className="approval-header">
+            <h2>Payroll Approval</h2>
+            <p>No pending payroll data to approve at this time.</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="alice-approval-view">
+        <div className="approval-header">
+          <h2>Payroll Approval</h2>
+          <p>Review and approve the payroll data submitted by Carla</p>
+        </div>
+        
+        <div className="approval-table-container">
+          <table className="approval-table">
+            <thead>
+              <tr>
+                <th rowSpan="2">Workers</th>
+                <th colSpan="2">Local Vessel</th>
+                <th colSpan="2">Foreign Vessel</th>
+                <th rowSpan="2">TOTAL</th>
+                <th rowSpan="2">SSS</th>
+                <th rowSpan="2">PAG-IBIG</th>
+                <th rowSpan="2">PhilHealth</th>
+                <th rowSpan="2">Cash Advance</th>
+                <th rowSpan="2">NET TOTAL</th>
+              </tr>
+              <tr>
+                <th>Mooring</th>
+                <th>Unmooring</th>
+                <th>Mooring</th>
+                <th>Unmooring</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingPayrollData.workers.map((worker, index) => (
+                <tr key={worker.id}>
+                  <td className="worker-name-cell">{worker.workerName}</td>
+                  <td>{worker.localMooringCount || 'Count'}</td>
+                  <td>{worker.localUnmooringCount || 'Count'}</td>
+                  <td>{worker.foreignMooringCount || 'Count'}</td>
+                  <td>{worker.foreignUnmooringCount || 'Count'}</td>
+                  <td>{worker.totalEarnings || 0}</td>
+                  <td>{worker.sss || 'Enter amount'}</td>
+                  <td>{worker.pagibig || 'Enter amount'}</td>
+                  <td>{worker.philhealth || 'Enter amount'}</td>
+                  <td>{worker.cashAdvance || 'Enter amount'}</td>
+                  <td>{worker.netTotal || 0}</td>
+                </tr>
+              ))}
+              <tr className="grand-total-row">
+                <td>GRAND TOTAL</td>
+                <td>{pendingPayrollData.totals.localMooringCount}</td>
+                <td>{pendingPayrollData.totals.localUnmooringCount}</td>
+                <td>{pendingPayrollData.totals.foreignMooringCount}</td>
+                <td>{pendingPayrollData.totals.foreignUnmooringCount}</td>
+                <td>{pendingPayrollData.totals.totalEarnings}</td>
+                <td>{pendingPayrollData.totals.sss}</td>
+                <td>{pendingPayrollData.totals.pagibig}</td>
+                <td>{pendingPayrollData.totals.philhealth}</td>
+                <td>{pendingPayrollData.totals.cashAdvance}</td>
+                <td>{pendingPayrollData.totals.netTotal}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div className="approval-actions">
+          <button
+            onClick={handleApprovePayroll}
+            disabled={isApproving}
+            className="approve-payroll-button"
+          >
+            {isApproving ? 'Approving...' : 'Approved Payroll'}
+          </button>
+          {approvalMessage && (
+            <div className={`approval-message ${approvalMessage.includes('Error') ? 'error' : 'success'}`}>
+              {approvalMessage}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Manager View Component
   const ManagerView = () => (
     <div className="manager-view">
@@ -1425,7 +1610,9 @@ const Payroll = () => {
 
   return (
     <div className="payroll-center-content">
-      {isManagerView && isCarlaUser(user) ? (
+      {isAliceUser(user) ? (
+        <AliceApprovalView />
+      ) : isManagerView && isCarlaUser(user) ? (
         <ManagerView />
       ) : (
         <RegularPayrollView />

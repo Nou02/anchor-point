@@ -8,7 +8,7 @@ const menu = [
   { id: 'payroll', label: 'Payroll', icon: 'attach_money' },
 ];
 
-const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotificationClick, showInfoButton, showNotificationButton, userProfile }) => (
+const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotificationClick, showInfoButton, showNotificationButton, userProfile, menuItems }) => (
   <aside className="sidebar">
     <div className="sidebar-logo-container">
       {/* Anchor SVG */}
@@ -30,7 +30,7 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
       </div>
     </div>
     <nav className="sidebar-nav">
-      {(typeof menuItems !== 'undefined' ? menuItems : menu).map(item => (
+      {(menuItems && menuItems.length > 0 ? menuItems : menu).map(item => (
         <button
           key={item.id}
           className={`sidebar-nav-item${activeMenu === item.id ? ' active' : ''}`}
