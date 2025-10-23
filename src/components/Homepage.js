@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './Homepage.css';
 import Scheduling from './Scheduling';
-import Weather from './Weather';
 import Report from './Report';
 import Payroll from './Payroll';
 import Sidebar from './Sidebar';
 import InfoContent from './InfoContent';
+import NotificationContent from './NotificationContent';
 import Analytics from './Analytics';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -24,56 +24,93 @@ const Homepage = () => {
     }
   };
 
-  // Try to get last menu from localStorage, default to 'weather'
+  // Try to get last menu from localStorage, default to 'home'
   const getInitialMenu = () => {
-    return localStorage.getItem('activeMenu') || 'weather';
+    return localStorage.getItem('activeMenu') || 'home';
   };
   const [activeMenu, setActiveMenu] = useState(getInitialMenu());
   const [showInfo, setShowInfo] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [showInfoButton, setShowInfoButton] = useState(false);
+  const [showNotificationButton, setShowNotificationButton] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('activeMenu', activeMenu);
   }, [activeMenu]);
 
-  // Show info button for Alice Margaretha Santos and Carla Dela Peña
+  // Fetch user profile data and show info button for specific users
   useEffect(() => {
     const checkUser = async () => {
       const auth = getAuth();
       const user = auth.currentUser;
       if (!user) {
         setShowInfoButton(false);
+        setUserProfile(null);
         return;
       }
-      // Try to get displayName from auth, or fullName from Firestore
-      let displayName = user.displayName;
-      if (!displayName) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            displayName = data.fullName || data.username || '';
-          }
-        } catch {}
+      
+      // Try to get user data from Firestore
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setUserProfile({
+            fullName: userData.fullName || user.displayName || user.email.split('@')[0],
+            role: userData.role || 'Employee',
+            email: userData.email || user.email
+          });
+          
+          // Show info button for both Alice and Carla
+          const displayName = userData.fullName || user.displayName || '';
+          const isAlice = displayName === 'Alice Margaretha Santos' || 
+                         displayName === 'Alice' ||
+                         (displayName && displayName.toLowerCase().includes('alice'));
+          const isCarla = displayName === 'Carla Dela Peña' || 
+                         displayName === 'Carla' ||
+                         (displayName && displayName.toLowerCase().includes('carla'));
+          setShowInfoButton(isAlice || isCarla);
+          
+          // Show notification button for all users
+          setShowNotificationButton(true);
+        } else {
+          // Fallback if no Firestore data
+          setUserProfile({
+            fullName: user.displayName || user.email.split('@')[0],
+            role: 'Employee',
+            email: user.email
+          });
+          setShowInfoButton(false);
+          setShowNotificationButton(true);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Fallback if error
+        setUserProfile({
+          fullName: user.displayName || user.email.split('@')[0],
+          role: 'Employee',
+          email: user.email
+        });
+        setShowInfoButton(false);
+        setShowNotificationButton(true);
       }
-      // Show info button for both Alice and Carla
-      const isAlice = displayName === 'Alice Margaretha Santos' || 
-                     displayName === 'Alice' ||
-                     (displayName && displayName.toLowerCase().includes('alice'));
-      const isCarla = displayName === 'Carla Dela Peña' || 
-                     displayName === 'Carla' ||
-                     (displayName && displayName.toLowerCase().includes('carla'));
-      setShowInfoButton(isAlice || isCarla);
     };
     checkUser();
   }, []);
 
   const handleInfoClick = () => {
     setShowInfo(true);
+    setShowNotifications(false);
+  };
+
+  const handleNotificationClick = () => {
+    setShowNotifications(true);
+    setShowInfo(false);
   };
 
   const handleMenuClick = (menu) => {
     setShowInfo(false);
+    setShowNotifications(false);
     setActiveMenu(menu);
   };
 
@@ -82,19 +119,19 @@ const Homepage = () => {
     { id: 'scheduling', label: 'Scheduling'},
     { id: 'reports', label: 'Reports'},
     { id: 'analytics', label: 'Analytics'},
-    { id: 'payroll', label: 'Payroll'},
-    { id: 'weather', label: 'Weather'}
+    { id: 'payroll', label: 'Payroll'}
   ];
 
   const renderContent = () => {
     if (showInfo) {
       return <InfoContent />;
     }
+    if (showNotifications) {
+      return <NotificationContent />;
+    }
     switch (activeMenu) {
       case 'scheduling':
         return <Scheduling />;
-      case 'weather':
-        return <Weather />;
       case 'reports':
         return <Report />;
       case 'analytics':
@@ -127,7 +164,10 @@ const Homepage = () => {
         menuItems={menuItems}
         handleLogout={handleLogout}
         onInfoClick={handleInfoClick}
+        onNotificationClick={handleNotificationClick}
         showInfoButton={showInfoButton}
+        showNotificationButton={showNotificationButton}
+        userProfile={userProfile}
       />
       {renderContent()}
     </div>

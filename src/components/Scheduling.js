@@ -3,6 +3,7 @@ import './Scheduling.css';
 import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import '../firebase/config'; // Make sure this imports your firebase config
+import { getWeatherForecast, getMockWeatherData } from '../services/weatherService';
 
 const Scheduling = () => {
   // Initialize Firestore database
@@ -20,6 +21,9 @@ const Scheduling = () => {
   const [assignedWorkers, setAssignedWorkers] = useState({}); // Track assigned workers for each appointment
   const [currentDateIndex, setCurrentDateIndex] = useState(0); // Track which selected date is being processed
   const [isInitialLoad, setIsInitialLoad] = useState(true); // Flag to prevent saving during initial load
+  const [weatherData, setWeatherData] = useState({}); // Store weather data for calendar dates
+  const [weatherLoading, setWeatherLoading] = useState(false); // Track weather loading state
+  const [selectedDateForAI, setSelectedDateForAI] = useState(null); // Track selected date for AI recommendation
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();
@@ -157,6 +161,8 @@ const Scheduling = () => {
           return [...prev, clickedDate];
         }
       });
+      // Set selected date for AI recommendation
+      setSelectedDateForAI(clickedDate);
       // Reset current date index when selection changes
       setCurrentDateIndex(0);
     }
@@ -575,6 +581,36 @@ const Scheduling = () => {
     return () => unsubscribe();
   }, []);
 
+  // Fetch weather data for calendar
+  useEffect(() => {
+    const fetchWeatherData = async () => {
+      setWeatherLoading(true);
+      try {
+        // Try to get real weather data first
+        const forecast = await getWeatherForecast();
+        if (Object.keys(forecast).length > 0) {
+          setWeatherData(forecast);
+          console.log('Weather data loaded:', forecast);
+        } else {
+          // Fallback to mock data if API fails
+          const mockData = getMockWeatherData();
+          setWeatherData(mockData);
+          console.log('Using mock weather data:', mockData);
+        }
+      } catch (error) {
+        console.error('Error fetching weather data:', error);
+        // Use mock data as fallback
+        const mockData = getMockWeatherData();
+        setWeatherData(mockData);
+        console.log('Using mock weather data due to error:', mockData);
+      } finally {
+        setWeatherLoading(false);
+      }
+    };
+
+    fetchWeatherData();
+  }, [currentDate]); // Refetch when month changes
+
   // Helper: get vessel type info for each day in current month
   const getDayVesselTypes = () => {
     const vesselMap = {};
@@ -589,6 +625,90 @@ const Scheduling = () => {
       }
     });
     return vesselMap;
+  };
+
+  // Helper: get weather data for a specific date
+  const getWeatherForDate = (day) => {
+    if (!day || !day.isCurrentMonth) return null;
+    
+    const date = new Date(currentYear, currentMonth, day.day);
+    const dateKey = date.toISOString().split('T')[0];
+    return weatherData[dateKey] || null;
+  };
+
+  // Generate AI recommendation based on weather
+  const generateAIRecommendation = (weatherInfo, date) => {
+    if (!weatherInfo) {
+      return {
+        title: "No Weather Data Available",
+        message: "Weather forecast is not available for this date. Please proceed with caution and monitor local weather conditions.",
+        type: "warning",
+        color: "#FF9800"
+      };
+    }
+
+    const condition = weatherInfo.condition.toLowerCase();
+    const temperature = weatherInfo.temperature;
+    const windSpeed = weatherInfo.windSpeed || 0;
+
+    // Generate recommendations based on weather conditions
+    if (condition.includes('clear') || condition.includes('sunny')) {
+      return {
+        title: "✅ Optimal Conditions for Operations",
+        message: `Perfect weather for mooring activities! Clear skies and ${temperature}°C temperature provide excellent visibility and safe working conditions. All outdoor operations can proceed as scheduled.`,
+        type: "success",
+        color: "#4CAF50"
+      };
+    } else if (condition.includes('cloud')) {
+      return {
+        title: "✅ Good Conditions for Operations",
+        message: `Cloudy weather with ${temperature}°C is suitable for mooring activities. Visibility may be slightly reduced, but operations can proceed safely. Monitor conditions throughout the day.`,
+        type: "success",
+        color: "#4CAF50"
+      };
+    } else if (condition.includes('light rain')) {
+      return {
+        title: "⚠️ Proceed with Caution",
+        message: `Light rain conditions with ${temperature}°C require extra safety measures. Ensure all workers have proper rain gear and non-slip footwear. Consider shorter work shifts and increased supervision.`,
+        type: "warning",
+        color: "#FF9800"
+      };
+    } else if (condition.includes('rain')) {
+      return {
+        title: "⚠️ High Risk - Consider Rescheduling",
+        message: `Rainy conditions with ${temperature}°C pose safety risks for mooring operations. Wet surfaces increase slip hazards. Consider rescheduling non-critical activities or implement enhanced safety protocols.`,
+        type: "warning",
+        color: "#FF5722"
+      };
+    } else if (condition.includes('heavy rain')) {
+      return {
+        title: "❌ Not Recommended for Operations",
+        message: `Heavy rain with ${temperature}°C creates dangerous working conditions. Strongly recommend rescheduling all outdoor mooring activities. Safety of personnel is the top priority.`,
+        type: "danger",
+        color: "#F44336"
+      };
+    } else if (condition.includes('storm') || condition.includes('thunderstorm')) {
+      return {
+        title: "❌ Operations Suspended",
+        message: `Storm conditions with ${temperature}°C are extremely dangerous. All outdoor operations must be suspended immediately. Ensure all personnel are in safe locations and equipment is secured.`,
+        type: "danger",
+        color: "#D32F2F"
+      };
+    } else if (windSpeed > 30) {
+      return {
+        title: "⚠️ High Wind Warning",
+        message: `High wind speeds (${windSpeed} km/h) create dangerous conditions for mooring operations. Consider postponing activities until wind conditions improve.`,
+        type: "warning",
+        color: "#FF9800"
+      };
+    } else {
+      return {
+        title: "ℹ️ Weather Advisory",
+        message: `Current conditions: ${weatherInfo.condition} with ${temperature}°C. Please assess local conditions and proceed with appropriate safety measures.`,
+        type: "info",
+        color: "#2196F3"
+      };
+    }
   };
 
   // Handle crew availability toggle - only Alice can change availability
@@ -873,6 +993,46 @@ return (
               </button>
             </div>
             <div className="calendar-grid">
+              {/* Weather Legend */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '16px',
+                padding: '8px 16px',
+                background: 'rgba(255, 255, 255, 0.9)',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                flexWrap: 'wrap'
+              }}>
+                <span style={{ fontWeight: 'bold', color: '#2F3B70' }}>Weather Forecast:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ width: '12px', height: '12px', background: '#FFD700', borderRadius: '2px' }}></div>
+                  <span>Sunny</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ width: '12px', height: '12px', background: '#D3D3D3', borderRadius: '2px' }}></div>
+                  <span>Cloudy</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ width: '12px', height: '12px', background: '#FFB6C1', borderRadius: '2px' }}></div>
+                  <span>Light Rain</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ width: '12px', height: '12px', background: '#FF6B6B', borderRadius: '2px' }}></div>
+                  <span>Rain</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ width: '12px', height: '12px', background: '#DC143C', borderRadius: '2px' }}></div>
+                  <span>Heavy Rain</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ width: '12px', height: '12px', background: '#8B0000', borderRadius: '2px' }}></div>
+                  <span>Storm</span>
+                </div>
+              </div>
+              
               {/* Weekday headers */}
               <div className="weekday-header">
                 {['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'].map((day, index) => {
@@ -892,7 +1052,10 @@ return (
               <div className="calendar-days">
                 {calendarDays.map((dayData, index) => {
                   let bgColor = '';
+                  let weatherInfo = null;
+                  
                   if (dayData.isCurrentMonth && dayData.day) {
+                    // Get vessel types for background color
                     const vesselTypes = dayVesselTypes[dayData.day];
                     if (vesselTypes) {
                       if (vesselTypes.has('Local') && vesselTypes.has('International')) {
@@ -903,10 +1066,23 @@ return (
                         bgColor = '#d6eaff'; // light blue
                       }
                     }
+                    
+                    // Get weather data for this date
+                    weatherInfo = getWeatherForDate(dayData);
                   }
 
                   const isPast = dayData.isCurrentMonth && dayData.day && isPastDate(dayData.day);
                   const canClick = isAlice() && dayData.isCurrentMonth && dayData.day && !isPast;
+                  
+                  // Create title with weather information
+                  let titleText = '';
+                  if (!isAlice() && dayData.isCurrentMonth && dayData.day) {
+                    titleText = 'Only Alice can select dates';
+                  } else if (isPast) {
+                    titleText = 'This date has already passed';
+                  } else if (weatherInfo) {
+                    titleText = `Weather: ${weatherInfo.condition} - ${weatherInfo.temperature}°C`;
+                  }
                   
                   return (
                     <div
@@ -920,16 +1096,26 @@ return (
                       }`}
                       style={{ 
                         ...bgColor ? { background: bgColor } : {},
+                        ...weatherInfo ? { 
+                          background: weatherInfo.color,
+                          color: weatherInfo.color === '#FFD700' || weatherInfo.color === '#FFFFFF' ? '#000' : '#fff',
+                          fontWeight: 'bold'
+                        } : {},
                         cursor: canClick ? 'pointer' : 'default'
                       }}
                       onClick={() => handleDateClick(dayData.day, dayData.isCurrentMonth)}
-                      title={
-                        !isAlice() && dayData.isCurrentMonth && dayData.day ? 'Only Alice can select dates' :
-                        isPast ? 'This date has already passed' :
-                        ''
-                      }
+                      title={titleText}
                     >
                       <div>{dayData.day}</div>
+                      {weatherInfo && (
+                        <div style={{ 
+                          fontSize: '0.7rem', 
+                          marginTop: '2px',
+                          opacity: 0.8
+                        }}>
+                          {weatherInfo.temperature}°C
+                        </div>
+                      )}
                     </div>
                   );
                 })}

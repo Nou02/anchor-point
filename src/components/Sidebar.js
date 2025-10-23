@@ -6,10 +6,9 @@ const menu = [
   { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
   { id: 'reports', label: 'Reports', icon: 'description' },
   { id: 'payroll', label: 'Payroll', icon: 'attach_money' },
-  { id: 'weather', label: 'Weather', icon: 'cloud' }
 ];
 
-const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, showInfoButton }) => (
+const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotificationClick, showInfoButton, showNotificationButton, userProfile }) => (
   <aside className="sidebar">
     <div className="sidebar-logo-container">
       {/* Anchor SVG */}
@@ -44,41 +43,180 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, showInf
       ))}
     </nav>
 
-      {/* Information Icon Button above Logout */}
-      {showInfoButton && (
-        <button
-          className="sidebar-info-minimal"
-          onClick={onInfoClick}
-          aria-label="Information"
-          type="button"
-          style={{
-            background: 'none',
-            border: 'none',
-            outline: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            margin: '32px auto 16px auto',
-            borderRadius: '50%',
-            transition: 'box-shadow 0.2s, background 0.2s'
-          }}
-          onMouseOver={e => {
-            e.currentTarget.style.background = '#e3f0fc';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(25, 118, 210, 0.12)';
-          }}
-          onMouseOut={e => {
-            e.currentTarget.style.background = 'none';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          <svg width="28" height="28" fill="none" stroke="#1976d2" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="14" cy="14" r="12" fill="#fff" />
-            <line x1="14" y1="11" x2="14" y2="18"/>
-            <circle cx="14" cy="8" r="1.3" fill="#1976d2"/>
-          </svg>
-        </button>
-      )}
+      {/* Notification and Information Buttons */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        margin: '32px auto 16px auto',
+        width: '90%'
+      }}>
+        {/* Notification Button */}
+        {showNotificationButton && (
+          <button
+            className="sidebar-notification-btn"
+            onClick={onNotificationClick}
+            aria-label="Notifications"
+            type="button"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              transition: 'all 0.3s ease',
+              color: 'white',
+              width: '100%'
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #FF6B6B, #FF8E8E)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <svg width="18" height="18" fill="white" viewBox="0 0 24 24">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              </svg>
+            </div>
+            <span style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              flex: 1,
+              textAlign: 'left'
+            }}>
+              Notifications
+            </span>
+          </button>
+        )}
+
+        {/* Information Button */}
+        {showInfoButton && (
+          <button
+            className="sidebar-info-btn"
+            onClick={onInfoClick}
+            aria-label="Information"
+            type="button"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              transition: 'all 0.3s ease',
+              color: 'white',
+              width: '100%'
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #1976d2, #42a5f5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <svg width="18" height="18" fill="white" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+              </svg>
+            </div>
+            <span style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              flex: 1,
+              textAlign: 'left'
+            }}>
+              Information Content
+            </span>
+          </button>
+        )}
+      </div>
+
+    {/* User Profile Section */}
+    {userProfile && (
+      <div className="user-profile-section" style={{
+        margin: '32px auto 16px auto',
+        padding: '16px',
+        background: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '12px',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        width: '90%',
+        transition: 'all 0.3s ease'
+      }}>
+        {/* User Avatar */}
+        <div style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          flexShrink: 0,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+        }}>
+          {userProfile.fullName ? userProfile.fullName.charAt(0).toUpperCase() : 'U'}
+        </div>
+        
+        {/* User Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            color: '#fff',
+            fontSize: '14px',
+            fontWeight: '600',
+            marginBottom: '2px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
+            {userProfile.fullName || 'User'}
+          </div>
+          <div style={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '12px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
+            {userProfile.role || 'Employee'}
+          </div>
+        </div>
+      </div>
+    )}
 
     <button
       className="logout-btn"

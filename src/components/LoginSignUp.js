@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import './LoginSignUp.css';
 
 const LoginSignUp = ({ onLogin, onSignUp }) => {
@@ -15,6 +16,7 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [role, setRole] = useState('');
 
   const auth = getAuth();
 
@@ -31,7 +33,20 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
         if (password !== confirmPassword) {
           throw new Error('Passwords do not match');
         }
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Save user data to Firestore
+        const db = getFirestore();
+        await setDoc(doc(db, 'users', user.uid), {
+          fullName: name,
+          email: email,
+          phone: phone,
+          role: role || 'Employee',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        
         onSignUp({ name, email, phone, password });
       }
     } catch (err) {
@@ -126,6 +141,31 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
                   className="input-field"
                   required
                 />
+              )}
+
+              {!isLogin && (
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="input-field"
+                  required
+                  style={{
+                    background: 'white',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    fontSize: '1rem',
+                    color: '#333',
+                    width: '100%',
+                    marginBottom: '16px'
+                  }}
+                >
+                  <option value="">Select Role</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Supervisor">Supervisor</option>
+                  <option value="Employee">Employee</option>
+                  <option value="Administrator">Administrator</option>
+                </select>
               )}
 
               <div className="password-input-wrapper">

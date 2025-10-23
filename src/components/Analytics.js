@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './Report.css';
-import * as XLSX from 'xlsx';
+// Using dynamic import for xlsx to handle potential module resolution issues
+let XLSX;
 
 const Analytics = () => {
   const { refreshData } = useExcelData();
@@ -101,6 +102,11 @@ const useExcelData = () => {
       try {
         setLoading(true);
         setError(null);
+        
+        // Dynamically import xlsx library
+        if (!XLSX) {
+          XLSX = await import('xlsx');
+        }
         
         // Fetch Excel file from public folder with aggressive cache-busting
         const timestamp = new Date().getTime();
