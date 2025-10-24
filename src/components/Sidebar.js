@@ -8,7 +8,7 @@ const menu = [
   { id: 'payroll', label: 'Payroll', icon: 'attach_money' },
 ];
 
-const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotificationClick, showInfoButton, showNotificationButton, userProfile, menuItems }) => (
+const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotificationClick, showInfoButton, showNotificationButton, userProfile, menuItems, hasUnreadNotifications }) => (
   <aside className="sidebar">
     <div className="sidebar-logo-container">
       {/* Anchor SVG */}
@@ -47,36 +47,39 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
       <div style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
-        margin: '32px auto 16px auto',
-        width: '90%'
+        gap: '6px',
+        margin: '0 auto 12px auto',
+        width: 'calc(100% - 40px)',
+        padding: '0 20px'
       }}>
         {/* Notification Button */}
         {showNotificationButton && (
           <button
-            className="sidebar-notification-btn"
+            className={`sidebar-notification-btn ${hasUnreadNotifications ? 'has-notification' : ''}`}
             onClick={onNotificationClick}
             aria-label="Notifications"
             type="button"
             style={{
-              background: 'rgba(255, 255, 255, 0.1)',
+              background: '#232b45',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               borderRadius: '12px',
-              padding: '12px 16px',
+              padding: '6px 10px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
               transition: 'all 0.3s ease',
               color: 'white',
-              width: '100%'
+              width: '100%',
+              position: 'relative',
+              overflow: 'hidden'
             }}
             onMouseOver={e => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.background = '#2e3652';
               e.currentTarget.style.transform = 'translateY(-2px)';
             }}
             onMouseOut={e => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.background = '#232b45';
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
@@ -88,11 +91,28 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              flexShrink: 0
+              flexShrink: 0,
+              position: 'relative'
             }}>
               <svg width="18" height="18" fill="white" viewBox="0 0 24 24">
                 <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
               </svg>
+              {/* Glowing notification indicator */}
+              <div 
+                className="notification-glow-indicator"
+                style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  width: '12px',
+                  height: '12px',
+                  background: '#FF4444',
+                  borderRadius: '50%',
+                  border: '2px solid white',
+                  display: 'none',
+                  animation: 'notificationPulse 2s infinite'
+                }}
+              ></div>
             </div>
             <span style={{
               fontSize: '14px',
@@ -113,10 +133,10 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
             aria-label="Information"
             type="button"
             style={{
-              background: 'rgba(255, 255, 255, 0.1)',
+              background: '#232b45',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               borderRadius: '12px',
-              padding: '12px 16px',
+              padding: '6px 10px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -126,11 +146,11 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
               width: '100%'
             }}
             onMouseOver={e => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.background = '#2e3652';
               e.currentTarget.style.transform = 'translateY(-2px)';
             }}
             onMouseOut={e => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.background = '#232b45';
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
@@ -163,15 +183,15 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
     {/* User Profile Section */}
     {userProfile && (
       <div className="user-profile-section" style={{
-        margin: '32px auto 16px auto',
-        padding: '16px',
-        background: 'rgba(255, 255, 255, 0.1)',
+        margin: '0 auto 8px auto',
+        padding: '10px',
+        background: '#232b45',
         borderRadius: '12px',
         border: '1px solid rgba(255, 255, 255, 0.2)',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
-        width: '90%',
+        width: 'calc(100% - 40px)',
         transition: 'all 0.3s ease'
       }}>
         {/* User Avatar */}
@@ -199,18 +219,18 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
             fontSize: '14px',
             fontWeight: '600',
             marginBottom: '2px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
+            lineHeight: '1.3'
           }}>
             {userProfile.fullName || 'User'}
           </div>
           <div style={{
             color: 'rgba(255, 255, 255, 0.7)',
             fontSize: '12px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
+            lineHeight: '1.3'
           }}>
             {userProfile.role || 'Employee'}
           </div>
@@ -221,8 +241,8 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
     <button
       className="logout-btn"
       style={{
-        width: '90%',
-        margin: '0 auto 16px auto',
+        width: 'calc(100% - 40px)',
+        margin: '0 auto 12px auto',
         display: 'block',
         background: '#fff',
         color: '#0a2240',
@@ -232,7 +252,8 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
         fontWeight: 'bold',
         fontSize: '1rem',
         cursor: 'pointer',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+        transition: 'all 0.3s ease'
       }}
       onClick={handleLogout}
     >

@@ -1,94 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import './NotificationContent.css';
+import notificationService from '../services/notificationService';
 
 const NotificationContent = () => {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "Vessel Arrival Alert",
-      message: "MV Ocean Star has arrived at Berth 3. Mooring operations are ready to commence.",
-      timestamp: new Date(),
-      type: "arrival",
-      priority: "high",
-      read: false,
-      status: "active"
-    },
-    {
-      id: 2,
-      title: "Weather Advisory",
-      message: "Heavy rain and strong winds forecasted for tomorrow (Oct 24). All outdoor operations should be rescheduled.",
-      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-      type: "weather",
-      priority: "high",
-      read: false,
-      status: "active"
-    },
-    {
-      id: 3,
-      title: "Crew Assignment Update",
-      message: "Bryan Matthew Cruz and David Emmanuel Reyes have been assigned to mooring operations for October 24th, 2025.",
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-      type: "assignment",
-      priority: "medium",
-      read: true,
-      status: "completed"
-    },
-    {
-      id: 4,
-      title: "System Maintenance Notice",
-      message: "Scheduled system maintenance will occur tonight from 11:00 PM to 1:00 AM. Please save your work.",
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-      type: "system",
-      priority: "medium",
-      read: true,
-      status: "scheduled"
-    },
-    {
-      id: 5,
-      title: "Payroll Processing Reminder",
-      message: "Monthly payroll processing deadline is tomorrow at 5:00 PM. Please ensure all timesheets are submitted.",
-      timestamp: new Date(Date.now() - 7 * 60 * 60 * 1000), // 7 hours ago
-      type: "payroll",
-      priority: "high",
-      read: false,
-      status: "pending"
-    },
-    {
-      id: 6,
-      title: "Safety Protocol Update",
-      message: "New safety protocols have been implemented. All crew members must complete the updated training by Friday.",
-      timestamp: new Date(Date.now() - 9 * 60 * 60 * 1000), // 9 hours ago
-      type: "safety",
-      priority: "medium",
-      read: true,
-      status: "active"
-    }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   const [filter, setFilter] = useState('all'); // all, unread, read
   const [sortBy, setSortBy] = useState('newest'); // newest, oldest
 
+  // Load notifications from service
+  useEffect(() => {
+    const loadNotifications = () => {
+      setNotifications(notificationService.getNotifications());
+    };
+
+    // Load initial notifications
+    loadNotifications();
+
+    // Add listener for updates
+    const handleNotificationUpdate = () => {
+      loadNotifications();
+    };
+
+    notificationService.addListener(handleNotificationUpdate);
+
+    return () => {
+      notificationService.removeListener(handleNotificationUpdate);
+    };
+  }, []);
+
   // Mark notification as read
   const markAsRead = (id) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
+    notificationService.markAsRead(id);
   };
 
   // Mark all as read
   const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+    notificationService.markAllAsRead();
   };
 
   // Delete notification
   const deleteNotification = (id) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
+    notificationService.deleteNotification(id);
   };
 
   // Format time for display
@@ -225,7 +178,10 @@ const NotificationContent = () => {
   return (
     <div className="notification-content">
       <div className="notification-header">
-        <h2 className="notification-title">NOTIFICATIONS</h2>
+        <div className="notification-title-section">
+          <h2 className="notification-title">Notifications</h2>
+          <p className="notification-subtitle">Stay updated with your latest alerts and messages</p>
+        </div>
         <div className="notification-controls">
           <div className="notification-filters">
             <button 
@@ -271,8 +227,19 @@ const NotificationContent = () => {
       <div className="notification-list">
         {filteredNotifications.length === 0 ? (
           <div className="no-notifications">
-            <div className="no-notifications-icon">📭</div>
-            <p>No notifications found</p>
+            <div className="no-notifications-icon">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.89 22 12 22ZM18 16V11C18 7.93 16.36 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5S10.5 3.17 10.5 4V4.68C7.63 5.36 6 7.92 6 11V16L4 18V19H20V18L18 16Z" 
+                      fill="#E5E7EB" 
+                      stroke="#9CA3AF" 
+                      strokeWidth="1.5" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"/>
+                <circle cx="12" cy="12" r="2" fill="#9CA3AF"/>
+              </svg>
+            </div>
+            <h3 className="no-notifications-title">No notifications</h3>
+            <p className="no-notifications-subtitle">You're all caught up! Check back later for updates.</p>
           </div>
         ) : (
           filteredNotifications.map(notification => {

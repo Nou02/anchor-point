@@ -24,6 +24,14 @@ const Scheduling = () => {
   const [weatherData, setWeatherData] = useState({}); // Store weather data for calendar dates
   const [weatherLoading, setWeatherLoading] = useState(false); // Track weather loading state
   const [selectedDateForAI, setSelectedDateForAI] = useState(null); // Track selected date for AI recommendation
+  const [showCreateDropdown, setShowCreateDropdown] = useState(false); // Track create dropdown visibility
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false); // Track appointment modal visibility
+  const [appointmentFormData, setAppointmentFormData] = useState({
+    time: '',
+    serviceType: 'Mooring',
+    vesselType: 'Local',
+    selectedWorkers: []
+  }); // Track appointment form data
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();
@@ -951,9 +959,9 @@ return (
       <div style={{
         backgroundColor: '#d4edda',
         border: '1px solid #c3e6cb',
-        borderRadius: '8px',
-        padding: '12px 16px',
-        margin: '16px',
+        borderRadius: '4px',
+        padding: '4px 8px',
+        margin: '4px 8px',
         textAlign: 'center',
         position: 'relative',
         zIndex: 10
@@ -961,18 +969,47 @@ return (
         <div style={{
           color: '#155724',
           fontWeight: '600',
-          fontSize: '1rem'
+          fontSize: '0.8rem'
         }}>
           Alice - You can change worker availability by clicking on the availability cells
         </div>
       </div>
     )}
+
+    {/* Create Button in Upper Left */}
+    <div className="scheduling-create-section">
+      <div className="create-button-container">
+        <button 
+          className="create-button"
+          onClick={() => setShowCreateDropdown(!showCreateDropdown)}
+        >
+          <span className="create-icon">+</span>
+          Create
+          <span className="dropdown-arrow">▼</span>
+        </button>
+        {showCreateDropdown && (
+          <div className="create-dropdown">
+            <div 
+              className="dropdown-item"
+              onClick={() => {
+                setShowAppointmentModal(true);
+                setShowCreateDropdown(false);
+              }}
+            >
+              Appointment Schedule
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
     
+    {/* Calendar header removed */}
+
     {/* Main content area: calendar or table */}
     <div className="scheduling-content">
       {view === 'calendar' ? (
-        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', gap: '32px', width: '100%' }}>
-          <div className="calendar-wrapper">
+        <div style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '1200px', alignItems: 'flex-start' }}>
+          <div className="calendar-wrapper" style={{ flex: '1' }}>
             <div className="calendar-header">
               <button 
                 className="nav-arrow left-arrow" 
@@ -998,37 +1035,37 @@ return (
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                gap: '12px',
-                marginBottom: '16px',
-                padding: '8px 16px',
+                gap: '4px',
+                marginBottom: '4px',
+                padding: '4px 8px',
                 background: 'rgba(255, 255, 255, 0.9)',
-                borderRadius: '8px',
-                fontSize: '0.8rem',
+                borderRadius: '4px',
+                fontSize: '0.6rem',
                 flexWrap: 'wrap'
               }}>
-                <span style={{ fontWeight: 'bold', color: '#2F3B70' }}>Weather Forecast:</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '12px', height: '12px', background: '#FFD700', borderRadius: '2px' }}></div>
+                <span style={{ fontWeight: 'bold', color: '#2F3B70' }}>Weather:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                  <div style={{ width: '6px', height: '6px', background: '#FFD700', borderRadius: '1px' }}></div>
                   <span>Sunny</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '12px', height: '12px', background: '#D3D3D3', borderRadius: '2px' }}></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                  <div style={{ width: '6px', height: '6px', background: '#D3D3D3', borderRadius: '1px' }}></div>
                   <span>Cloudy</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '12px', height: '12px', background: '#FFB6C1', borderRadius: '2px' }}></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                  <div style={{ width: '6px', height: '6px', background: '#FFB6C1', borderRadius: '1px' }}></div>
                   <span>Light Rain</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '12px', height: '12px', background: '#FF6B6B', borderRadius: '2px' }}></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                  <div style={{ width: '6px', height: '6px', background: '#FF6B6B', borderRadius: '1px' }}></div>
                   <span>Rain</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '12px', height: '12px', background: '#DC143C', borderRadius: '2px' }}></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                  <div style={{ width: '6px', height: '6px', background: '#DC143C', borderRadius: '1px' }}></div>
                   <span>Heavy Rain</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '12px', height: '12px', background: '#8B0000', borderRadius: '2px' }}></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                  <div style={{ width: '6px', height: '6px', background: '#8B0000', borderRadius: '1px' }}></div>
                   <span>Storm</span>
                 </div>
               </div>
@@ -1122,314 +1159,77 @@ return (
               </div>
             </div>
           </div>
-          {/* Selected date info beside calendar */}
-          {selectedDates.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div className="selected-date-info">
-                <h3>Selected Date{selectedDates.length > 1 ? 's' : ''}:</h3>
-                <ul>
-                  {selectedDates.map((date, idx) => {
-                    const dateISO = date.toISOString().slice(0, 10);
-                    const appointmentsForDate = savedEntries.filter(entry => 
-                      entry.date && entry.date.slice(0, 10) === dateISO
-                    );
-                    return (
-                      <li key={idx}>
-                        {date.toDateString()}
-                        {appointmentsForDate.length > 0 && (
-                          <span style={{ 
-                            fontSize: '0.9rem', 
-                            color: '#6c757d', 
-                            marginLeft: '8px',
-                            fontStyle: 'italic'
-                          }}>
-                            ({appointmentsForDate.length} appointment{appointmentsForDate.length > 1 ? 's' : ''})
-                          </span>
-                        )}
-                      </li>
-                    );
+          
+          {/* AI Weather Recommendation Section - Now beside calendar */}
+          {selectedDateForAI && (
+            <div className="ai-recommendation-section" style={{ width: '300px', flexShrink: 0 }}>
+              <div className="ai-recommendation-header" style={{ padding: '6px 8px', marginBottom: '4px' }}>
+                <div className="ai-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L13.09 8.26L19 7L14.74 12L19 17L13.09 15.74L12 22L10.91 15.74L5 17L9.26 12L5 7L10.91 8.26L12 2Z" fill="#2F3B70"/>
+                    <circle cx="12" cy="12" r="3" fill="#4A90E2"/>
+                  </svg>
+                </div>
+                <h3 style={{ fontSize: '0.8rem', margin: '0' }}>AI Weather Recommendation</h3>
+                <div className="date-badge" style={{ fontSize: '0.7rem', padding: '1px 4px' }}>
+                  {selectedDateForAI.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
                   })}
-                </ul>
-                <p>You can schedule multiple appointments for each selected date.</p>
+                </div>
               </div>
-              {/* Only show Client Information container if user is Alice Margaretha Santos */}
+              
               {(() => {
-                // Check if the logged-in user is Alice Margaretha Santos (including partial matches)
-                const auth = getAuth();
-                const currentUser = auth.currentUser;
-                const userEmail = currentUser ? currentUser.email : '';
+                const dateKey = selectedDateForAI.toISOString().split('T')[0];
+                const weatherInfo = weatherData[dateKey];
+                const recommendation = generateAIRecommendation(weatherInfo, selectedDateForAI);
                 
-                const isAliceMargarethaSantos = 
-                  userFullName === 'Alice Margaretha Santos' || 
-                  userName === 'Alice Margaretha Santos' ||
-                  userFullName === 'Alice' || 
-                  userName === 'Alice' ||
-                  (userFullName && userFullName.toLowerCase().includes('alice')) ||
-                  (userName && userName.toLowerCase().includes('alice')) ||
-                  (userEmail && userEmail.toLowerCase().includes('alice'));
-                
-                // Debug logging to help identify the issue
-                console.log('Debug - userFullName:', userFullName);
-                console.log('Debug - userName:', userName);
-                console.log('Debug - userEmail:', userEmail);
-                console.log('Debug - isAliceMargarethaSantos:', isAliceMargarethaSantos);
-                
-                // Only render the container if user is Alice Margaretha Santos
-                if (isAliceMargarethaSantos) {
-                  return (
-                    <div className="selected-dates-container">
-                      <h4>Client Information</h4>
-                      
-                      {/* Progress indicator */}
-                      {selectedDates.length > 1 && (
-                        <div style={{
-                          marginBottom: '20px',
-                          padding: '12px 16px',
-                          background: '#e3f2fd',
-                          borderRadius: '8px',
-                          border: '1px solid #2196f3'
-                        }}>
-                          <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '8px'
-                          }}>
-                            <span style={{
-                              fontSize: '0.9rem',
-                              fontWeight: '600',
-                              color: '#1976d2'
-                            }}>
-                              Processing Date {currentDateIndex + 1} of {selectedDates.length}
-                            </span>
-                            <span style={{
-                              fontSize: '0.8rem',
-                              color: '#666'
-                            }}>
-                              {selectedDates.length - currentDateIndex - 1} remaining
-                            </span>
-                          </div>
-                          <div style={{
-                            width: '100%',
-                            height: '6px',
-                            background: '#e0e0e0',
-                            borderRadius: '3px',
-                            overflow: 'hidden'
-                          }}>
-                            <div style={{
-                              width: `${((currentDateIndex + 1) / selectedDates.length) * 100}%`,
-                              height: '100%',
-                              background: '#2196f3',
-                              transition: 'width 0.3s ease'
-                            }} />
+                return (
+                  <div className="ai-recommendation-card" style={{ padding: '8px' }}>
+                    <div className="recommendation-header">
+                      <div className="status-indicator">
+                        <div className={`status-icon ${recommendation.type}`}>
+                          {recommendation.type === 'success' ? (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                              <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          ) : recommendation.type === 'warning' ? (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                              <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          ) : recommendation.type === 'danger' ? (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                              <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          ) : (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                              <path d="M13 16H12V12H11M12 8H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </div>
+                        <div className="status-text">
+                          <h4 style={{ fontSize: '0.8rem', margin: '0 0 1px 0' }}>{recommendation.title}</h4>
+                          <div className="priority-badge" style={{ fontSize: '0.6rem', padding: '1px 3px' }}>
+                            {recommendation.type === 'success' ? 'OPTIMAL' : 
+                             recommendation.type === 'warning' ? 'CAUTION' : 
+                             recommendation.type === 'danger' ? 'CRITICAL' : 'ADVISORY'}
                           </div>
                         </div>
-                      )}
-                      
-                      {/* Show form for current date only */}
-                      {(() => {
-                        const currentDate = selectedDates[currentDateIndex];
-                        if (!currentDate) return null;
-                        
-                        const dateISO = currentDate.toISOString().slice(0, 10);
-                        const existingAppointments = savedEntries.filter(entry => 
-                          entry.date && entry.date.slice(0, 10) === dateISO
-                        );
-                        
-                        return (
-                          <div style={{ marginBottom: '24px', borderBottom: '1px solid #e0e0e0', paddingBottom: '20px' }}>
-                            <div className="date-display">
-                              <strong>Date:</strong> {currentDate.toDateString()}
-                              {existingAppointments.length > 0 && (
-                                <div style={{ 
-                                  fontSize: '0.85rem', 
-                                  color: '#6c757d', 
-                                  marginTop: '4px',
-                                  fontStyle: 'italic'
-                                }}>
-                                  {existingAppointments.length} appointment{existingAppointments.length > 1 ? 's' : ''} already scheduled
-                                </div>
-                              )}
-                            </div>
-                            <form onSubmit={e => handleFormSubmit(e, currentDateIndex, currentDate)}>
-                              <label>
-                                Name:
-                                <input 
-                                  type="text" 
-                                  name={`clientName_${currentDateIndex}`} 
-                                  value={formData[currentDateIndex]?.name || ''} 
-                                  onChange={e => handleInputChange(currentDateIndex, 'name', e.target.value)} 
-                                  placeholder="Enter client name" 
-                                  required 
-                                />
-                              </label>
-                              <label>
-                                Time:
-                                <input 
-                                  type="time" 
-                                  name={`clientTime_${currentDateIndex}`} 
-                                  value={formData[currentDateIndex]?.time || ''} 
-                                  onChange={e => handleInputChange(currentDateIndex, 'time', e.target.value)} 
-                                  required 
-                                />
-                              </label>
-                              <label>
-                                Type of Service:
-                                <select 
-                                  name={`serviceType_${currentDateIndex}`} 
-                                  value={formData[currentDateIndex]?.serviceType || 'Mooring'} 
-                                  onChange={e => handleInputChange(currentDateIndex, 'serviceType', e.target.value)} 
-                                  required
-                                >
-                                  <option value="Mooring">Mooring</option>
-                                  <option value="Unmooring">Unmooring</option>
-                                </select>
-                              </label>
-                              <label>
-                                Vessel Type:
-                                <select 
-                                  name={`vesselType_${currentDateIndex}`} 
-                                  value={formData[currentDateIndex]?.vesselType || 'Local'} 
-                                  onChange={e => handleInputChange(currentDateIndex, 'vesselType', e.target.value)} 
-                                  required
-                                >
-                                  <option value="Local">Local</option>
-                                  <option value="International">International</option>
-                                </select>
-                              </label>
-                              
-                              {/* Worker Assignment Section */}
-                              <div style={{ 
-                                marginTop: '20px', 
-                                padding: '16px', 
-                                background: '#f8f9fa', 
-                                borderRadius: '8px',
-                                border: '1px solid #e9ecef'
-                              }}>
-                                <h5 style={{ 
-                                  margin: '0 0 12px 0', 
-                                  color: '#2F3B70', 
-                                  fontSize: '1rem',
-                                  fontWeight: '600'
-                                }}>
-                                  Assign Available Workers
-                                </h5>
-                                <p style={{ 
-                                  fontSize: '0.9rem', 
-                                  color: '#6c757d', 
-                                  margin: '0 0 12px 0',
-                                  fontStyle: 'italic'
-                                }}>
-                                  Select workers who are available for this appointment:
-                                </p>
-                                <div style={{ 
-                                  display: 'grid', 
-                                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                                  gap: '8px',
-                                  maxHeight: '200px',
-                                  overflowY: 'auto'
-                                }}>
-                                  {getAvailableWorkers(currentDate).map(workerName => (
-                                    <label key={workerName} style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      padding: '8px 12px',
-                                      background: 'white',
-                                      borderRadius: '6px',
-                                      border: '1px solid #dee2e6',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.2s ease'
-                                    }}>
-                                      <input
-                                        type="checkbox"
-                                        checked={assignedWorkers[currentDateIndex]?.[workerName] || false}
-                                        onChange={(e) => handleWorkerAssignment(currentDateIndex, workerName, e.target.checked)}
-                                        style={{ marginRight: '8px' }}
-                                      />
-                                      <span style={{ fontSize: '0.9rem', color: '#2F3B70' }}>
-                                        {workerName}
-                                      </span>
-                                    </label>
-                                  ))}
-                                </div>
-                                {getAvailableWorkers(currentDate).length === 0 && (
-                                  <p style={{ 
-                                    fontSize: '0.9rem', 
-                                    color: '#dc3545', 
-                                    margin: '8px 0 0 0',
-                                    fontStyle: 'italic'
-                                  }}>
-                                    No workers available for this date. Please check crew availability.
-                                  </p>
-                                )}
-                              </div>
-                              
-                              <button type="submit">
-                                {currentDateIndex < selectedDates.length - 1 ? 'Add Appointment & Continue' : 'Add Appointment & Finish'}
-                              </button>
-                            </form>
-                          </div>
-                        );
-                      })()}
+                      </div>
                     </div>
-                  );
-                }
-                
-                // Return null for all other users - no container will be rendered
-                return null;
+                    
+                    <div className="recommendation-content">
+                      <p className="recommendation-message" style={{ fontSize: '0.7rem', margin: '4px 0' }}>
+                        {recommendation.message}
+                      </p>
+                    </div>
+                  </div>
+                );
               })()}
-              {/* New container: show saved entries for selected dates */}
-              {savedEntries.length > 0 && (
-                <div className="saved-entries-container">
-                  <h4>Saved Appointments</h4>
-                  <ul>
-                    {savedEntries.map((entry, idx) => (
-                      <li key={idx}>
-                        <div><strong>Date:</strong> <span>{entry.date ? new Date(entry.date).toDateString() : ''}</span></div>
-                        <div><strong>Name:</strong> <span>{entry.name || ''}</span></div>
-                        <div><strong>Time:</strong> <span>{entry.time || ''}</span></div>
-                        <div><strong>Type of Service:</strong> <span>{entry.serviceType || ''}</span></div>
-                        <div><strong>Vessel Type:</strong> <span>{entry.vesselType || ''}</span></div>
-                        <div><strong>User:</strong> <span>{entry.userEmail || ''}</span></div>
-                        {entry.assignedWorkers && entry.assignedWorkers.length > 0 && (
-                          <div style={{ marginTop: '8px' }}>
-                            <strong>Assigned Workers:</strong>
-                            <div style={{ 
-                              marginTop: '4px',
-                              padding: '8px',
-                              background: '#e9ecef',
-                              borderRadius: '4px',
-                              fontSize: '0.9rem'
-                            }}>
-                              {entry.assignedWorkers.map((worker, workerIdx) => (
-                                <span key={workerIdx} style={{ 
-                                  display: 'inline-block',
-                                  margin: '2px 4px 2px 0',
-                                  padding: '2px 6px',
-                                  background: '#2F3B70',
-                                  color: 'white',
-                                  borderRadius: '12px',
-                                  fontSize: '0.8rem'
-                                }}>
-                                  {worker}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        <button 
-                          className="done-button"
-                          onClick={() => handleDoneAppointment(entry.id)}
-                        >
-                          Done
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           )}
+
         </div>
       ) : (
         <div className="crew-availability-table-wrapper">
@@ -1672,6 +1472,126 @@ return (
         </button>
       </div>
     </div>
+
+    {/* Appointment Creation Modal */}
+    {showAppointmentModal && (
+      <div className="modal-overlay" onClick={() => setShowAppointmentModal(false)}>
+        <div className="appointment-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2>Create Appointment</h2>
+            <button 
+              className="close-button"
+              onClick={() => setShowAppointmentModal(false)}
+            >
+              ×
+            </button>
+          </div>
+          
+          <div className="modal-content">
+            <div className="form-group">
+              <label>TIME:</label>
+              <div className="time-input-container">
+                <input
+                  type="time"
+                  value={appointmentFormData.time}
+                  onChange={(e) => setAppointmentFormData(prev => ({...prev, time: e.target.value}))}
+                  className="time-input"
+                />
+                <span className="clock-icon">🕐</span>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>TYPE OF SERVICE:</label>
+              <select
+                value={appointmentFormData.serviceType}
+                onChange={(e) => setAppointmentFormData(prev => ({...prev, serviceType: e.target.value}))}
+                className="form-select"
+              >
+                <option value="Mooring">Mooring</option>
+                <option value="Unmooring">Unmooring</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>VESSEL TYPE:</label>
+              <select
+                value={appointmentFormData.vesselType}
+                onChange={(e) => setAppointmentFormData(prev => ({...prev, vesselType: e.target.value}))}
+                className="form-select"
+              >
+                <option value="Local">Local</option>
+                <option value="International">International</option>
+              </select>
+            </div>
+
+            <div className="workers-section">
+              <h3>Assign Available Workers</h3>
+              <p>Select workers who are available for this appointment:</p>
+              <div className="workers-list">
+                {[
+                  'Bryan Matthew Cruz',
+                  'David Emmanuel Reyes',
+                  'Junnel, Cusi',
+                  'Aljon, Dipasupil',
+                  'Phil Allen, Eje',
+                  'Rhed, Escalon',
+                  'Fortune, Garcia Jr.',
+                  'Keith, Javier',
+                  'Ericson, Mendoza',
+                  'Alec, Sino-ag',
+                  'Romeo, Velasquez',
+                  'Rodel, Maranan',
+                  'Alloi, Sino-ag',
+                  'Renzy, Cantos',
+                  'PJ, Cusi'
+                ].map(worker => (
+                  <label key={worker} className="worker-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={appointmentFormData.selectedWorkers.includes(worker)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAppointmentFormData(prev => ({
+                            ...prev,
+                            selectedWorkers: [...prev.selectedWorkers, worker]
+                          }));
+                        } else {
+                          setAppointmentFormData(prev => ({
+                            ...prev,
+                            selectedWorkers: prev.selectedWorkers.filter(w => w !== worker)
+                          }));
+                        }
+                      }}
+                    />
+                    <span>{worker}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                className="add-appointment-button"
+                onClick={() => {
+                  // Handle appointment creation logic here
+                  console.log('Creating appointment:', appointmentFormData);
+                  setShowAppointmentModal(false);
+                  setAppointmentFormData({
+                    time: '',
+                    serviceType: 'Mooring',
+                    vesselType: 'Local',
+                    selectedWorkers: []
+                  });
+                }}
+              >
+                ADD APPOINTMENT & FINISH
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
   </div>
 )
 };

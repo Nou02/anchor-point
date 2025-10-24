@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef, memo } from '
 import './Payroll.css';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, query, where, getDocs, getDoc, addDoc, updateDoc, doc, setDoc } from 'firebase/firestore';
+import notificationService from '../services/notificationService';
 import '../firebase/config';
 
 function getInitials(name, email) {
@@ -31,7 +32,7 @@ const WORKERS_LIST = [
 ];
 
 // Ultra-stable input that NEVER re-renders - Complete React bypass
-const UltraSimpleInput = ({ 
+const UltraSimpleInput = memo(({ 
   initialValue, 
   onValueChange, 
   onBlur,
@@ -42,15 +43,18 @@ const UltraSimpleInput = ({
 }) => {
   const inputRef = useRef(null);
   const isInitialized = useRef(false);
-  const lastValue = useRef(initialValue);
+  const lastValue = useRef(initialValue || '');
   const changeHandlerRef = useRef(null);
   const blurHandlerRef = useRef(null);
+  const currentValue = useRef(initialValue || '');
   
   // Set initial value only once, never again
   useEffect(() => {
-    if (inputRef.current && initialValue !== undefined && !isInitialized.current) {
-      inputRef.current.value = initialValue;
-      lastValue.current = initialValue;
+    if (inputRef.current && !isInitialized.current) {
+      const value = initialValue || '';
+      inputRef.current.value = value;
+      lastValue.current = value;
+      currentValue.current = value;
       isInitialized.current = true;
     }
   }, []); // Empty dependency array - only runs once
@@ -60,6 +64,7 @@ const UltraSimpleInput = ({
     // Direct DOM manipulation - no React state updates during typing
     const value = e.target.value;
     lastValue.current = value;
+    currentValue.current = value;
     
     // Call onChange immediately without any delays
     if (onValueChange) {
@@ -110,7 +115,7 @@ const UltraSimpleInput = ({
       }}
     />
   );
-};
+});
 
 const TABLE_FIELDS = [
   'localVess', 'foreignVess', 'tal', 'sss', 'pagibig', 'philhealth', 'cashAdvance', 'netTotal'
@@ -173,6 +178,7 @@ const Payroll = () => {
     foreignUnmooringPrice: 800
   });
   const [showPricingConfig, setShowPricingConfig] = useState(false);
+  const tableContainerRef = useRef(null);
 
   // The following states were missing in your code but are referenced later:
   const [availableWorkers, setAvailableWorkers] = useState([]);
@@ -478,8 +484,12 @@ const Payroll = () => {
       clearTimeout(updateTimeout.current);
     }
     
-    // Set a very long timeout to batch updates (only when user stops typing for 5 seconds)
+    // Set a shorter timeout to batch updates (only when user stops typing for 1 second)
     updateTimeout.current = setTimeout(() => {
+      // Preserve scroll position
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const tableScrollTop = tableContainerRef.current?.scrollTop || 0;
+      
       // Batch commit all pending updates
       const updates = Array.from(pendingUpdates.current.entries());
       if (updates.length > 0) {
@@ -498,8 +508,16 @@ const Payroll = () => {
           return newData;
         });
         pendingUpdates.current.clear();
+        
+        // Restore scroll position after state update
+        requestAnimationFrame(() => {
+          window.scrollTo(0, scrollTop);
+          if (tableContainerRef.current) {
+            tableContainerRef.current.scrollTop = tableScrollTop;
+          }
+        });
       }
-    }, 5000); // 5 second delay to batch updates
+    }, 1000); // 1 second delay to batch updates
   }, []);
   
   // Handle blur to commit pending updates immediately
@@ -508,6 +526,10 @@ const Payroll = () => {
     const value = pendingUpdates.current.get(key);
     
     if (value !== undefined) {
+      // Preserve scroll position
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const tableScrollTop = tableContainerRef.current?.scrollTop || 0;
+      
       setTableData(prevData => {
         const newData = [...prevData];
         if (newData[rowIndex]) {
@@ -519,6 +541,14 @@ const Payroll = () => {
         return newData;
       });
       pendingUpdates.current.delete(key);
+      
+      // Restore scroll position after state update
+      requestAnimationFrame(() => {
+        window.scrollTo(0, scrollTop);
+        if (tableContainerRef.current) {
+          tableContainerRef.current.scrollTop = tableScrollTop;
+        }
+      });
     }
   }, []);
 
@@ -981,6 +1011,15 @@ const Payroll = () => {
       setSaveMessage('Payroll data saved successfully!');
       setTimeout(() => setSaveMessage(''), 3000);
       
+          // Create notification for Alice about payroll approval
+          if (isCarlaUser(user)) {
+            console.log('Carla is saving payroll, creating notification for Alice');
+            notificationService.createPayrollNotification(
+              'Carla Dela Peña',
+              'Carla: Payroll data for workers has been updated and is ready for your review and approval. Please check the payroll section to approve the submitted data.'
+            );
+          }
+      
     } catch (error) {
       console.error('Error saving payroll data:', error);
       setSaveMessage('Error saving data. Please try again.');
@@ -991,68 +1030,158 @@ const Payroll = () => {
   };
 
   // Alice Approval View Component
-  const AliceApprovalView = () => {
+  const AliceApprovalView = memo(() => {
     const [pendingPayrollData, setPendingPayrollData] = useState(null);
     const [isApproving, setIsApproving] = useState(false);
     const [approvalMessage, setApprovalMessage] = useState('');
+    const [availablePayrollDays, setAvailablePayrollDays] = useState([]);
+    const [selectedPayrollDay, setSelectedPayrollDay] = useState(null);
+    const [pastApprovedPayrolls, setPastApprovedPayrolls] = useState([]);
+    const [hasNewPayrollFromCarla, setHasNewPayrollFromCarla] = useState(false);
 
-    // Load pending payroll data for Alice to approve
+    // Memoize the payroll days to prevent unnecessary re-renders
+    const memoizedPayrollDays = useMemo(() => {
+      if (!availablePayrollDays || availablePayrollDays.length === 0) {
+        return [];
+      }
+      return availablePayrollDays.map(payrollDay => ({
+        ...payrollDay,
+        // Ensure stable date formatting
+        dateString: payrollDay.dateString || '',
+        // Ensure stable lastModified
+        lastModified: payrollDay.lastModified || new Date().toISOString()
+      }));
+    }, [availablePayrollDays]);
+
+    // Load all available payroll days for Alice to select from
     useEffect(() => {
-      const loadPendingPayrollData = async () => {
+      let isMounted = true;
+      
+      const loadAvailablePayrollDays = async () => {
+        if (!isMounted) return;
+        
         try {
           const db = getFirestore();
-          const currentDate = new Date();
-          const month = currentDate.getMonth() + 1;
-          const date = currentDate.getDate();
-          const year = currentDate.getFullYear();
-          const payrollId = `payroll(${month},${date},${year})`;
           
-          // Try to get today's payroll data
-          const payrollRef = doc(db, 'payrolls', payrollId);
-          const payrollDoc = await getDoc(payrollRef);
+          // Get all payroll documents
+          const q = query(collection(db, 'payrolls'));
+          const querySnapshot = await getDocs(q);
           
-          if (payrollDoc.exists()) {
-            const payrollData = payrollDoc.data();
-            // Only show if not already approved
-            if (payrollData.status !== 'approved') {
-              setPendingPayrollData(payrollData);
+          if (!querySnapshot.empty) {
+            const payrollDays = [];
+            const approvedPayrolls = [];
+            let hasNewFromCarla = false;
+            
+            querySnapshot.docs.forEach(doc => {
+              const data = doc.data();
+              const docId = doc.id;
+              
+              // Extract date from document ID (format: payroll(month,day,year))
+              const match = docId.match(/payroll\((\d+),(\d+),(\d+)\)/);
+              if (match) {
+                const month = parseInt(match[1]);
+                const day = parseInt(match[2]);
+                const year = parseInt(match[3]);
+                const payrollDate = new Date(year, month - 1, day);
+                
+                // Check if data has been edited by Carla (has meaningful data)
+                const hasEditedData = data.workers && data.workers.some(worker => 
+                  worker.localMooringCount > 0 || 
+                  worker.localUnmooringCount > 0 || 
+                  worker.foreignMooringCount > 0 || 
+                  worker.foreignUnmooringCount > 0 ||
+                  worker.sss > 0 ||
+                  worker.pagibig > 0 ||
+                  worker.philhealth > 0 ||
+                  worker.cashAdvance > 0
+                );
+                
+                if (hasEditedData) {
+                  // Ensure stable date formatting to prevent re-renders
+                  const stableDateString = payrollDate.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  });
+                  
+                  // Ensure stable lastModified to prevent re-renders
+                  const stableLastModified = data.lastModified || data.date || new Date().toISOString();
+                  
+                  const payrollDay = {
+                    id: docId,
+                    date: payrollDate,
+                    dateString: stableDateString,
+                    status: data.status || 'pending',
+                    createdBy: data.createdByName || 'Unknown',
+                    lastModified: stableLastModified,
+                    data: data
+                  };
+                  
+                  // Check if this is a new payroll from Carla (pending status and created by Carla)
+                  if (data.status === 'pending' && data.createdByName && 
+                      (data.createdByName.toLowerCase().includes('carla') || 
+                       data.createdByName.toLowerCase().includes('carla dela peña'))) {
+                    hasNewFromCarla = true;
+                    payrollDays.push(payrollDay);
+                  } else if (data.status === 'approved') {
+                    approvedPayrolls.push(payrollDay);
+                  } else if (data.status === 'pending') {
+                    payrollDays.push(payrollDay);
+                  }
+                }
+              }
+            });
+            
+            // Sort by date (newest first)
+            payrollDays.sort((a, b) => new Date(b.date) - new Date(a.date));
+            approvedPayrolls.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            if (isMounted) {
+              setAvailablePayrollDays(payrollDays);
+              setPastApprovedPayrolls(approvedPayrolls);
+              setHasNewPayrollFromCarla(hasNewFromCarla);
             }
           } else {
-            // If today's data doesn't exist, get the most recent unapproved data
-            const q = query(collection(db, 'payrolls'), where('status', '!=', 'approved'));
-            const querySnapshot = await getDocs(q);
-            
-            if (!querySnapshot.empty) {
-              const sortedDocs = querySnapshot.docs.sort((a, b) => 
-                new Date(b.data().date) - new Date(a.data().date)
-              );
-              setPendingPayrollData(sortedDocs[0].data());
+            if (isMounted) {
+              setAvailablePayrollDays([]);
+              setPastApprovedPayrolls([]);
+              setHasNewPayrollFromCarla(false);
             }
           }
         } catch (error) {
-          console.error('Error loading pending payroll data:', error);
+          console.error('Error loading available payroll days:', error);
+          if (isMounted) {
+            setAvailablePayrollDays([]);
+            setPastApprovedPayrolls([]);
+            setHasNewPayrollFromCarla(false);
+          }
         }
       };
 
-      loadPendingPayrollData();
+      // Load initial data
+      loadAvailablePayrollDays();
+      
+      return () => {
+        isMounted = false;
+      };
     }, []);
 
+    const handleSelectPayrollDay = (payrollDay) => {
+      setSelectedPayrollDay(payrollDay);
+      setPendingPayrollData(payrollDay.data);
+    };
+
     const handleApprovePayroll = async () => {
-      if (!pendingPayrollData) return;
+      if (!selectedPayrollDay || !pendingPayrollData) return;
       
       setIsApproving(true);
       setApprovalMessage('');
       
       try {
         const db = getFirestore();
-        const currentDate = new Date();
-        const month = currentDate.getMonth() + 1;
-        const date = currentDate.getDate();
-        const year = currentDate.getFullYear();
-        const payrollId = `payroll(${month},${date},${year})`;
         
-        // Update payroll status to approved
-        const payrollRef = doc(db, 'payrolls', payrollId);
+        // Update payroll status to approved using the selected payroll day ID
+        const payrollRef = doc(db, 'payrolls', selectedPayrollDay.id);
         await updateDoc(payrollRef, {
           status: 'approved',
           approvedBy: user.email,
@@ -1060,21 +1189,88 @@ const Payroll = () => {
           approvedAt: new Date().toISOString()
         });
         
-        // Update workers payroll data to reflect approved status
-        const workersPayrollId = `workerspayroll(${month},${date},${year})`;
-        const workersPayrollRef = doc(db, 'workerPayrolls', workersPayrollId);
-        await updateDoc(workersPayrollRef, {
-          status: 'approved',
-          approvedBy: user.email,
-          approvedByName: user.name,
-          approvedAt: new Date().toISOString()
-        });
+        // Extract date from selected payroll day ID to update workers payroll
+        const match = selectedPayrollDay.id.match(/payroll\((\d+),(\d+),(\d+)\)/);
+        if (match) {
+          const month = parseInt(match[1]);
+          const day = parseInt(match[2]);
+          const year = parseInt(match[3]);
+          const workersPayrollId = `workerspayroll(${month},${day},${year})`;
+          
+          const workersPayrollRef = doc(db, 'workerPayrolls', workersPayrollId);
+          await updateDoc(workersPayrollRef, {
+            status: 'approved',
+            approvedBy: user.email,
+            approvedByName: user.name,
+            approvedAt: new Date().toISOString()
+          });
+        }
         
         setApprovalMessage('Payroll approved successfully! Changes are now reflected for all workers.');
         setTimeout(() => setApprovalMessage(''), 5000);
         
         // Reload the data to show updated status
+        setSelectedPayrollDay(null);
         setPendingPayrollData(null);
+        
+        // Refresh the available payroll days
+        const loadAvailablePayrollDays = async () => {
+          try {
+            const q = query(collection(db, 'payrolls'));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+              const payrollDays = [];
+              
+              querySnapshot.docs.forEach(doc => {
+                const data = doc.data();
+                const docId = doc.id;
+                
+                const match = docId.match(/payroll\((\d+),(\d+),(\d+)\)/);
+                if (match) {
+                  const month = parseInt(match[1]);
+                  const day = parseInt(match[2]);
+                  const year = parseInt(match[3]);
+                  const payrollDate = new Date(year, month - 1, day);
+                  
+                  const hasEditedData = data.workers && data.workers.some(worker => 
+                    worker.localMooringCount > 0 || 
+                    worker.localUnmooringCount > 0 || 
+                    worker.foreignMooringCount > 0 || 
+                    worker.foreignUnmooringCount > 0 ||
+                    worker.sss > 0 ||
+                    worker.pagibig > 0 ||
+                    worker.philhealth > 0 ||
+                    worker.cashAdvance > 0
+                  );
+                  
+                  if (hasEditedData) {
+                    payrollDays.push({
+                      id: docId,
+                      date: payrollDate,
+                      dateString: payrollDate.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      }),
+                      status: data.status || 'pending',
+                      createdBy: data.createdByName || 'Unknown',
+                      lastModified: data.lastModified || data.date,
+                      data: data
+                    });
+                  }
+                }
+              });
+              
+              payrollDays.sort((a, b) => new Date(b.date) - new Date(a.date));
+              setAvailablePayrollDays(payrollDays);
+            }
+          } catch (error) {
+            console.error('Error refreshing payroll days:', error);
+          }
+        };
+        
+        loadAvailablePayrollDays();
         
       } catch (error) {
         console.error('Error approving payroll:', error);
@@ -1085,22 +1281,172 @@ const Payroll = () => {
       }
     };
 
-    if (!pendingPayrollData) {
+
+
+    // Show tab interface if no payroll day is selected
+    if (!selectedPayrollDay) {
       return (
-        <div className="alice-approval-view">
-          <div className="approval-header">
-            <h2>Payroll Approval</h2>
-            <p>No pending payroll data to approve at this time.</p>
+        <div className="alice-approval-view" key="alice-approval-view">
+          <div className="payroll-days-container" key="payroll-days-container">
+            <div className="payroll-days-header">
+              <h3>
+                Available Payroll Days
+              </h3>
+              <p>
+                Click on a day to view and approve the payroll data
+              </p>
+            </div>
+            
+            <div className="payroll-days-grid" key="payroll-days-grid">
+              {/* Show pending payrolls only if Carla has sent new data */}
+              {hasNewPayrollFromCarla && memoizedPayrollDays.length > 0 ? (
+                memoizedPayrollDays.map((payrollDay) => {
+                  // Memoize the lastModified display to prevent re-renders
+                  const displayLastModified = new Date(payrollDay.lastModified).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+                  
+                  return (
+                  <div
+                    key={`payroll-day-${payrollDay.id}`}
+                    className={`payroll-day-card ${payrollDay.status === 'approved' ? 'approved' : 'pending'}`}
+                    onClick={() => handleSelectPayrollDay(payrollDay)}
+                  >
+                  <div className="payroll-day-header">
+                    <div className="payroll-day-date">
+                      {payrollDay.dateString}
+                    </div>
+                    <div className={`payroll-day-status ${payrollDay.status}`}>
+                      {payrollDay.status === 'approved' ? 'Approved' : 'Pending'}
+                    </div>
+                  </div>
+                  <div className="payroll-day-info">
+                    <div className="payroll-day-created-by">
+                      <span className="label">Created by:</span>
+                      <span className="value">{payrollDay.createdBy}</span>
+                    </div>
+                    <div className="payroll-day-last-modified">
+                      <span className="label">Last modified:</span>
+                      <span className="value">
+                        {displayLastModified}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="payroll-day-actions">
+                    {payrollDay.status === 'approved' ? (
+                      <div className="approved-indicator">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M9,12L11,14L15,10M21,12A9,9 0 0,1 12,21A9,9 0 0,1 3,12A9,9 0 0,1 12,3A9,9 0 0,1 21,12Z"/>
+                        </svg>
+                        Already Approved
+                      </div>
+                    ) : (
+                      <div className="pending-indicator">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5Z"/>
+                        </svg>
+                        Click to Review
+                      </div>
+                    )}
+                  </div>
+                </div>
+                  );
+                })
+              ) : pastApprovedPayrolls.length > 0 ? (
+                /* Show past approved payrolls when no pending payrolls exist */
+                <div className="past-approved-section">
+                  <div className="past-approved-header">
+                    <h3>Past Approved Payrolls</h3>
+                    <p>Previously approved payroll data</p>
+                  </div>
+                  <div className="past-approved-grid">
+                    {pastApprovedPayrolls.map((payrollDay) => {
+                      const displayLastModified = new Date(payrollDay.lastModified).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+                      
+                      return (
+                        <div
+                          key={`past-payroll-${payrollDay.id}`}
+                          className="payroll-day-card approved"
+                        >
+                          <div className="payroll-day-header">
+                            <div className="payroll-day-date">
+                              {payrollDay.dateString}
+                            </div>
+                            <div className="payroll-day-status approved">
+                              Approved
+                            </div>
+                          </div>
+                          <div className="payroll-day-info">
+                            <div className="payroll-day-created-by">
+                              <span className="label">Created by:</span>
+                              <span className="value">{payrollDay.createdBy}</span>
+                            </div>
+                            <div className="payroll-day-last-modified">
+                              <span className="label">Last modified:</span>
+                              <span className="value">
+                                {displayLastModified}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="payroll-day-actions">
+                            <div className="approved-indicator">
+                              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M9,12L11,14L15,10M21,12A9,9 0 0,1 12,21A9,9 0 0,1 3,12A9,9 0 0,1 12,3A9,9 0 0,1 21,12Z"/>
+                              </svg>
+                              Already Approved
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="no-payroll-days-message" key="no-payroll-data">
+                  <div className="no-payroll-days-icon">
+                    <svg width="64" height="64" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                    </svg>
+                  </div>
+                  <h3>No Payroll Data Available</h3>
+                  <p>No payroll data has been created yet. Carla needs to create and save payroll data first.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       );
     }
 
     return (
-      <div className="alice-approval-view">
+      <div className="alice-approval-view" key="alice-approval-view-table">
         <div className="approval-header">
-          <h2>Payroll Approval</h2>
-          <p>Review and approve the payroll data submitted by Carla</p>
+          <div className="approval-title-section">
+            <button
+              onClick={() => {
+                setSelectedPayrollDay(null);
+                setPendingPayrollData(null);
+              }}
+              className="back-to-days-button"
+            >
+              <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/>
+              </svg>
+              Back to Payroll Days
+            </button>
+            <div className="approval-title-content">
+              <h2>Payroll Approval</h2>
+              <p>Review and approve the payroll data for {selectedPayrollDay.dateString}</p>
+            </div>
+          </div>
         </div>
         
         <div className="approval-table-container">
@@ -1158,22 +1504,60 @@ const Payroll = () => {
         </div>
         
         <div className="approval-actions">
-          <button
-            onClick={handleApprovePayroll}
-            disabled={isApproving}
-            className="approve-payroll-button"
-          >
-            {isApproving ? 'Approving...' : 'Approved Payroll'}
-          </button>
+          <div className="approval-actions-content">
+            <div className="approval-info">
+              <div className="approval-info-icon">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
+                </svg>
+              </div>
+              <div className="approval-info-text">
+                <strong>Review Required</strong>
+                <p>Please review all payroll data before approving. Once approved, changes cannot be undone.</p>
+              </div>
+            </div>
+            <button
+              onClick={handleApprovePayroll}
+              disabled={isApproving}
+              className="approve-payroll-button"
+            >
+              <div className="button-content">
+                {isApproving ? (
+                  <>
+                    <div className="button-spinner"></div>
+                    <span>Approving...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9,12L11,14L15,10M21,12A9,9 0 0,1 12,21A9,9 0 0,1 3,12A9,9 0 0,1 12,3A9,9 0 0,1 21,12Z"/>
+                    </svg>
+                    <span>Approve Payroll</span>
+                  </>
+                )}
+              </div>
+            </button>
+          </div>
           {approvalMessage && (
             <div className={`approval-message ${approvalMessage.includes('Error') ? 'error' : 'success'}`}>
-              {approvalMessage}
+              <div className="message-icon">
+                {approvalMessage.includes('Error') ? (
+                  <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M9,12L11,14L15,10M21,12A9,9 0 0,1 12,21A9,9 0 0,1 3,12A9,9 0 0,1 12,3A9,9 0 0,1 21,12Z"/>
+                  </svg>
+                )}
+              </div>
+              <span>{approvalMessage}</span>
             </div>
           )}
         </div>
       </div>
     );
-  };
+  });
 
   // Manager View Component
   const ManagerView = () => (
@@ -1259,7 +1643,7 @@ const Payroll = () => {
           </div>
         </div>
       )}
-      <div className="manager-table-container">
+      <div className="manager-table-container" ref={tableContainerRef}>
         <table className="manager-table">
           <thead>
             <tr>
@@ -1496,126 +1880,130 @@ const Payroll = () => {
   );
 
   // Regular Payroll View
-  const RegularPayrollView = () => (
-    <div className="payroll-regular-bg">
-      {/* User Profile Section */}
-      <div className="payroll-profile-section">
-        <div className="payroll-profile-avatar">
-          {user.initials || 'U'}
+  const RegularPayrollView = () => {
+    // For Carla, show the workers payroll table directly
+    if (isCarlaUser(user)) {
+      return <ManagerView />;
+    }
+    
+    // For Alice, show a message that she should use the approval view
+    if (isAliceUser(user)) {
+      return <AliceApprovalView />;
+    }
+    
+    // For other users, show the regular view with summary
+    return (
+      <div className="payroll-regular-bg">
+        {/* User Profile Section */}
+        <div className="payroll-profile-section">
+          <div className="payroll-profile-avatar">
+            {user.initials || 'U'}
+          </div>
+          <h2 className="payroll-profile-name">
+            {user.name && user.name.trim() !== "" ? user.name : "Your Name"}
+          </h2>
+          <p className="payroll-profile-email">
+            {user.email}
+          </p>
+          <p className="payroll-profile-date">
+            Billing of this day <span className="payroll-profile-date-highlight">({user.date})</span>
+          </p>
+          {/* Worker Selection Dropdown */}
+          {availableWorkers.length > 0 && (
+            <div className="payroll-worker-dropdown-container">
+              <div className="payroll-worker-dropdown">
+                <button
+                  className="payroll-worker-dropdown-btn"
+                  onClick={() => setShowWorkerDropdown(!showWorkerDropdown)}
+                >
+                  {selectedWorker || 'Select Worker'}
+                  <span className="payroll-worker-dropdown-arrow">▼</span>
+                </button>
+                {showWorkerDropdown && (
+                  <div className="payroll-worker-dropdown-menu">
+                    {availableWorkers.map((workerName, index) => (
+                      <div
+                        key={index}
+                        className="payroll-worker-dropdown-item"
+                        onClick={() => handleWorkerSelection(workerName)}
+                      >
+                        {workerName}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-        <h2 className="payroll-profile-name">
-          {user.name && user.name.trim() !== "" ? user.name : "Your Name"}
-        </h2>
-        <p className="payroll-profile-email">
-          {user.email}
-        </p>
-        <p className="payroll-profile-date">
-          Billing of this day <span className="payroll-profile-date-highlight">({user.date})</span>
-        </p>
-        {/* Worker Selection Dropdown */}
-        {availableWorkers.length > 0 && (
-          <div className="payroll-worker-dropdown-container">
-            <div className="payroll-worker-dropdown">
-              <button
-                className="payroll-worker-dropdown-btn"
-                onClick={() => setShowWorkerDropdown(!showWorkerDropdown)}
-              >
-                {selectedWorker || 'Select Worker'}
-                <span className="payroll-worker-dropdown-arrow">▼</span>
-              </button>
-              {showWorkerDropdown && (
-                <div className="payroll-worker-dropdown-menu">
-                  {availableWorkers.map((workerName, index) => (
-                    <div
-                      key={index}
-                      className="payroll-worker-dropdown-item"
-                      onClick={() => handleWorkerSelection(workerName)}
-                    >
-                      {workerName}
-                    </div>
-                  ))}
-                </div>
-              )}
+        {/* Payroll Details Card */}
+        <div className="payroll-details-card">
+          <div className="payroll-details-header">
+            <h3 className="payroll-details-title">
+              Payroll Summary
+            </h3>
+          </div>
+          <div className="payroll-details-grid">
+            {/* First Group */}
+            <div className="payroll-details-group payroll-details-group-local">
+              <div className="payroll-details-group-bar payroll-details-group-bar-local" />
+              <div className="payroll-details-row">
+                <span className="payroll-details-label">LOCAL</span>
+                <span className="payroll-details-value">₱{getCurrentUserPayrollData().local}</span>
+              </div>
+              <div className="payroll-details-row">
+                <span className="payroll-details-label">FOREIGN</span>
+                <span className="payroll-details-value">₱{getCurrentUserPayrollData().foreign}</span>
+              </div>
+              <div className="payroll-details-row payroll-details-row-total">
+                <span className="payroll-details-label payroll-details-label-total">TOTAL</span>
+                <span className="payroll-details-value payroll-details-value-total">₱{getCurrentUserPayrollData().total}</span>
+              </div>
+            </div>
+            {/* Second Group */}
+            <div className="payroll-details-group payroll-details-group-loan">
+              <div className="payroll-details-group-bar payroll-details-group-bar-loan" />
+              <div className="payroll-details-row">
+                <span className="payroll-details-label">PAG-IBIG LOAN</span>
+                <span className="payroll-details-value">₱{getCurrentUserPayrollData().pagibigLoan}</span>
+              </div>
+              <div className="payroll-details-row">
+                <span className="payroll-details-label">CASH ADVANCE</span>
+                <span className="payroll-details-value">₱{getCurrentUserPayrollData().cashAdvance}</span>
+              </div>
+              <div className="payroll-details-row payroll-details-row-balance">
+                <span className="payroll-details-label payroll-details-label-balance">BALANCE</span>
+                <span className="payroll-details-value payroll-details-value-balance">₱{getCurrentUserPayrollData().balance}</span>
+              </div>
+            </div>
+            {/* Third Group */}
+            <div className="payroll-details-group payroll-details-group-deductions">
+              <div className="payroll-details-group-bar payroll-details-group-bar-deductions" />
+              <div className="payroll-details-row">
+                <span className="payroll-details-label">SSS/PI/PH</span>
+                <span className="payroll-details-value">₱{getCurrentUserPayrollData().sssPiPh}</span>
+              </div>
+              <div className="payroll-details-row payroll-details-row-deductions">
+                <span className="payroll-details-label payroll-details-label-deductions">TOTAL DEDUCTIONS</span>
+                <span className="payroll-details-value payroll-details-value-deductions">₱{getCurrentUserPayrollData().totalDeductions}</span>
+              </div>
             </div>
           </div>
-        )}
-        {isCarlaUser(user) && (
-          <div className="payroll-manager-toggle">
-            <button className="manager-toggle-btn" onClick={handleToggleManagerView}>
-              Proceed
-            </button>
+          <div className="payroll-details-final-total">
+            <span className="payroll-details-final-label">TOTAL</span>
+            <span className="payroll-details-final-value">₱{getCurrentUserPayrollData().finalTotal}</span>
           </div>
-        )}
+        </div>
       </div>
-      {/* Payroll Details Card */}
-      <div className="payroll-details-card">
-        <div className="payroll-details-header">
-          <h3 className="payroll-details-title">
-            Payroll Summary
-          </h3>
-        </div>
-        <div className="payroll-details-grid">
-          {/* First Group */}
-          <div className="payroll-details-group payroll-details-group-local">
-            <div className="payroll-details-group-bar payroll-details-group-bar-local" />
-            <div className="payroll-details-row">
-              <span className="payroll-details-label">LOCAL</span>
-              <span className="payroll-details-value">₱{getCurrentUserPayrollData().local}</span>
-            </div>
-            <div className="payroll-details-row">
-              <span className="payroll-details-label">FOREIGN</span>
-              <span className="payroll-details-value">₱{getCurrentUserPayrollData().foreign}</span>
-            </div>
-            <div className="payroll-details-row payroll-details-row-total">
-              <span className="payroll-details-label payroll-details-label-total">TOTAL</span>
-              <span className="payroll-details-value payroll-details-value-total">₱{getCurrentUserPayrollData().total}</span>
-            </div>
-          </div>
-          {/* Second Group */}
-          <div className="payroll-details-group payroll-details-group-loan">
-            <div className="payroll-details-group-bar payroll-details-group-bar-loan" />
-            <div className="payroll-details-row">
-              <span className="payroll-details-label">PAG-IBIG LOAN</span>
-              <span className="payroll-details-value">₱{getCurrentUserPayrollData().pagibigLoan}</span>
-            </div>
-            <div className="payroll-details-row">
-              <span className="payroll-details-label">CASH ADVANCE</span>
-              <span className="payroll-details-value">₱{getCurrentUserPayrollData().cashAdvance}</span>
-            </div>
-            <div className="payroll-details-row payroll-details-row-balance">
-              <span className="payroll-details-label payroll-details-label-balance">BALANCE</span>
-              <span className="payroll-details-value payroll-details-value-balance">₱{getCurrentUserPayrollData().balance}</span>
-            </div>
-          </div>
-          {/* Third Group */}
-          <div className="payroll-details-group payroll-details-group-deductions">
-            <div className="payroll-details-group-bar payroll-details-group-bar-deductions" />
-            <div className="payroll-details-row">
-              <span className="payroll-details-label">SSS/PI/PH</span>
-              <span className="payroll-details-value">₱{getCurrentUserPayrollData().sssPiPh}</span>
-            </div>
-            <div className="payroll-details-row payroll-details-row-deductions">
-              <span className="payroll-details-label payroll-details-label-deductions">TOTAL DEDUCTIONS</span>
-              <span className="payroll-details-value payroll-details-value-deductions">₱{getCurrentUserPayrollData().totalDeductions}</span>
-            </div>
-          </div>
-        </div>
-        <div className="payroll-details-final-total">
-          <span className="payroll-details-final-label">TOTAL</span>
-          <span className="payroll-details-final-value">₱{getCurrentUserPayrollData().finalTotal}</span>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div className="payroll-center-content">
+    <div className="payroll-center-content" key="payroll-center-content">
       {isAliceUser(user) ? (
-        <AliceApprovalView />
-      ) : isManagerView && isCarlaUser(user) ? (
-        <ManagerView />
+        <AliceApprovalView key="alice-approval-view" />
       ) : (
-        <RegularPayrollView />
+        <RegularPayrollView key="regular-payroll-view" />
       )}
     </div>
   );

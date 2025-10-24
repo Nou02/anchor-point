@@ -16,8 +16,8 @@
   content: "";
   position: fixed;
   top: 0;
-  left: 220px;
-  width: calc(100vw - 220px);
+  left: 320px;
+  width: calc(100vw - 320px);
   height: 100vh;
   background-image: url('../assets/apone.png');
   background-size: cover;
@@ -447,9 +447,6 @@
   max-width: 100%;
   padding: 20px;
   background: none;
-  max-height: 80vh;
-  overflow-y: auto;
-  overflow-x: auto;
   box-sizing: border-box;
 }
 
@@ -482,6 +479,8 @@
   padding: 20px;
   box-shadow: 0 4px 20px rgba(35, 58, 108, 0.3);
   margin-bottom: 24px;
+  position: relative;
+  contain: layout style paint;
   overflow-x: auto;
   width: 100%;
   max-width: 100%;
@@ -1165,11 +1164,270 @@
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 0;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 24px;
+  box-shadow: 0 12px 48px rgba(47, 59, 112, 0.15);
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  /* Prevent blinking and ensure stable rendering */
+  contain: layout style paint;
+  will-change: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
+
+/* Approval Header Styles */
+.approval-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #1d4ed8 100%);
+  color: white;
+  padding: 40px 32px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 48px rgba(30, 58, 138, 0.4);
+  border-radius: 16px;
+  margin-bottom: 32px;
+}
+
+.approval-header::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 70%);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.approval-header::after {
+  content: '';
+  position: absolute;
+  bottom: -80px;
+  left: -80px;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.03) 70%);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.approval-title-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 0;
+  text-align: center;
+}
+
+.approval-title-icon {
+  width: 72px;
+  height: 72px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.approval-title-content {
+  flex: 1;
+  text-align: center;
+}
+
+.approval-title-content h2 {
+  font-size: 2.8rem;
+  font-weight: 800;
+  margin: 0 0 16px 0;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.8px;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.approval-title-content p {
+  font-size: 1.4rem;
+  margin: 0;
+  opacity: 1;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Loading Container Styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+/* Notification Banner Styles */
+.notification-banner {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  animation: slideInDown 0.5s ease-out;
+}
+
+.notification-icon {
+  font-size: 1.5rem;
+  /* Removed pulse animation to prevent blinking */
+}
+
+.notification-text {
+  flex: 1;
+}
+
+.notification-text strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.notification-text p {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+/* Enhanced Notification Banner Styles */
+.notification-banner {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  padding: 20px 24px;
+  border-radius: 12px;
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
+  animation: slideInFromTop 0.5s ease-out;
+  position: relative;
+  z-index: 2;
+}
+
+.notification-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: white;
+}
+
+.notification-text strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.notification-text p {
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.9;
+  line-height: 1.4;
+}
+
+/* No Data State Styles */
+.no-data-container {
+  text-align: center;
+  padding: 60px 40px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 16px;
+  margin: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.no-data-container::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 100px;
+  height: 100px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.no-data-container::after {
+  content: '';
+  position: absolute;
+  bottom: -30px;
+  left: -30px;
+  width: 80px;
+  height: 80px;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.no-data-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+  color: white;
+  position: relative;
+  z-index: 2;
+}
+
+.no-data-container h3 {
+  font-size: 1.5rem;
+  color: #1e40af;
+  margin-bottom: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  position: relative;
+  z-index: 2;
+}
+
+.no-data-container p {
+  font-size: 1.1rem;
+  color: #64748b;
+  line-height: 1.6;
+  max-width: 400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Removed pulse animation to prevent blinking */
 
 .approval-header {
   text-align: center;
@@ -1196,6 +1454,11 @@
   margin-bottom: 30px;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  /* Prevent blinking and ensure stable rendering */
+  contain: layout style paint;
+  will-change: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .approval-table {
@@ -1203,6 +1466,11 @@
   border-collapse: collapse;
   background: white;
   font-size: 0.9rem;
+  /* Prevent blinking and ensure stable rendering */
+  contain: layout style paint;
+  will-change: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .approval-table th {
@@ -1219,6 +1487,11 @@
   text-align: center;
   border: 1px solid #dee2e6;
   background: white;
+  /* Prevent blinking and ensure stable rendering */
+  contain: layout style;
+  will-change: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .approval-table .worker-name-cell {
@@ -1231,19 +1504,163 @@
 .approval-table .grand-total-row {
   background: #e9ecef;
   font-weight: 600;
+  /* Prevent blinking and ensure stable rendering */
+  contain: layout style;
+  will-change: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .approval-table .grand-total-row td {
   background: #e9ecef;
   border-top: 2px solid #2F3B70;
+  /* Prevent blinking and ensure stable rendering */
+  contain: layout style;
+  will-change: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Additional anti-blinking measures for table rows */
+.approval-table tr {
+  /* Prevent blinking and ensure stable rendering */
+  contain: layout style;
+  will-change: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.approval-table tbody tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.approval-table tbody tr:nth-child(even) td {
+  background: #f8f9fa;
 }
 
 .approval-actions {
-  text-align: center;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #dee2e6;
+  padding: 32px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-top: 1px solid #e2e8f0;
+}
+
+.approval-actions-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.approval-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.approval-info-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.approval-info-text strong {
+  display: block;
+  font-size: 1.1rem;
+  color: #1e40af;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.approval-info-text p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.approve-payroll-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 32px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+  justify-content: center;
+}
+
+.approve-payroll-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+}
+
+.approve-payroll-button:disabled {
+  background: #6b7280;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 16px rgba(107, 114, 128, 0.2);
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.button-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  /* Removed spin animation to prevent blinking */
+}
+
+/* Removed spin animation to prevent blinking */
+
+.approval-message {
+  margin-top: 20px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.approval-message.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.approval-message.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.message-icon {
+  flex-shrink: 0;
 }
 
 .approve-payroll-button {
@@ -1295,4 +1712,536 @@
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
+}
+
+/* Payroll Days Tab Interface Styles */
+.payroll-days-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-radius: 0 0 16px 16px;
+}
+
+.payroll-days-header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(47, 59, 112, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.payroll-days-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2F3B70 0%, #4A90E2 50%, #2F3B70 100%);
+}
+
+.payroll-days-header h3 {
+  color: #2F3B70;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.payroll-days-header p {
+  color: #64748b;
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.payroll-days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.payroll-day-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.payroll-day-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.payroll-day-card.pending {
+  border-color: #ffc107;
+  background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+}
+
+.payroll-day-card.approved {
+  border-color: #28a745;
+  background: linear-gradient(135deg, #e8f5e8 0%, #ffffff 100%);
+}
+
+.payroll-day-card.pending:hover {
+  border-color: #e0a800;
+  box-shadow: 0 8px 30px rgba(255, 193, 7, 0.3);
+}
+
+.payroll-day-card.approved:hover {
+  border-color: #1e7e34;
+  box-shadow: 0 8px 30px rgba(40, 167, 69, 0.3);
+}
+
+.payroll-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.payroll-day-date {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #2F3B70;
+}
+
+.payroll-day-status {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.payroll-day-status.pending {
+  background: #ffc107;
+  color: #856404;
+}
+
+.payroll-day-status.approved {
+  background: #28a745;
+  color: white;
+}
+
+.payroll-day-info {
+  margin-bottom: 20px;
+}
+
+.payroll-day-created-by,
+.payroll-day-last-modified {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.payroll-day-created-by .label,
+.payroll-day-last-modified .label {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.payroll-day-created-by .value,
+.payroll-day-last-modified .value {
+  color: #2F3B70;
+  font-weight: 600;
+}
+
+.payroll-day-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.approved-indicator,
+.pending-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.approved-indicator {
+  color: #28a745;
+}
+
+.pending-indicator {
+  color: #ffc107;
+}
+
+.back-to-days-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.back-to-days-button:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+.no-payroll-days-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 30px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%);
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  margin: 15px 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(47, 59, 112, 0.08);
+}
+
+.no-payroll-days-message::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 120px;
+  height: 120px;
+  background: linear-gradient(135deg, rgba(47, 59, 112, 0.1) 0%, rgba(47, 59, 112, 0.05) 100%);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.no-payroll-days-message::after {
+  content: '';
+  position: absolute;
+  bottom: -30px;
+  left: -30px;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, rgba(47, 59, 112, 0.08) 0%, rgba(47, 59, 112, 0.03) 100%);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.no-payroll-days-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #2F3B70 0%, #4A90E2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  box-shadow: 0 4px 16px rgba(47, 59, 112, 0.2);
+  position: relative;
+  z-index: 2;
+  color: white;
+  font-size: 32px;
+}
+
+.no-payroll-days-message h3 {
+  color: #2F3B70;
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 2;
+  letter-spacing: 0.5px;
+}
+
+.no-payroll-days-message p {
+  color: #64748b;
+  font-size: 1rem;
+  margin: 0 auto;
+  line-height: 1.5;
+  position: relative;
+  z-index: 2;
+  max-width: 400px;
+  font-weight: 500;
+}
+
+/* Past Approved Payrolls Styles */
+.past-approved-section {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.past-approved-header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.past-approved-header h3 {
+  color: #2F3B70;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.past-approved-header p {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.past-approved-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* Responsive Design Improvements */
+@media (max-width: 768px) {
+  .no-payroll-days-message {
+    padding: 60px 40px;
+    margin: 20px 0;
+  }
+  
+  .no-payroll-days-icon {
+    width: 100px;
+    height: 100px;
+    font-size: 40px;
+    margin-bottom: 24px;
+  }
+  
+  .no-payroll-days-message h3 {
+    font-size: 1.6rem;
+  }
+  
+  .no-payroll-days-message p {
+    font-size: 1.1rem;
+  }
+  
+  .approval-header {
+    padding: 32px 24px;
+    margin-bottom: 24px;
+  }
+  
+  .approval-title-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+  
+  .approval-title-icon {
+    width: 64px;
+    height: 64px;
+  }
+  
+  .approval-title-content h2 {
+    font-size: 2.2rem;
+    letter-spacing: 0.6px;
+  }
+  
+  .approval-title-content p {
+    font-size: 1.2rem;
+    font-weight: 500;
+  }
+  
+  .payroll-days-container {
+    padding: 24px;
+  }
+  
+  .payroll-days-header {
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  
+  .payroll-days-header h3 {
+    font-size: 1.8rem;
+  }
+  
+  .payroll-days-header p {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .no-payroll-days-message {
+    padding: 40px 24px;
+  }
+  
+  .no-payroll-days-icon {
+    width: 80px;
+    height: 80px;
+    font-size: 32px;
+    margin-bottom: 20px;
+  }
+  
+  .no-payroll-days-message h3 {
+    font-size: 1.4rem;
+  }
+  
+  .no-payroll-days-message p {
+    font-size: 1rem;
+  }
+  
+  .approval-header {
+    padding: 24px 16px;
+    margin-bottom: 20px;
+  }
+  
+  .approval-title-icon {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .approval-title-content h2 {
+    font-size: 1.8rem;
+    letter-spacing: 0.4px;
+  }
+  
+  .approval-title-content p {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  .payroll-days-container {
+    padding: 16px;
+  }
+  
+  .payroll-days-header {
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  
+  .payroll-days-header h3 {
+    font-size: 1.6rem;
+  }
+  
+  .payroll-days-header p {
+    font-size: 1rem;
+  }
+}
+
+/* Alice Access Message Styles */
+.payroll-access-message {
+  text-align: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.payroll-access-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  color: white;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+}
+
+.payroll-access-message h4 {
+  color: #1e40af;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
+.payroll-access-message p {
+  color: #64748b;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 32px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.payroll-access-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.payroll-access-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.payroll-access-feature:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.payroll-access-feature svg {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.payroll-access-feature span {
+  color: #374151;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+/* Mobile responsive for Alice access message */
+@media (max-width: 768px) {
+  .payroll-access-message {
+    padding: 30px 15px;
+  }
+  
+  .payroll-access-icon {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .payroll-access-message h4 {
+    font-size: 1.3rem;
+  }
+  
+  .payroll-access-message p {
+    font-size: 1rem;
+  }
+  
+  .payroll-access-features {
+    gap: 12px;
+  }
+  
+  .payroll-access-feature {
+    padding: 10px 12px;
+  }
 }
