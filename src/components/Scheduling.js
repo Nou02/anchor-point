@@ -1008,228 +1008,204 @@ return (
     {/* Main content area: calendar or table */}
     <div className="scheduling-content">
       {view === 'calendar' ? (
-        <div style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '1200px', alignItems: 'flex-start' }}>
-          <div className="calendar-wrapper" style={{ flex: '1' }}>
-            <div className="calendar-header">
-              <button 
-                className="nav-arrow left-arrow" 
-                onClick={goToPreviousMonth}
-                aria-label="Previous month"
-              >
-                ←
-              </button>
-              <h2 className="month-year">
-                {monthNames[currentMonth]}, {currentYear}
-              </h2>
-              <button 
-                className="nav-arrow right-arrow" 
-                onClick={goToNextMonth}
-                aria-label="Next month"
-              >
-                →
-              </button>
-            </div>
-            <div className="calendar-grid">
-              {/* Weather Legend */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '4px',
-                marginBottom: '4px',
-                padding: '4px 8px',
-                background: 'rgba(255, 255, 255, 0.9)',
-                borderRadius: '4px',
-                fontSize: '0.6rem',
-                flexWrap: 'wrap'
-              }}>
-                <span style={{ fontWeight: 'bold', color: '#2F3B70' }}>Weather:</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                  <div style={{ width: '6px', height: '6px', background: '#FFD700', borderRadius: '1px' }}></div>
-                  <span>Sunny</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                  <div style={{ width: '6px', height: '6px', background: '#D3D3D3', borderRadius: '1px' }}></div>
-                  <span>Cloudy</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                  <div style={{ width: '6px', height: '6px', background: '#FFB6C1', borderRadius: '1px' }}></div>
-                  <span>Light Rain</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                  <div style={{ width: '6px', height: '6px', background: '#FF6B6B', borderRadius: '1px' }}></div>
-                  <span>Rain</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                  <div style={{ width: '6px', height: '6px', background: '#DC143C', borderRadius: '1px' }}></div>
-                  <span>Heavy Rain</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                  <div style={{ width: '6px', height: '6px', background: '#8B0000', borderRadius: '1px' }}></div>
-                  <span>Storm</span>
-                </div>
-              </div>
-              
-              {/* Weekday headers */}
-              <div className="weekday-header">
-                {['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'].map((day, index) => {
-                  const today = new Date();
-                  const isCurrentDay = today.getDay() === index;
-                  return (
-                    <div 
-                      key={day}
-                      className={`weekday ${isCurrentDay ? 'current-day' : ''}`}
-                    >
-                      {day}
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Calendar days */}
-              <div className="calendar-days">
-                {calendarDays.map((dayData, index) => {
-                  let bgColor = '';
-                  let weatherInfo = null;
-                  
-                  if (dayData.isCurrentMonth && dayData.day) {
-                    // Get vessel types for background color
-                    const vesselTypes = dayVesselTypes[dayData.day];
-                    if (vesselTypes) {
-                      if (vesselTypes.has('Local') && vesselTypes.has('International')) {
-                        bgColor = '#e6d6ff'; // light purple
-                      } else if (vesselTypes.has('Local')) {
-                        bgColor = '#d6f5d6'; // light green
-                      } else if (vesselTypes.has('International')) {
-                        bgColor = '#d6eaff'; // light blue
-                      }
-                    }
-                    
-                    // Get weather data for this date
-                    weatherInfo = getWeatherForDate(dayData);
-                  }
-
-                  const isPast = dayData.isCurrentMonth && dayData.day && isPastDate(dayData.day);
-                  const canClick = isAlice() && dayData.isCurrentMonth && dayData.day && !isPast;
-                  
-                  // Create title with weather information
-                  let titleText = '';
-                  if (!isAlice() && dayData.isCurrentMonth && dayData.day) {
-                    titleText = 'Only Alice can select dates';
-                  } else if (isPast) {
-                    titleText = 'This date has already passed';
-                  } else if (weatherInfo) {
-                    titleText = `Weather: ${weatherInfo.condition} - ${weatherInfo.temperature}°C`;
-                  }
-                  
-                  return (
-                    <div
-                      key={index}
-                      className={`calendar-day ${
-                        dayData.isCurrentMonth ? 'current-month' : 'other-month'
-                      } ${dayData.isToday ? 'today' : ''} ${
-                        dayData.isSelected ? 'selected' : ''
-                      } ${!canClick && dayData.isCurrentMonth && dayData.day ? 'non-clickable' : ''} ${
-                        isPast ? 'past-date' : ''
-                      }`}
-                      style={{ 
-                        ...bgColor ? { background: bgColor } : {},
-                        ...weatherInfo ? { 
-                          background: weatherInfo.color,
-                          color: weatherInfo.color === '#FFD700' || weatherInfo.color === '#FFFFFF' ? '#000' : '#fff',
-                          fontWeight: 'bold'
-                        } : {},
-                        cursor: canClick ? 'pointer' : 'default'
-                      }}
-                      onClick={() => handleDateClick(dayData.day, dayData.isCurrentMonth)}
-                      title={titleText}
-                    >
-                      <div>{dayData.day}</div>
-                      {weatherInfo && (
-                        <div style={{ 
-                          fontSize: '0.7rem', 
-                          marginTop: '2px',
-                          opacity: 0.8
-                        }}>
-                          {weatherInfo.temperature}°C
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+        <div className="calendar-wrapper" style={{ width: '100%', maxWidth: '1200px' }}>
+          <div className="calendar-header">
+            <button 
+              className="nav-arrow left-arrow" 
+              onClick={goToPreviousMonth}
+              aria-label="Previous month"
+            >
+              ←
+            </button>
+            <h2 className="month-year">
+              {monthNames[currentMonth]}, {currentYear}
+            </h2>
+            <button 
+              className="nav-arrow right-arrow" 
+              onClick={goToNextMonth}
+              aria-label="Next month"
+            >
+              →
+            </button>
           </div>
-          
-          {/* AI Weather Recommendation Section - Now beside calendar */}
-          {selectedDateForAI && (
-            <div className="ai-recommendation-section" style={{ width: '300px', flexShrink: 0 }}>
-              <div className="ai-recommendation-header" style={{ padding: '6px 8px', marginBottom: '4px' }}>
-                <div className="ai-icon">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L13.09 8.26L19 7L14.74 12L19 17L13.09 15.74L12 22L10.91 15.74L5 17L9.26 12L5 7L10.91 8.26L12 2Z" fill="#2F3B70"/>
-                    <circle cx="12" cy="12" r="3" fill="#4A90E2"/>
-                  </svg>
-                </div>
-                <h3 style={{ fontSize: '0.8rem', margin: '0' }}>AI Weather Recommendation</h3>
-                <div className="date-badge" style={{ fontSize: '0.7rem', padding: '1px 4px' }}>
-                  {selectedDateForAI.toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric' 
-                  })}
-                </div>
+          <div className="calendar-grid">
+            {/* Weather Legend */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '4px',
+              marginBottom: '4px',
+              padding: '4px 8px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: '4px',
+              fontSize: '0.6rem',
+              flexWrap: 'wrap'
+            }}>
+              <span style={{ fontWeight: 'bold', color: '#2F3B70' }}>Weather:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                <div style={{ width: '6px', height: '6px', background: '#FFD700', borderRadius: '1px' }}></div>
+                <span>Sunny</span>
               </div>
-              
-              {(() => {
-                const dateKey = selectedDateForAI.toISOString().split('T')[0];
-                const weatherInfo = weatherData[dateKey];
-                const recommendation = generateAIRecommendation(weatherInfo, selectedDateForAI);
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                <div style={{ width: '6px', height: '6px', background: '#D3D3D3', borderRadius: '1px' }}></div>
+                <span>Cloudy</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                <div style={{ width: '6px', height: '6px', background: '#FFB6C1', borderRadius: '1px' }}></div>
+                <span>Light Rain</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                <div style={{ width: '6px', height: '6px', background: '#FF6B6B', borderRadius: '1px' }}></div>
+                <span>Rain</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                <div style={{ width: '6px', height: '6px', background: '#DC143C', borderRadius: '1px' }}></div>
+                <span>Heavy Rain</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                <div style={{ width: '6px', height: '6px', background: '#8B0000', borderRadius: '1px' }}></div>
+                <span>Storm</span>
+              </div>
+            </div>
+            
+            {/* Weekday headers */}
+            <div className="weekday-header">
+              {['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'].map((day, index) => {
+                const today = new Date();
+                const isCurrentDay = today.getDay() === index;
+                return (
+                  <div 
+                    key={day}
+                    className={`weekday ${isCurrentDay ? 'current-day' : ''}`}
+                  >
+                    {day}
+                  </div>
+                );
+              })}
+            </div>
+            {/* Calendar days */}
+            <div className="calendar-days">
+              {calendarDays.map((dayData, index) => {
+                let bgColor = '';
+                let weatherInfo = null;
+                
+                if (dayData.isCurrentMonth && dayData.day) {
+                  // Get vessel types for background color
+                  const vesselTypes = dayVesselTypes[dayData.day];
+                  if (vesselTypes) {
+                    if (vesselTypes.has('Local') && vesselTypes.has('International')) {
+                      bgColor = '#e6d6ff'; // light purple
+                    } else if (vesselTypes.has('Local')) {
+                      bgColor = '#d6f5d6'; // light green
+                    } else if (vesselTypes.has('International')) {
+                      bgColor = '#d6eaff'; // light blue
+                    }
+                  }
+                  
+                  // Get weather data for this date
+                  weatherInfo = getWeatherForDate(dayData);
+                }
+
+                const isPast = dayData.isCurrentMonth && dayData.day && isPastDate(dayData.day);
+                const canClick = isAlice() && dayData.isCurrentMonth && dayData.day && !isPast;
+                
+                // Create title with weather information
+                let titleText = '';
+                if (!isAlice() && dayData.isCurrentMonth && dayData.day) {
+                  titleText = 'Only Alice can select dates';
+                } else if (isPast) {
+                  titleText = 'This date has already passed';
+                } else if (weatherInfo) {
+                  titleText = `Weather: ${weatherInfo.condition} - ${weatherInfo.temperature}°C`;
+                }
                 
                 return (
-                  <div className="ai-recommendation-card" style={{ padding: '8px' }}>
-                    <div className="recommendation-header">
-                      <div className="status-indicator">
-                        <div className={`status-icon ${recommendation.type}`}>
-                          {recommendation.type === 'success' ? (
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                              <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          ) : recommendation.type === 'warning' ? (
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                              <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          ) : recommendation.type === 'danger' ? (
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                              <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          ) : (
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                              <path d="M13 16H12V12H11M12 8H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                        </div>
-                        <div className="status-text">
-                          <h4 style={{ fontSize: '0.8rem', margin: '0 0 1px 0' }}>{recommendation.title}</h4>
-                          <div className="priority-badge" style={{ fontSize: '0.6rem', padding: '1px 3px' }}>
-                            {recommendation.type === 'success' ? 'OPTIMAL' : 
-                             recommendation.type === 'warning' ? 'CAUTION' : 
-                             recommendation.type === 'danger' ? 'CRITICAL' : 'ADVISORY'}
+                  <div
+                    key={index}
+                    className={`calendar-day ${
+                      dayData.isCurrentMonth ? 'current-month' : 'other-month'
+                    } ${dayData.isToday ? 'today' : ''} ${
+                      dayData.isSelected ? 'selected' : ''
+                    } ${!canClick && dayData.isCurrentMonth && dayData.day ? 'non-clickable' : ''} ${
+                      isPast ? 'past-date' : ''
+                    }`}
+                    style={{ 
+                      ...bgColor ? { background: bgColor } : {},
+                      ...weatherInfo ? { 
+                        background: weatherInfo.color,
+                        color: weatherInfo.color === '#FFD700' || weatherInfo.color === '#FFFFFF' ? '#000' : '#fff',
+                        fontWeight: 'bold'
+                      } : {},
+                      cursor: canClick ? 'pointer' : 'default'
+                    }}
+                    onClick={() => handleDateClick(dayData.day, dayData.isCurrentMonth)}
+                    title={titleText}
+                  >
+                    <div>{dayData.day}</div>
+                    {weatherInfo && (
+                      <div style={{ 
+                        fontSize: '0.7rem', 
+                        marginTop: '2px',
+                        opacity: 0.8
+                      }}>
+                        {weatherInfo.temperature}°C
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* AI Weather Recommendation Section - Now inside calendar */}
+            {selectedDateForAI && (
+              <div className="ai-recommendation-section" style={{ marginTop: '20px', width: '100%' }}>
+                <div className="ai-recommendation-header" style={{ padding: '12px 16px', marginBottom: '8px' }}>
+                  <div className="date-badge" style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>
+                      {selectedDateForAI.toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
+                    </div>
+                    <div style={{ fontSize: '0.6rem', textAlign: 'center', lineHeight: '1.2' }}>
+                      AI Weather Recommendation
+                    </div>
+                  </div>
+                </div>
+                
+                {(() => {
+                  const dateKey = selectedDateForAI.toISOString().split('T')[0];
+                  const weatherInfo = weatherData[dateKey];
+                  const recommendation = generateAIRecommendation(weatherInfo, selectedDateForAI);
+                  
+                  return (
+                    <div className="ai-recommendation-card" style={{ padding: '16px' }}>
+                      <div className="recommendation-header">
+                        <div className="status-indicator">
+                          <div className="status-text">
+                            <h4 style={{ fontSize: '1rem', margin: '0 0 8px 0' }}>{recommendation.title}</h4>
+                            <div className="priority-badge" style={{ fontSize: '0.7rem', padding: '4px 8px' }}>
+                              {recommendation.type === 'success' ? 'OPTIMAL' : 
+                               recommendation.type === 'warning' ? 'CAUTION' : 
+                               recommendation.type === 'danger' ? 'CRITICAL' : 'ADVISORY'}
+                            </div>
                           </div>
                         </div>
                       </div>
+                      
+                      <div className="recommendation-content">
+                        <p className="recommendation-message" style={{ fontSize: '0.9rem', margin: '8px 0' }}>
+                          {recommendation.message}
+                        </p>
+                      </div>
                     </div>
-                    
-                    <div className="recommendation-content">
-                      <p className="recommendation-message" style={{ fontSize: '0.7rem', margin: '4px 0' }}>
-                        {recommendation.message}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-
+                  );
+                })()}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="crew-availability-table-wrapper">

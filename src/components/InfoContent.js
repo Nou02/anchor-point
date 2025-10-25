@@ -103,53 +103,81 @@ const InfoContent = () => {
   return (
     <div className="main-content">
       <div className="info-content">
-        <h2 className="info-title">USER ACCOUNTS</h2>
-        <div className="info-table-meta" style={{alignItems: 'center', justifyContent: 'flex-start', marginBottom: 18, gap: 24, width: '100%'}}>
-          <span style={{fontSize: '1.08em', color: '#232b45'}}>
-            Showing <b style={{fontWeight: 700, color: '#232b45'}}>{filteredUsers.length}</b> of <b style={{fontWeight: 700, color: '#232b45'}}>{users.length} users</b>
-          </span>
-          {/* Search bar */}
-          <input
-            type="text"
-            className="info-search"
-            placeholder="Search name..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              padding: '7px 14px',
-              border: '1px solid #bfc6e0',
-              borderRadius: 6,
-              fontSize: '1em',
-              outline: 'none',
-              minWidth: 180,
-              background: '#fff',
-              color: '#232b45'
-            }}
-          />
-          <span className="info-sort" ref={sortRef} style={{marginLeft: 0, position: 'relative', cursor: 'pointer', color: '#232b45', fontWeight: 500}} onClick={() => setSortDropdown(d => !d)}>
-            Sort by <span className="info-sort-arrow">▼</span>
-            {sortDropdown && (
-              <div style={{position: 'absolute', left: 0, top: 24, background: '#fff', color: '#232b45', border: '1px solid #bfc6e0', borderRadius: 6, zIndex: 10, minWidth: 120, boxShadow: '0 2px 8px rgba(30,40,60,0.08)'}}>
-                <div style={{padding: '8px 14px', cursor: 'pointer', background: sortBy==='name'?'#e0e4f7':'#fff'}} onClick={() => {setSortBy('name'); setSortDropdown(false);}}>Name</div>
-                <div style={{padding: '8px 14px', cursor: 'pointer', background: sortBy==='date'?'#e0e4f7':'#fff'}} onClick={() => {setSortBy('date'); setSortDropdown(false);}}>Date Created</div>
-              </div>
-            )}
-          </span>
-          <span className="info-icons" style={{marginLeft: 0, display: 'flex', alignItems: 'center', gap: 10}}>
-            <button className="info-add-btn" title="Add" onClick={handleAddRow}>＋</button>
-            <button className="info-edit-btn" title="Edit" onClick={handleEdit}>
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 14.25V17h2.75l8.13-8.13-2.75-2.75L3 14.25zM17.71 6.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.13 1.13 3.75 3.75 1.14-1.13z" fill="#232b45"/></svg>
-            </button>
-            <button className="info-delete-btn" title="Delete" onClick={handleDelete}>
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M6 7v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V7" stroke="#232b45" strokeWidth="1.5"/><rect x="4" y="5" width="12" height="2" rx="1" fill="#232b45"/><rect x="8" y="9" width="1.5" height="5" rx="0.75" fill="#232b45"/><rect x="10.5" y="9" width="1.5" height="5" rx="0.75" fill="#232b45"/></svg>
-            </button>
-          </span>
+        <div className="info-header">
+          <h2 className="info-title">USER ACCOUNTS</h2>
+          <p className="info-subtitle">Manage user accounts and permissions</p>
         </div>
-        <div style={{display: 'flex'}}>
-          <table className="info-table" style={{marginLeft: 0}}>
+        
+        <div className="info-controls">
+          <div className="info-stats">
+            <span className="info-count">
+              Showing <strong>{filteredUsers.length}</strong> of <strong>{users.length}</strong> users
+            </span>
+          </div>
+          
+          <div className="info-actions">
+            <div className="search-container">
+              <svg className="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <input
+                type="text"
+                className="info-search"
+                placeholder="Search users..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            
+            <div className="sort-container" ref={sortRef}>
+              <button className="sort-button" onClick={() => setSortDropdown(d => !d)}>
+                <span>Sort by</span>
+                <svg className="sort-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {sortDropdown && (
+                <div className="sort-dropdown">
+                  <div className={`sort-option ${sortBy === 'name' ? 'active' : ''}`} onClick={() => {setSortBy('name'); setSortDropdown(false);}}>
+                    Name
+                  </div>
+                  <div className={`sort-option ${sortBy === 'date' ? 'active' : ''}`} onClick={() => {setSortBy('date'); setSortDropdown(false);}}>
+                    Date Created
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="action-buttons">
+              <button className="action-btn add-btn" title="Add User" onClick={handleAddRow}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Add User
+              </button>
+              <button className="action-btn edit-btn" title="Edit Mode" onClick={handleEdit}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13M18.5 2.5C18.8978 2.10218 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10218 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10218 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {editMode ? 'Save' : 'Edit'}
+              </button>
+              <button className="action-btn delete-btn" title="Delete Selected" onClick={handleDelete} disabled={selectedRows.length === 0}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 6H5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="table-container">
+          <table className="info-table">
             <thead>
               <tr>
-                <th style={{width: 36}}></th>
+                <th className="checkbox-column">
+                  <input type="checkbox" className="select-all-checkbox" />
+                </th>
                 <th>Username</th>
                 <th>Password</th>
                 <th>Phone No.</th>
@@ -160,44 +188,114 @@ const InfoContent = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="7">Loading...</td></tr>
+                <tr className="loading-row">
+                  <td colSpan="7" className="loading-cell">
+                    <div className="loading-spinner"></div>
+                    <span>Loading users...</span>
+                  </td>
+                </tr>
               ) : sortedUsers.length === 0 ? (
-                <tr><td colSpan="7">No users found.</td></tr>
+                <tr className="empty-row">
+                  <td colSpan="7" className="empty-cell">
+                    <div className="empty-state">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <h3>No users found</h3>
+                      <p>Try adjusting your search criteria or add a new user.</p>
+                    </div>
+                  </td>
+                </tr>
               ) : (
                 sortedUsers.map((user, i) => (
-                  <tr key={user.uid || i} className={selectedRows.includes(user.uid) ? 'row-selected' : ''}>
-                    <td style={{textAlign: 'center'}}>
-                      <input type="checkbox" checked={selectedRows.includes(user.uid)} onChange={() => handleSelectRow(user.uid)} />
+                  <tr key={user.uid || i} className={`user-row ${selectedRows.includes(user.uid) ? 'row-selected' : ''}`}>
+                    <td className="checkbox-column">
+                      <input 
+                        type="checkbox" 
+                        className="row-checkbox"
+                        checked={selectedRows.includes(user.uid)} 
+                        onChange={() => handleSelectRow(user.uid)} 
+                      />
                     </td>
-                    <td>
+                    <td className="username-cell">
                       {editMode ? (
-                        <input value={user.username || user.fullName || ''} onChange={e => handleCellChange(user.uid, 'username', e.target.value)} />
-                      ) : (user.username || user.fullName || '')}
+                        <input 
+                          className="table-input"
+                          value={user.username || user.fullName || ''} 
+                          onChange={e => handleCellChange(user.uid, 'username', e.target.value)} 
+                        />
+                      ) : (
+                        <div className="user-info">
+                          <div className="user-avatar">
+                            {(user.username || user.fullName || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          <span className="user-name">{user.username || user.fullName || ''}</span>
+                        </div>
+                      )}
                     </td>
-                    <td>
+                    <td className="password-cell">
                       {editMode ? (
-                        <input value={user.password || ''} onChange={e => handleCellChange(user.uid, 'password', e.target.value)} type="text" />
-                      ) : '••••••••'}
+                        <input 
+                          className="table-input"
+                          value={user.password || ''} 
+                          onChange={e => handleCellChange(user.uid, 'password', e.target.value)} 
+                          type="text" 
+                        />
+                      ) : (
+                        <span className="password-mask">••••••••</span>
+                      )}
                     </td>
-                    <td>
+                    <td className="phone-cell">
                       {editMode ? (
-                        <input value={user.phone || ''} onChange={e => handleCellChange(user.uid, 'phone', e.target.value)} />
-                      ) : (user.phone || '')}
+                        <input 
+                          className="table-input"
+                          value={user.phone || ''} 
+                          onChange={e => handleCellChange(user.uid, 'phone', e.target.value)} 
+                        />
+                      ) : (
+                        <span className="phone-number">{user.phone || ''}</span>
+                      )}
                     </td>
-                    <td>
+                    <td className="role-cell">
                       {editMode ? (
-                        <input value={user.role || user.type || ''} onChange={e => handleCellChange(user.uid, 'role', e.target.value)} />
-                      ) : (user.role || user.type || '')}
+                        <input 
+                          className="table-input"
+                          value={user.role || user.type || ''} 
+                          onChange={e => handleCellChange(user.uid, 'role', e.target.value)} 
+                        />
+                      ) : (
+                        <span className={`role-badge ${(user.role || user.type || '').toLowerCase().replace(/\s+/g, '-')}`}>
+                          {user.role || user.type || ''}
+                        </span>
+                      )}
                     </td>
-                    <td>
+                    <td className="date-cell">
                       {editMode ? (
-                        <input value={user.createdAt && user.createdAt.toDate ? user.createdAt.toDate().toLocaleDateString() : (user.createdAt ? new Date(user.createdAt.seconds ? user.createdAt.seconds * 1000 : user.createdAt).toLocaleDateString() : '')} onChange={() => {}} disabled />
-                      ) : (user.createdAt && user.createdAt.toDate ? user.createdAt.toDate().toLocaleDateString() : (user.createdAt ? new Date(user.createdAt.seconds ? user.createdAt.seconds * 1000 : user.createdAt).toLocaleDateString() : ''))}
+                        <input 
+                          className="table-input"
+                          value={user.createdAt && user.createdAt.toDate ? user.createdAt.toDate().toLocaleDateString() : (user.createdAt ? new Date(user.createdAt.seconds ? user.createdAt.seconds * 1000 : user.createdAt).toLocaleDateString() : '')} 
+                          onChange={() => {}} 
+                          disabled 
+                        />
+                      ) : (
+                        <span className="date-text">
+                          {user.createdAt && user.createdAt.toDate ? user.createdAt.toDate().toLocaleDateString() : (user.createdAt ? new Date(user.createdAt.seconds ? user.createdAt.seconds * 1000 : user.createdAt).toLocaleDateString() : '')}
+                        </span>
+                      )}
                     </td>
-                    <td>
+                    <td className="status-cell">
                       {editMode ? (
-                        <input value={user.status || ''} onChange={e => handleCellChange(user.uid, 'status', e.target.value)} />
-                      ) : (user.status || '')}
+                        <input 
+                          className="table-input"
+                          value={user.status || ''} 
+                          onChange={e => handleCellChange(user.uid, 'status', e.target.value)} 
+                        />
+                      ) : (
+                        <span className={`status-badge ${user.status ? 'active' : 'inactive'}`}>
+                          {user.status || 'Inactive'}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))

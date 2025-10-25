@@ -845,15 +845,13 @@ const Homepage = () => {
                         <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
                       </svg>
                     </div>
-                    <h3 className="capability-title">Vessel Scheduling</h3>
+                    <h3 className="capability-title">Ship Schedules</h3>
                     <p className="capability-description">
-                      Comprehensive vessel scheduling system for managing mooring operations, 
-                      arrival and departure times, and port assignments with real-time updates. 
-                      Track vessel movements, manage berth allocations, and coordinate with port authorities.
+                      View and manage vessel schedules, docking times, and port operations with real-time updates and notifications.
                     </p>
                     <div className="capability-features">
-                      <span className="feature-tag">Mooring Operations</span>
-                      <span className="feature-tag">Port Management</span>
+                      <span className="feature-tag">Vessel Tracking</span>
+                      <span className="feature-tag">Docking Times</span>
                       <span className="feature-tag">Real-time Updates</span>
                     </div>
                   </div>
@@ -864,35 +862,31 @@ const Homepage = () => {
                         <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H16c-.8 0-1.54.37-2.01.99L12 11l-1.99-2.01A2.5 2.5 0 0 0 8 8H5.46c-.8 0-1.54.37-2.01.99L1 14.37V22h2v-6h2.5l2.54-7.63A1.5 1.5 0 0 1 9.46 8H12c.8 0 1.54.37 2.01.99L16 11l1.99-2.01A2.5 2.5 0 0 1 20.54 8H22c.8 0 1.54.37 2.01.99L26.5 16H24v6h2z"/>
                       </svg>
                     </div>
-                    <h3 className="capability-title">Crew Assignment</h3>
+                    <h3 className="capability-title">Crew Assignments</h3>
                     <p className="capability-description">
-                      Advanced crew management system for assigning personnel to vessels, 
-                      tracking work schedules, and managing crew certifications and qualifications. 
-                      Ensure proper staffing levels and maintain compliance with maritime regulations.
+                      Manage crew availability, assignments, and scheduling with comprehensive workforce management tools.
                     </p>
                     <div className="capability-features">
-                      <span className="feature-tag">Personnel Management</span>
-                      <span className="feature-tag">Work Schedules</span>
-                      <span className="feature-tag">Certifications</span>
+                      <span className="feature-tag">Crew Management</span>
+                      <span className="feature-tag">Scheduling</span>
+                      <span className="feature-tag">Workforce Tools</span>
                     </div>
                   </div>
 
                   <div className="capability-card">
                     <div className="capability-icon">
                       <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                       </svg>
                     </div>
-                    <h3 className="capability-title">Payroll Management</h3>
+                    <h3 className="capability-title">Docking Operations</h3>
                     <p className="capability-description">
-                      Complete payroll system for employee compensation, benefits management, 
-                      tax calculations, and automated payment processing with approval workflows. 
-                      Handle salary calculations, overtime, bonuses, and deductions efficiently.
+                      Coordinate vessel docking, mooring operations, and port logistics with precision and efficiency.
                     </p>
                     <div className="capability-features">
-                      <span className="feature-tag">Employee Compensation</span>
-                      <span className="feature-tag">Benefits Management</span>
-                      <span className="feature-tag">Approval Workflows</span>
+                      <span className="feature-tag">Vessel Docking</span>
+                      <span className="feature-tag">Mooring Operations</span>
+                      <span className="feature-tag">Port Logistics</span>
                     </div>
                   </div>
                 </div>

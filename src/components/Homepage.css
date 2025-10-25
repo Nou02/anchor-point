@@ -1242,17 +1242,22 @@
 
 .capabilities-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
   margin-bottom: 40px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .capability-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
-  padding: 32px;
-  border: 1px solid rgba(47, 59, 112, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -1264,63 +1269,79 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #2F3B70 0%, #4A90E2 50%, #2F3B70 100%);
-  border-radius: 20px 20px 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(47, 59, 112, 0.8) 0%, rgba(74, 144, 226, 0.8) 50%, rgba(47, 59, 112, 0.8) 100%);
+  border-radius: 16px 16px 0 0;
 }
 
 .capability-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+  transform: translateY(-6px);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .capability-icon {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #2F3B70 0%, #4A90E2 100%);
-  border-radius: 20px;
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  margin-bottom: 24px;
-  box-shadow: 0 8px 24px rgba(47, 59, 112, 0.3);
+  color: #ffffff;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 .capability-title {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 700;
-  color: #1a2332;
+  color: #ffffff;
   margin-bottom: 16px;
   text-align: left;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .capability-description {
-  color: #64748b;
-  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
   line-height: 1.6;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   text-align: left;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .capability-features {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .feature-tag {
-  background: linear-gradient(135deg, #4A90E2 0%, #2F3B70 100%);
-  color: white;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
   padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
+  border-radius: 16px;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Responsive Design */
+@media (max-width: 1200px) {
+  .capabilities-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
 @media (max-width: 1024px) {
   .dashboard-layout {
     flex-direction: column;
@@ -1362,7 +1383,7 @@
   }
   
   .capability-card {
-    padding: 24px;
+    padding: 20px;
   }
 }
 
