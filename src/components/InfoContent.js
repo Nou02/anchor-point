@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './InfoContent.css';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 
@@ -18,9 +18,22 @@ const InfoContent = () => {
     const fetchUsers = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, 'users'));
-        const userList = querySnapshot.docs.map(doc => doc.data());
+        const userList = querySnapshot.docs.map(doc => ({
+          ...doc.data(),
+          uid: doc.id, // Ensure uid is set from document ID
+          // Normalize the data structure
+          username: doc.data().username || doc.data().fullName || '',
+          fullName: doc.data().fullName || doc.data().username || '',
+          phone: doc.data().phone || '',
+          role: doc.data().role || doc.data().type || 'Employee',
+          type: doc.data().type || doc.data().role || 'Employee',
+          status: doc.data().status || 'Active',
+          createdAt: doc.data().createdAt || new Date(),
+          email: doc.data().email || ''
+        }));
         setUsers(userList);
       } catch (err) {
+        console.error('Error fetching users:', err);
         setUsers([]);
       } finally {
         setLoading(false);
@@ -46,7 +59,17 @@ const InfoContent = () => {
   };
 
   // Toggle edit mode
-  const handleEdit = () => setEditMode(e => !e);
+  const handleEdit = async () => {
+    if (editMode) {
+      // Save all changes to Firestore when exiting edit mode
+      for (const user of users) {
+        if (user.uid && !user.isNew) {
+          await saveUserChanges(user);
+        }
+      }
+    }
+    setEditMode(e => !e);
+  };
 
   // Handle checkbox select
   const handleSelectRow = (uid) => {
@@ -55,8 +78,14 @@ const InfoContent = () => {
     );
   };
 
-  // Delete selected rows (local only)
-  const handleDelete = () => {
+  // Delete selected rows
+  const handleDelete = async () => {
+    // Delete from Firestore first
+    for (const uid of selectedRows) {
+      await deleteUserFromFirestore(uid);
+    }
+    
+    // Update local state
     setUsers(users.filter(user => !selectedRows.includes(user.uid)));
     setSelectedRows([]);
   };
@@ -68,11 +97,42 @@ const InfoContent = () => {
     ));
   };
 
+  // Save user changes to Firestore
+  const saveUserChanges = async (user) => {
+    try {
+      if (user.uid && !user.isNew) {
+        await updateDoc(doc(db, 'users', user.uid), {
+          fullName: user.fullName,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          type: user.type,
+          status: user.status,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error saving user changes:', error);
+    }
+  };
+
+  // Delete user from Firestore
+  const deleteUserFromFirestore = async (uid) => {
+    try {
+      if (uid && !uid.startsWith('new-')) {
+        await deleteDoc(doc(db, 'users', uid));
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+    }
+  };
+
   // Filter users by search
   const filteredUsers = users.filter(user =>
-    (user.username || user.fullName || '')
-      .toLowerCase()
-      .includes(search.toLowerCase())
+    (user.username || user.fullName || '').toLowerCase().includes(search.toLowerCase()) ||
+    (user.email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (user.phone || '').toLowerCase().includes(search.toLowerCase())
   );
 
   // Sort users based on sortBy
@@ -178,11 +238,11 @@ const InfoContent = () => {
                 <th className="checkbox-column">
                   <input type="checkbox" className="select-all-checkbox" />
                 </th>
-                <th>Username</th>
-                <th>Password</th>
+                <th>Full Name</th>
+                <th>Email</th>
                 <th>Phone No.</th>
                 <th>User Type</th>
-                <th>Date</th>
+                <th>Date Created</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -222,28 +282,28 @@ const InfoContent = () => {
                       {editMode ? (
                         <input 
                           className="table-input"
-                          value={user.username || user.fullName || ''} 
-                          onChange={e => handleCellChange(user.uid, 'username', e.target.value)} 
+                          value={user.fullName || user.username || ''} 
+                          onChange={e => handleCellChange(user.uid, 'fullName', e.target.value)} 
                         />
                       ) : (
                         <div className="user-info">
                           <div className="user-avatar">
-                            {(user.username || user.fullName || 'U').charAt(0).toUpperCase()}
+                            {(user.fullName || user.username || 'U').charAt(0).toUpperCase()}
                           </div>
-                          <span className="user-name">{user.username || user.fullName || ''}</span>
+                          <span className="user-name">{user.fullName || user.username || ''}</span>
                         </div>
                       )}
                     </td>
-                    <td className="password-cell">
+                    <td className="email-cell">
                       {editMode ? (
                         <input 
                           className="table-input"
-                          value={user.password || ''} 
-                          onChange={e => handleCellChange(user.uid, 'password', e.target.value)} 
-                          type="text" 
+                          value={user.email || ''} 
+                          onChange={e => handleCellChange(user.uid, 'email', e.target.value)} 
+                          type="email"
                         />
                       ) : (
-                        <span className="password-mask">••••••••</span>
+                        <span className="email-text">{user.email || ''}</span>
                       )}
                     </td>
                     <td className="phone-cell">

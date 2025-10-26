@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import CarlaPayroll from './CarlaPayroll';
 import AlicePayroll from './AlicePayroll';
+import WorkerPayroll from './WorkerPayroll';
 import '../components/Payroll.css';
 
 const Payroll = () => {
   const [user, setUser] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Check if current user is Carla
@@ -32,11 +35,23 @@ const Payroll = () => {
   // Load user data
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+        
+        // Load user info from Firestore
+        try {
+          const db = getFirestore();
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          if (userDoc.exists()) {
+            setUserInfo(userDoc.data());
+          }
+        } catch (error) {
+          console.error('Error loading user info:', error);
+        }
       } else {
         setUser(null);
+        setUserInfo(null);
       }
       setIsLoading(false);
     });
@@ -56,10 +71,13 @@ const Payroll = () => {
     }
 
   // Route to appropriate component based on user
-    if (isCarlaUser(user)) {
+  if (isCarlaUser(user)) {
     return <CarlaPayroll />;
   } else if (isAliceUser(user)) {
     return <AlicePayroll />;
+  } else if (user && userInfo) {
+    // Show worker payroll for all other authenticated users
+    return <WorkerPayroll />;
   } else {
     return (
       <div className="payroll-center-content">

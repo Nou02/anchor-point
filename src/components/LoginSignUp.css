@@ -414,6 +414,42 @@
   opacity: 0.95;
 }
 
+/* Medium screens - half browser width */
+@media (max-width: 1200px) {
+  .login-signup-split-bg {
+    padding: 10px;
+  }
+  
+  .login-signup-split-container {
+    max-width: 100%;
+    height: calc(100vh - 20px);
+  }
+  
+  .login-left-panel {
+    flex: 0 0 300px;
+    max-width: 300px;
+    min-width: 280px;
+    padding: 20px 12px;
+  }
+  
+  .login-right-panel {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .form-section {
+    max-width: 280px;
+  }
+  
+  .hero-title {
+    font-size: 1.8rem;
+  }
+  
+  .hero-quote {
+    font-size: 0.9rem;
+  }
+}
+
 /* Responsive for smaller screens */
 @media (max-width: 1024px) {
   .login-signup-split-container {

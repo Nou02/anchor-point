@@ -17,15 +17,16 @@ body, #root, .App {
   -webkit-backdrop-filter: blur(20px);
   border-radius: 24px;
   padding: 40px;
-  margin: 32px auto;
+  margin: 20px auto;
   max-width: 98vw;
-  min-width: 0;
+  min-width: 1000px;
   width: 1200px;
+  max-height: calc(100vh - 40px);
   box-shadow: 
     0 20px 60px rgba(0, 0, 0, 0.1),
     0 8px 32px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  overflow-x: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -35,14 +36,15 @@ body, #root, .App {
 
 /* Header Section */
 .info-header {
-  margin-bottom: 40px;
+  margin-bottom: 24px;
   text-align: center;
   background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
   border-radius: 16px;
-  padding: 32px;
+  padding: 24px;
   box-shadow: 0 8px 32px rgba(30, 58, 138, 0.3);
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .info-header::before {
@@ -56,10 +58,10 @@ body, #root, .App {
 }
 
 .info-title {
-  font-size: 2.8rem;
+  font-size: 2.2rem;
   font-weight: 900;
   color: #ffffff;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   letter-spacing: -0.02em;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -77,12 +79,13 @@ body, #root, .App {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
-  padding: 24px;
+  margin-bottom: 20px;
+  padding: 16px;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border-radius: 16px;
   border: 1px solid rgba(226, 232, 240, 0.8);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
 }
 
 .info-stats {
@@ -274,16 +277,20 @@ body, #root, .App {
 .table-container {
   background: #ffffff;
   border-radius: 16px;
-  overflow: hidden;
+  overflow: auto;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(226, 232, 240, 0.8);
+  flex: 1;
+  min-height: 0;
+  width: 100%;
 }
 
 .info-table {
   width: 100%;
   border-collapse: collapse;
   background: #ffffff;
-  min-width: 900px;
+  min-width: 1000px;
+  table-layout: fixed;
 }
 
 /* Table Headers */
@@ -323,6 +330,15 @@ body, #root, .App {
   width: 60px;
   text-align: center;
 }
+
+/* Column Widths */
+.info-table th:nth-child(1), .info-table td:nth-child(1) { width: 60px; } /* Checkbox */
+.info-table th:nth-child(2), .info-table td:nth-child(2) { width: 200px; } /* Full Name */
+.info-table th:nth-child(3), .info-table td:nth-child(3) { width: 250px; } /* Email */
+.info-table th:nth-child(4), .info-table td:nth-child(4) { width: 150px; } /* Phone */
+.info-table th:nth-child(5), .info-table td:nth-child(5) { width: 150px; } /* User Type */
+.info-table th:nth-child(6), .info-table td:nth-child(6) { width: 120px; } /* Date Created */
+.info-table th:nth-child(7), .info-table td:nth-child(7) { width: 100px; } /* Status */
 
 /* Table Rows */
 .user-row {
@@ -567,11 +583,33 @@ body, #root, .App {
   }
 }
 
+/* Medium screens - maintain table scrollability */
+@media (max-width: 1200px) {
+  .info-content {
+    margin: 16px;
+    padding: 24px;
+    max-width: calc(100vw - 32px);
+    min-width: 800px;
+    max-height: calc(100vh - 32px);
+  }
+  
+  .table-container {
+    flex: 1;
+    min-height: 0;
+  }
+  
+  .info-table {
+    min-width: 800px;
+  }
+}
+
 @media (max-width: 768px) {
 .info-content {
     margin: 16px;
     padding: 24px 16px;
     border-radius: 16px;
+    min-width: 600px;
+    max-height: calc(100vh - 32px);
   }
   
   .info-title {
@@ -595,9 +633,11 @@ body, #root, .App {
   }
   
   .table-container {
-  overflow-x: auto;
-}
-
+    overflow-x: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  
   .info-table {
     min-width: 700px;
   }
@@ -623,4 +663,22 @@ body, #root, .App {
     height: 32px;
     font-size: 0.8rem;
   }
+}
+
+/* Email Cell Styling */
+.email-cell {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 0.95rem;
+  color: #4b5563;
+  min-width: 200px;
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email-text {
+  color: #3b82f6;
+  font-weight: 500;
 }

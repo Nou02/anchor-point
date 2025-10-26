@@ -186,6 +186,32 @@
   display: block !important;
 }
 
+/* Medium screens - half browser width */
+@media (max-width: 1200px) {
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    max-width: 280px;
+  }
+  
+  .sidebar-nav {
+    padding: 0 16px;
+  }
+  
+  .sidebar-nav-item {
+    padding: 8px 12px;
+    font-size: 1rem;
+  }
+  
+  .sidebar-nav-icon {
+    font-size: 1.3rem;
+  }
+  
+  .sidebar-title {
+    font-size: 2rem;
+  }
+}
+
 @media (max-width: 768px) {
   .sidebar {
     width: 100vw;

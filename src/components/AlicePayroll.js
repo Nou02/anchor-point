@@ -7,9 +7,11 @@ const AlicePayroll = () => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [payrollData, setPayrollData] = useState([]);
+  const [approvedPayrolls, setApprovedPayrolls] = useState([]);
   const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [isApproving, setIsApproving] = useState(false);
   const [approvalMessage, setApprovalMessage] = useState('');
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'history'
 
   // Check if current user is Alice
   const isAliceUser = (currentUser) => {
@@ -46,10 +48,12 @@ const AlicePayroll = () => {
         const q = query(collection(db, 'payrolls'));
         const querySnapshot = await getDocs(q);
         
-        const payrollList = [];
+        const pendingPayrolls = [];
+        const approvedPayrolls = [];
+        
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          if (data.status === 'pending' && data.createdByName && 
+          if (data.createdByName && 
               (data.createdByName.toLowerCase().includes('carla') || 
                data.createdByName.toLowerCase().includes('carla dela peña'))) {
             
@@ -61,7 +65,7 @@ const AlicePayroll = () => {
               const year = parseInt(match[3]);
               const payrollDate = new Date(year, month - 1, day);
               
-              payrollList.push({
+              const payrollItem = {
                 id: doc.id,
                 date: payrollDate,
                 dateString: payrollDate.toLocaleDateString('en-US', { 
@@ -72,14 +76,23 @@ const AlicePayroll = () => {
                 data: data,
                 createdBy: data.createdByName,
                 lastModified: data.lastModified || data.createdAt
-              });
+              };
+              
+              if (data.status === 'pending') {
+                pendingPayrolls.push(payrollItem);
+              } else if (data.status === 'approved') {
+                approvedPayrolls.push(payrollItem);
+              }
             }
           }
         });
         
         // Sort by date (newest first)
-        payrollList.sort((a, b) => new Date(b.date) - new Date(a.date));
-        setPayrollData(payrollList);
+        pendingPayrolls.sort((a, b) => new Date(b.date) - new Date(a.date));
+        approvedPayrolls.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        setPayrollData(pendingPayrolls);
+        setApprovedPayrolls(approvedPayrolls);
       } catch (error) {
         console.error('Error loading payroll data:', error);
       }
@@ -162,24 +175,8 @@ const AlicePayroll = () => {
     );
   }
 
-  // If no payroll data available
-  if (payrollData.length === 0) {
-    return (
-      <div className="payroll-center-content">
-        <div className="alice-empty-payroll">
-          <div className="empty-payroll-content">
-            <div className="empty-payroll-icon">
-              <svg width="80" height="80" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-              </svg>
-            </div>
-            <h2>No Pending Payrolls</h2>
-            <p>No payroll data has been submitted by Carla for review.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Always show the tab navigation, even when there are no pending payrolls
+  // This allows Alice to access the history section
 
   // If a specific payroll is selected, show detailed validation view
   if (selectedPayroll) {
@@ -301,41 +298,136 @@ const AlicePayroll = () => {
     <div className="payroll-center-content">
       <div className="alice-payroll-list">
         <div className="payroll-list-header">
-          <h2>Pending Payroll Approvals</h2>
-          <p>Review and approve payroll data submitted by Carla</p>
+          <h2>Payroll Management</h2>
+          <p>Review and manage payroll data submitted by Carla</p>
         </div>
         
-        <div className="payroll-list-grid">
-          {payrollData.map((payroll) => (
-            <div
-              key={payroll.id}
-              className="payroll-card"
-              onClick={() => setSelectedPayroll(payroll)}
-            >
-              <div className="payroll-card-header">
-                <h3>{payroll.dateString}</h3>
-                <span className="status-badge pending">Pending</span>
-              </div>
-              <div className="payroll-card-content">
-                <div className="payroll-info">
-                  <span className="label">Created by:</span>
-                  <span className="value">{payroll.createdBy}</span>
-                </div>
-                <div className="payroll-info">
-                  <span className="label">Workers:</span>
-                  <span className="value">{payroll.data.workers.length}</span>
-                </div>
-                <div className="payroll-info">
-                  <span className="label">Total Amount:</span>
-                  <span className="value">₱{payroll.data.totals.netTotal.toLocaleString()}</span>
-                </div>
-              </div>
-              <div className="payroll-card-actions">
-                <span className="review-text">Click to Review & Approve</span>
-              </div>
-            </div>
-          ))}
+        {/* Tab Navigation */}
+        <div className="payroll-tabs">
+          <button 
+            className={`tab-button ${activeTab === 'pending' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pending')}
+          >
+            Pending Approvals ({payrollData.length})
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'history' ? 'active' : ''}`}
+            onClick={() => setActiveTab('history')}
+          >
+            Past History ({approvedPayrolls.length})
+          </button>
         </div>
+        
+        {/* Pending Payrolls Tab */}
+        {activeTab === 'pending' && (
+          <div className="payroll-tab-content">
+            {payrollData.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">
+                  <svg width="60" height="60" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                  </svg>
+                </div>
+                <h3>No Pending Payrolls</h3>
+                <p>No payroll data has been submitted by Carla for review.</p>
+              </div>
+            ) : (
+              <div className="payroll-list-grid">
+                {payrollData.map((payroll) => (
+                  <div
+                    key={payroll.id}
+                    className="payroll-card"
+                    onClick={() => setSelectedPayroll(payroll)}
+                  >
+                    <div className="payroll-card-header">
+                      <h3>{payroll.dateString}</h3>
+                      <span className="status-badge pending">Pending</span>
+                    </div>
+                    <div className="payroll-card-content">
+                      <div className="payroll-info">
+                        <span className="label">Created by:</span>
+                        <span className="value">{payroll.createdBy}</span>
+                      </div>
+                      <div className="payroll-info">
+                        <span className="label">Workers:</span>
+                        <span className="value">{payroll.data.workers.length}</span>
+                      </div>
+                      <div className="payroll-info">
+                        <span className="label">Total Amount:</span>
+                        <span className="value">₱{payroll.data.totals.netTotal.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="payroll-card-actions">
+                      <span className="review-text">Click to Review & Approve</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Past History Tab */}
+        {activeTab === 'history' && (
+          <div className="payroll-tab-content">
+            {approvedPayrolls.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">
+                  <svg width="60" height="60" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M9,20.42L2.79,14.21L4.21,12.79L9,17.58L19.59,7L21,8.41L9,20.42Z"/>
+                  </svg>
+                </div>
+                <h3>No Approved Payrolls</h3>
+                <p>No payroll data has been approved yet.</p>
+              </div>
+            ) : (
+              <div className="payroll-list-grid">
+                {approvedPayrolls.map((payroll) => (
+                  <div
+                    key={payroll.id}
+                    className="payroll-card history-card"
+                    onClick={() => setSelectedPayroll(payroll)}
+                  >
+                    <div className="payroll-card-header">
+                      <h3>{payroll.dateString}</h3>
+                      <span className="status-badge approved">Approved</span>
+                    </div>
+                    <div className="payroll-card-content">
+                      <div className="payroll-info">
+                        <span className="label">Created by:</span>
+                        <span className="value">{payroll.createdBy}</span>
+                      </div>
+                      <div className="payroll-info">
+                        <span className="label">Approved by:</span>
+                        <span className="value">{payroll.data.approvedByName || 'Alice'}</span>
+                      </div>
+                      <div className="payroll-info">
+                        <span className="label">Workers:</span>
+                        <span className="value">{payroll.data.workers.length}</span>
+                      </div>
+                      <div className="payroll-info">
+                        <span className="label">Total Amount:</span>
+                        <span className="value">₱{payroll.data.totals.netTotal.toLocaleString()}</span>
+                      </div>
+                      <div className="payroll-info">
+                        <span className="label">Approved on:</span>
+                        <span className="value">
+                          {payroll.data.approvedAt ? 
+                            new Date(payroll.data.approvedAt).toLocaleDateString() : 
+                            'Unknown'
+                          }
+                        </span>
+                      </div>
+                    </div>
+                    <div className="payroll-card-actions">
+                      <span className="review-text">Click to View Details</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

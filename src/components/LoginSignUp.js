@@ -39,10 +39,14 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
         // Save user data to Firestore
         const db = getFirestore();
         await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
           fullName: name,
+          username: name, // Add username field for compatibility
           email: email,
           phone: phone,
           role: role || 'Employee',
+          type: role || 'Employee', // Add type field for compatibility
+          status: 'Active',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
