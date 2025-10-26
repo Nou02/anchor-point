@@ -313,11 +313,10 @@
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(47, 59, 112, 0.08);
   padding: 16px 12px;
-  min-width: 800px;
-  max-width: none;
   width: 100%;
   margin: 0 auto;
   max-height: 85vh;
+  overflow-x: auto;
   overflow-y: auto;
   margin-bottom: 32px;
 }
@@ -348,6 +347,7 @@
 
 .report-table {
   width: 100%;
+  min-width: 800px;
   border-collapse: collapse;
   border-spacing: 0;
   background: linear-gradient(135deg, #eaf3ff 0%, #f5f7fa 100%);
@@ -357,7 +357,7 @@
   box-shadow: 0 6px 32px rgba(44,62,80,0.10);
   overflow: hidden;
   margin-bottom: 24px;
-  table-layout: fixed;
+  table-layout: auto;
 }
 .report-table th, .report-table td {
   border: none;
@@ -366,6 +366,43 @@
   background: rgba(255,255,255,0.85);
   font-weight: normal;
   transition: background 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Column width optimizations */
+.report-table th:nth-child(1), .report-table td:nth-child(1) { /* No. */
+  width: 60px;
+  min-width: 60px;
+  text-align: center;
+}
+
+.report-table th:nth-child(2), .report-table td:nth-child(2) { /* Vessel */
+  width: 200px;
+  min-width: 150px;
+}
+
+.report-table th:nth-child(3), .report-table td:nth-child(3) { /* Service */
+  width: 150px;
+  min-width: 120px;
+}
+
+.report-table th:nth-child(4), .report-table td:nth-child(4) { /* Control Number */
+  width: 120px;
+  min-width: 100px;
+}
+
+.report-table th:nth-child(5), .report-table td:nth-child(5) { /* Voyage Number */
+  width: 100px;
+  min-width: 80px;
+  text-align: center;
+}
+
+.report-table th:nth-child(6), .report-table td:nth-child(6) { /* Date */
+  width: 120px;
+  min-width: 100px;
+  text-align: center;
 }
 .report-table th {
   font-weight: bold;
@@ -695,12 +732,18 @@
 
 @media (max-width: 1200px) {
   .report-table-container {
-    min-width: 100%;
+    width: 100%;
     overflow-x: auto;
+    padding: 8px 4px;
   }
   
   .report-table {
     min-width: 800px;
+  }
+  
+  .report-table th, .report-table td {
+    padding: 8px 6px;
+    font-size: 0.95rem;
   }
 }
 

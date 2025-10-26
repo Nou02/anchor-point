@@ -49,12 +49,64 @@ export const analyticsService = {
 
   async getVesselsLogData() {
     try {
-      const response = await fetch(`${API_BASE_URL}/excel/vessels-log`);
+      // Fetch Excel file directly from public folder
+      const response = await fetch('/Vessels Log.xlsx');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      return data;
+      
+      const arrayBuffer = await response.arrayBuffer();
+      
+      // Dynamically import xlsx library
+      const XLSX = await import('xlsx');
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      
+      // Process all sheets and combine data
+      let allVesselsData = [];
+      
+      for (const sheetName of workbook.SheetNames) {
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Find the header row (look for 'Vessel' column)
+        let headerRowIndex = -1;
+        for (let i = 0; i < jsonData.length; i++) {
+          if (jsonData[i] && jsonData[i].includes('Vessel')) {
+            headerRowIndex = i;
+            break;
+          }
+        }
+        
+        if (headerRowIndex >= 0 && headerRowIndex < jsonData.length - 1) {
+          const headers = jsonData[headerRowIndex];
+          const dataRows = jsonData.slice(headerRowIndex + 1);
+          
+          const mappedRows = dataRows.map(row => {
+            const obj = {};
+            headers.forEach((header, index) => {
+              if (header) {
+                obj[header] = row[index] || '';
+              }
+            });
+            return obj;
+          }).filter(row => row['Vessel'] && row['Vessel'].trim() !== '');
+          
+          allVesselsData = allVesselsData.concat(mappedRows);
+        }
+      }
+      
+      return {
+        success: true,
+        vessels: allVesselsData.map((vessel, index) => ({
+          date: vessel['Date'] || '',
+          vessel: vessel['Vessel'] || '',
+          voyage: vessel['Voyage Number'] || '',
+          port: vessel['Service'] || '',
+          purpose: vessel['Service'] || '',
+          controlId: vessel['Control Number'] || '',
+          updatedBy: 'system@anchorpoint.com'
+        }))
+      };
     } catch (error) {
       console.error('Error fetching vessels log data:', error);
       return {

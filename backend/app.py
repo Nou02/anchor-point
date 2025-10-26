@@ -210,12 +210,9 @@ def get_crew():
 # ========================
 # Excel utilities & routes
 # ========================
-EXCEL_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
 EXCEL_FILENAME = 'Vessels Log.xlsx'
-EXCEL_PATH = os.path.join(EXCEL_DIR, EXCEL_FILENAME)
-
-# Also save to public folder for Analytics access
-PUBLIC_EXCEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'public', EXCEL_FILENAME)
+# Use only the public folder for Excel file access
+EXCEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'public', EXCEL_FILENAME)
 
 def _load_workbook_or_404(path):
     if not os.path.exists(path):
@@ -274,7 +271,6 @@ def append_excel_row():
 
         ws.append(values)
         wb.save(EXCEL_PATH)
-        wb.save(PUBLIC_EXCEL_PATH)
 
         return jsonify({"success": True, "appended": values, "totalRows": ws.max_row})
     except FileNotFoundError as e:
@@ -373,13 +369,12 @@ def save_report_to_excel():
         # Append the row
         ws.append(row_data)
         
-        # Save the workbook to both locations
+        # Save the workbook to public location
         wb.save(EXCEL_PATH)
-        wb.save(PUBLIC_EXCEL_PATH)
 
         return jsonify({
             "success": True, 
-            "message": f"Report saved to {sheet_name} sheet in both backend and public folders",
+            "message": f"Report saved to {sheet_name} sheet in public folder",
             "sheet": sheet_name,
             "rowNumber": row_number,
             "data": {
@@ -459,9 +454,8 @@ def delete_report_from_excel():
                 "deletedRows": 0
             })
 
-        # Save the workbook to both locations
+        # Save the workbook to public location
         wb.save(EXCEL_PATH)
-        wb.save(PUBLIC_EXCEL_PATH)
 
         return jsonify({
             "success": True, 

@@ -96,6 +96,7 @@ const useExcelData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [availableSheets, setAvailableSheets] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -126,6 +127,9 @@ const useExcelData = () => {
         const arrayBuffer = await response.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
         
+        // Store available sheets for dynamic display
+        setAvailableSheets(workbook.SheetNames);
+        
         // Process all sheets and combine data
         let allMappedRows = [];
         
@@ -148,40 +152,39 @@ const useExcelData = () => {
           const headers = jsonData[headerRowIndex];
           const dataRows = jsonData.slice(headerRowIndex + 1);
           
-          // Convert to objects with proper column mapping
+          // Convert to objects with proper column mapping using dynamic header detection
           const mappedRows = dataRows.map(row => {
             const obj = {};
             
-            // Handle different sheet structures
-            if (sheetName === '2023') {
-              // 2023 structure: No., Vessel, Service (control numbers), ID, Date
-              obj['No'] = row[0] || '';
-              obj['Vessel'] = row[1] || '';
-              obj['Service'] = 'W/MOORING BUOY'; // Default service for 2023
-              obj['Control Number'] = row[2] || ''; // Service column contains control numbers
-              obj['Voyage Number'] = row[3] || ''; // ID column
-              obj['Date'] = row[4] || '';
-            } else if (sheetName === '2024') {
-              // 2024 structure: No., Vessel, Service (empty), Control Number, Voyage Number, Date
-              obj['No'] = row[0] || '';
-              obj['Vessel'] = row[1] || '';
-              obj['Service'] = 'W/MOORING BUOY'; // Default service for 2024
-              obj['Control Number'] = row[3] || '';
-              obj['Voyage Number'] = row[4] || '';
-              obj['Date'] = row[5] || '';
-            } else {
-              // 2025 structure: No., Vessel, Service, Control Number, Voyage Number, Date
-              obj['No'] = row[0] || '';
-              obj['Vessel'] = row[1] || '';
-              obj['Service'] = row[2] || '';
-              obj['Control Number'] = row[3] || '';
-              obj['Voyage Number'] = row[4] || '';
-              obj['Date'] = row[5] || '';
+            // Map columns dynamically based on headers
+            headers.forEach((header, index) => {
+              if (header) {
+                // Normalize column names for consistency
+                let normalizedHeader = header.trim();
+                
+                // Handle different naming conventions
+                if (normalizedHeader === 'ID' || normalizedHeader === 'Voyage ID') {
+                  normalizedHeader = 'Voyage Number';
+                }
+                if (normalizedHeader === 'Control ID' || normalizedHeader === 'Control') {
+                  normalizedHeader = 'Control Number';
+                }
+                if (normalizedHeader === 'Vessel Name' || normalizedHeader === 'Vessel Name') {
+                  normalizedHeader = 'Vessel';
+                }
+                
+                obj[normalizedHeader] = row[index] || '';
+              }
+            });
+            
+            // Set default service if not present
+            if (!obj['Service'] || obj['Service'].trim() === '') {
+              obj['Service'] = 'W/MOORING BUOY';
             }
+            
             return obj;
           });
           
-          console.log(`Sheet ${sheetName}:`, { headers, dataRows: dataRows.length, mappedRows: mappedRows.length });
           allMappedRows = allMappedRows.concat(mappedRows);
         }
         
@@ -226,19 +229,21 @@ const useExcelData = () => {
     setRefreshKey(prev => prev + 1);
   };
 
-  return { rows, loading, error, refreshData };
+  return { rows, loading, error, availableSheets, refreshData };
 };
 
 const AnalyticsContent = ({ refreshData }) => {
-  const { rows, loading, error } = useExcelData();
+  const { rows, loading, error, availableSheets } = useExcelData();
 
   const parsed = useMemo(() => {
     // Attempt to infer date column and normalize rows
     const normalizeDate = (v) => {
       if (!v) return null;
       if (v instanceof Date) return v;
+      
       // Try common formats
       const tryParse = new Date(v);
+      
       if (!isNaN(tryParse.getTime())) return tryParse;
       return null;
     };
@@ -263,13 +268,10 @@ const AnalyticsContent = ({ refreshData }) => {
     };
 
     const mapped = rows.map(r => {
-      console.log('Processing row:', r);
-      
       // Use the actual date from the Excel file
       const dateVal = r['Date'] ?? r.date ?? r['date'] ?? '';
       const dt = normalizeDate(dateVal);
       if (!dt) {
-        console.log('No valid date found for row:', r);
         return null;
       }
       
@@ -287,7 +289,6 @@ const AnalyticsContent = ({ refreshData }) => {
         voyageNumber
       };
       
-      console.log('Mapped result:', result);
       return result;
     }).filter(Boolean);
 
@@ -371,8 +372,11 @@ const AnalyticsContent = ({ refreshData }) => {
             <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>Total Vessels</div>
           </div>
           <div style={{ textAlign: 'center', padding: '20px', background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', borderRadius: '12px', border: '1px solid rgba(34, 197, 94, 0.2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#059669', marginBottom: '8px' }}>{stats.byYear.length}</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#059669', marginBottom: '8px' }}>{availableSheets.length}</div>
             <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>Years Active</div>
+            <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '4px', opacity: 0.8 }}>
+              {availableSheets.sort().join(', ')}
+            </div>
           </div>
           <div style={{ textAlign: 'center', padding: '20px', background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#d97706', marginBottom: '8px' }}>{stats.topServices.length}</div>

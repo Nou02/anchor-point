@@ -1,10 +1,18 @@
 .homepage {
   display: flex;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  height: auto;
+  overflow: visible;
   font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   position: relative;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure no overflow hidden on any homepage elements */
+.homepage * {
+  overflow: visible !important;
 }
 
 /* Hide scrollbar but maintain scroll functionality */
@@ -21,8 +29,9 @@
 .dashboard-container {
   flex: 1;
   position: relative;
-  height: 100vh;
-  overflow-y: auto;
+  min-height: 100vh;
+  height: auto;
+  overflow-y: visible;
   overflow-x: hidden;
   background: transparent;
   /* Hide scrollbar but maintain scroll functionality */
@@ -55,10 +64,17 @@
 * {
   scrollbar-width: none;  /* Firefox */
   -ms-overflow-style: none;  /* IE and Edge */
+  box-sizing: border-box;
 }
 
 *::-webkit-scrollbar {
   display: none;  /* Chrome, Safari, Opera */
+}
+
+/* Reset any default margins and padding that might cause gaps */
+body, html {
+  margin: 0;
+  padding: 0;
 }
 
 /* Background Video with Semi-Transparent Overlay - REMOVED */
@@ -78,10 +94,10 @@
 .dashboard-header {
   position: relative;
   z-index: 2;
-  padding: 40px 20px 30px;
+  padding: 20px 20px 15px;
   color: #1e293b;
   background: transparent;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .header-content {
@@ -104,7 +120,7 @@
 }
 
 .header-time-date .current-time-display {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: 900;
   color: #1e293b;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
@@ -117,7 +133,7 @@
 }
 
 .header-time-date .current-date-display {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #1e293b;
   text-align: right;
@@ -125,18 +141,18 @@
 }
 
 .welcome-title {
-  font-size: 2.4rem;
+  font-size: 2rem;
   font-weight: 800;
-  margin: 0 0 12px 0;
+  margin: 0 0 8px 0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   letter-spacing: -0.02em;
   color: #1e293b;
 }
 
 .system-subtitle {
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 600;
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
   color: #1e293b;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
@@ -153,12 +169,14 @@
   z-index: 2;
   display: flex;
   gap: 24px;
-  padding: 0 24px 32px;
-  height: calc(100vh - 180px);
+  padding: 0 20px 32px;
+  min-height: calc(100vh - 180px);
+  height: auto;
   max-width: 1600px;
   margin: 0 auto;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
+  width: 100%;
 }
 
 /* Medium screens - half browser width */
@@ -166,38 +184,46 @@
   .dashboard-layout {
     gap: 16px;
     padding: 0 16px 24px;
-    max-width: 100%;
-    height: calc(100vh - 160px);
+    max-width: 1400px;
+    min-height: calc(100vh - 120px);
+    height: auto;
+    width: 100%;
   }
   
   .dashboard-content {
     padding: 16px;
-    height: calc(100vh - 160px);
+    min-height: calc(100vh - 120px);
+    height: auto;
   }
   
   .dashboard-container {
     padding: 20px;
-    max-width: 100%;
+    max-width: none;
+  }
+  
+  .dashboard-header {
+    padding: 15px 20px 10px;
+    margin-bottom: 8px;
   }
   
   .welcome-title {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
   
   .system-subtitle {
-    font-size: 1rem;
-  }
-  
-  .header-time-date .current-time-display {
-    font-size: 1.5rem;
-  }
-  
-  .header-time-date .current-date-display {
     font-size: 0.9rem;
   }
   
+  .header-time-date .current-time-display {
+    font-size: 1.3rem;
+  }
+  
+  .header-time-date .current-date-display {
+    font-size: 0.8rem;
+  }
+  
   .analytics-dashboard-container {
-    max-width: 100%;
+    max-width: 1400px;
     margin: 0 auto 16px auto;
   }
   
@@ -206,7 +232,7 @@
   }
   
   .capabilities-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     max-width: 100%;
   }
@@ -244,9 +270,9 @@
 
 .dashboard-container {
   background: transparent;
-  padding: 32px;
+  padding: 16px 12px;
   width: 100%;
-  max-width: 1200px;
+  max-width: none;
   overflow: visible;
   position: relative;
   display: flex;
@@ -325,32 +351,61 @@
 }
 
 .dashboard-sections {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   flex: 1;
-  overflow-y: auto;
-  grid-auto-rows: minmax(280px, auto);
+  overflow: visible;
   padding: 0;
-  height: 100%;
-  /* Hide scrollbar for WebKit browsers */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  height: auto;
+  max-height: none;
+  position: relative;
+  z-index: 201;
+  min-height: auto;
 }
 
-/* Hide scrollbar for dashboard sections */
-.dashboard-sections::-webkit-scrollbar {
-  display: none;
+/* Dashboard sections are now unscrollable */
+
+.chart-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 202;
 }
 
 .dashboard-section {
-  background: transparent;
-  padding: 20px;
+  background: #ffffff;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   min-height: 220px;
-  max-height: 280px;
-  height: 100%;
+  overflow: visible;
+  justify-content: flex-start;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(47, 59, 112, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 203;
+}
+
+/* Specific overflow handling for Top Vessels section */
+.dashboard-section:has(.vessels-list) {
+  overflow: hidden;
+}
+
+
+/* Specific styling for bottom row charts to ensure no overflow hidden */
+.dashboard-section:nth-child(2) .chart-container,
+.dashboard-section:nth-child(2) .performance-summary,
+.dashboard-section:nth-child(2) .forecast-content {
+  overflow: visible !important;
+}
+
+.dashboard-section:nth-child(2) {
+  overflow: visible !important;
 }
 
 /* Removed pseudo-element styling for direct content display */
@@ -359,21 +414,15 @@
 
 .section-title {
   color: #1e293b;
-  font-size: 1.4rem;
-  font-weight: 800;
-  margin: 0 0 24px 0;
-  text-align: center;
-  background: linear-gradient(135deg, #1e293b 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -0.01em;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 0 20px 0;
+  text-align: left;
+  letter-spacing: 0.05em;
   position: relative;
-  padding-bottom: 16px;
+  padding-bottom: 12px;
   flex-shrink: 0;
   text-transform: uppercase;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 .section-title::after {
@@ -387,6 +436,7 @@
   background: linear-gradient(90deg, #2F3B70 0%, #4A90E2 100%);
   border-radius: 1px;
 }
+
 
 /* Information Panel Sections */
 .info-section {
@@ -611,31 +661,148 @@
   justify-content: center;
   align-items: center;
   flex: 1;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: #f8fafc;
   border-radius: 12px;
-  padding: 20px;
-  border: 1px solid rgba(47, 59, 112, 0.08);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.03);
-  min-height: 200px;
-  margin-bottom: 16px;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  min-height: 180px;
+  max-height: 300px;
+  margin-bottom: 8px;
+  overflow: visible;
+  width: 100%;
+  position: relative;
+  z-index: 204;
+}
+
+/* Ensure all chart containers have visible overflow */
+.chart-container * {
+  overflow: visible !important;
 }
 
 .peak-quarter-info {
-  margin-top: 12px;
+  margin-top: 16px;
   padding: 16px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: #f8fafc;
   border-radius: 10px;
   text-align: center;
-  border: 1px solid rgba(47, 59, 112, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
+  min-height: 60px;
+  position: relative;
+  z-index: 205;
+}
+
+.peak-quarter-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  min-height: 60px;
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 .peak-quarter-info p {
-  margin: 8px 0;
-  color: #1a2332;
-  font-size: 1rem;
+  margin: 0;
+  color: #2F3B70;
   font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.monthly-performance-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  min-height: 60px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.monthly-performance-info p {
+  margin: 0;
+  color: #2F3B70;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.service-distribution-list {
+  padding: 16px 0;
+  width: 100%;
+  min-width: 350px;
+}
+
+.service-item {
+  margin-bottom: 16px;
+  width: 100%;
+  min-width: 350px;
+}
+
+.service-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.service-name {
+  font-size: 0.9rem;
+  color: #2F3B70;
+  font-weight: 500;
+}
+
+.service-count {
+  font-weight: bold;
+  color: #2F3B70;
+  font-size: 0.9rem;
+}
+
+.service-progress-bar {
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  width: 100%;
+  min-width: 300px;
+}
+
+.service-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.service-distribution-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  min-height: 60px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.service-distribution-info p {
+  margin: 0;
+  color: #2F3B70;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .vessels-list {
@@ -643,9 +810,10 @@
   flex-direction: column;
   gap: 12px;
   flex: 1;
-  overflow-y: auto;
-  max-height: 300px;
+  overflow: hidden;
+  height: 246px;
 }
+
 
 .vessel-item {
   display: flex;
@@ -653,10 +821,12 @@
   padding: 16px;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border-radius: 12px;
-  transition: all 0.3s ease;
   border: 1px solid rgba(47, 59, 112, 0.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
+  min-height: 70px;
+  max-height: 70px;
+  overflow: hidden;
 }
 
 .vessel-item:hover {
@@ -671,16 +841,16 @@
 }
 
 .rank-number {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%);
   color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700;
+  font-size: 1.1rem;
   border: 2px solid rgba(47, 59, 112, 0.1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -699,13 +869,13 @@
 .vessel-name {
   font-weight: 700;
   color: #1a2332;
-  font-size: 1.1rem;
-  margin-bottom: 6px;
+  font-size: 1.2rem;
+  margin-bottom: 8px;
 }
 
 .vessel-count {
   color: #4A90E2;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -714,13 +884,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 16px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: #f8fafc;
   border-radius: 10px;
-  border: 1px solid rgba(47, 59, 112, 0.08);
+  border: 1px solid #e2e8f0;
   font-size: 0.9rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  min-height: 60px;
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 .performance-summary p {
@@ -891,7 +1064,7 @@
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .forecast-content::before {
@@ -1494,17 +1667,24 @@
 /* Main Homepage Container */
 .homepage-main-content {
   flex: 1;
-  height: 100vh;
+  min-height: 100vh;
+  height: auto;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0;
+  padding: 0 0 40px 0;
   margin: 0;
+  margin-left: 250px;
+  position: relative;
+  left: 0;
 }
 
 /* Medium screens - half browser width */
 @media (max-width: 1200px) {
   .homepage-main-content {
-    padding: 0;
+    margin-left: 250px;
+    padding: 0 0 40px 0;
+    min-height: 100vh;
+    height: auto;
   }
 }
 
@@ -1516,15 +1696,16 @@
 /* Analytics Dashboard Container */
 .analytics-dashboard-container {
   position: relative;
-  z-index: 2;
+  z-index: 200;
   width: 100%;
-  max-width: 1400px;
-  padding: 0;
+  max-width: 1600px;
+  padding: 10px 20px 20px 20px;
   background: transparent;
   display: block;
   visibility: visible;
   overflow: visible;
-  margin: 0 auto 20px auto;
+  margin: 0 auto;
+  min-height: auto;
 }
 
 /* Hide scrollbar for analytics dashboard */
@@ -1535,15 +1716,17 @@
 /* System Capabilities Main Container */
 .system-capabilities-main-container {
   position: relative;
-  z-index: 30;
-  margin: 0 auto;
-  padding: 0;
-  max-width: 1400px;
+  z-index: 1;
+  margin: 60px auto 0 auto;
+  padding: 40px 20px;
+  max-width: 1600px;
   width: 100%;
-  background: transparent;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   display: block;
   visibility: visible;
   overflow: visible;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Hide scrollbar for system capabilities */
@@ -1564,7 +1747,7 @@
 /* System Capabilities Content */
 .system-capabilities-content {
   position: relative;
-  z-index: 31;
+  z-index: 2;
   background: transparent;
   display: block;
   visibility: visible;
@@ -1578,7 +1761,7 @@
   margin-left: auto;
   margin-right: auto;
   position: relative;
-  z-index: 31;
+  z-index: 3;
   background: transparent;
   display: block;
   visibility: visible;
@@ -1586,24 +1769,22 @@
 
 .capabilities-title {
   text-align: center;
-  font-size: 2.8rem;
-  font-weight: 800;
+  font-size: 1.8rem;
+  font-weight: 700;
   color: #1e293b;
-  margin-bottom: 60px;
+  margin-bottom: 20px;
   position: relative;
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  letter-spacing: -0.02em;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+  letter-spacing: -0.01em;
 }
 
 .capabilities-title::after {
   content: '';
   position: absolute;
-  bottom: -20px;
+  bottom: -12px;
   left: 50%;
   transform: translateX(-50%);
-  width: 80px;
-  height: 4px;
+  width: 60px;
+  height: 3px;
   background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
   border-radius: 2px;
 }
@@ -1611,9 +1792,9 @@
 .capabilities-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-bottom: 20px;
-  max-width: 1200px;
+  gap: 12px;
+  margin-bottom: 16px;
+  max-width: 1000px;
   margin-left: auto;
   margin-right: auto;
   padding: 0 20px;
@@ -1621,9 +1802,9 @@
 
 .capability-card {
   background: transparent;
-  padding: 24px;
+  padding: 12px;
   position: relative;
-  z-index: 32;
+  z-index: 4;
   display: block;
   visibility: visible;
   overflow: visible;
@@ -1632,42 +1813,38 @@
 /* Removed pseudo-element and hover effects for direct content display */
 
 .capability-icon {
-  width: 72px;
-  height: 72px;
+  width: 48px;
+  height: 48px;
   background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  border-radius: 20px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  margin-bottom: 24px;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+  margin-bottom: 12px;
+  box-shadow: 0 3px 8px rgba(59, 130, 246, 0.2);
   transition: all 0.3s ease;
 }
 
 /* Removed capability icon hover effects for direct content display */
 
 .capability-title {
-  font-size: 1.5rem;
-  font-weight: 800;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: #1e293b;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   text-align: left;
   line-height: 1.3;
   letter-spacing: -0.01em;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 .capability-description {
   color: #475569;
-  font-size: 1rem;
-  line-height: 1.7;
-  margin-bottom: 24px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin-bottom: 12px;
   text-align: left;
   font-weight: 500;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.05));
 }
 
 .capability-features {
@@ -1694,7 +1871,7 @@
 /* Responsive Design */
 @media (max-width: 1200px) {
   .capabilities-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 24px;
   }
   
@@ -1706,10 +1883,11 @@
 @media (max-width: 1024px) {
   .dashboard-layout {
     flex-direction: column;
-    height: calc(100vh - 140px);
+    min-height: calc(100vh - 140px);
+    height: auto;
     gap: 20px;
     padding: 0 20px 24px;
-    overflow-y: auto;
+    overflow-y: visible;
   }
   
   .dashboard-sections {
@@ -1749,21 +1927,21 @@
   }
   
   .capabilities-title {
-    font-size: 2.2rem;
-    margin-bottom: 40px;
+    font-size: 1.6rem;
+    margin-bottom: 16px;
   }
   
   .capability-card {
-    padding: 24px;
+    padding: 12px;
   }
   
   .capability-icon {
-    width: 64px;
-    height: 64px;
+    width: 44px;
+    height: 44px;
   }
   
   .capability-title {
-    font-size: 1.3rem;
+    font-size: 1rem;
   }
 }
 
@@ -1773,8 +1951,17 @@
     height: 100vh;
   }
   
+  .homepage-main-content {
+    margin-left: 0;
+    min-height: calc(100vh - 60px);
+    height: auto;
+    margin-top: 60px;
+    padding: 0 0 40px 0;
+  }
+  
   .dashboard-header {
-    padding: 30px 16px 20px;
+    padding: 15px 16px 10px;
+    margin-bottom: 8px;
   }
   
   .header-content {
@@ -1844,7 +2031,8 @@
   }
   
   .chart-container {
-    min-height: 180px;
+    min-height: 160px;
+    padding: 8px;
   }
   
   .right-sidebar {
@@ -1870,22 +2058,22 @@
   }
   
   .capabilities-title {
-    font-size: 1.8rem;
-    margin-bottom: 30px;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
   }
   
   .capabilities-grid {
-    gap: 20px;
+    gap: 16px;
   }
   
   .capability-card {
-    padding: 20px;
+    padding: 14px;
   }
   
   .capability-icon {
-    width: 56px;
-    height: 56px;
-    margin-bottom: 16px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
   }
   
   .capability-title {
@@ -1998,22 +2186,22 @@
   }
   
   .capabilities-title {
-    font-size: 1.5rem;
-    margin-bottom: 24px;
+    font-size: 1.3rem;
+    margin-bottom: 16px;
   }
   
   .capabilities-grid {
-    gap: 16px;
+    gap: 12px;
   }
   
   .capability-card {
-    padding: 16px;
+    padding: 10px;
   }
   
   .capability-icon {
-    width: 48px;
-    height: 48px;
-    margin-bottom: 12px;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
   }
   
   .capability-title {
@@ -2039,8 +2227,7 @@
   }
   
   .dashboard-section {
-    min-height: 280px;
-    max-height: 350px;
+    min-height: 260px;
     padding: 20px;
   }
   
@@ -2048,14 +2235,14 @@
     margin: 10px;
     padding: 16px;
     min-height: 300px;
-    max-height: 400px;
     width: calc(100% - 20px);
   }
   
   .system-capabilities-main-container {
-    margin-top: 20px;
-    margin-bottom: 20px;
-    padding: 20px 16px;
+    position: relative;
+    margin: 40px auto 0 auto;
+    padding: 30px 16px;
+    max-width: 100%;
   }
   
   .capabilities-grid {
@@ -2066,39 +2253,87 @@
 }
 
 /* Additional responsive styles for analytics dashboard */
-@media (max-width: 1200px) {
+@media (max-width: 1600px) {
   .analytics-dashboard-container {
-    max-width: 95vw;
-    margin: 15px auto;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 8px 16px 20px 16px;
   }
   
   .dashboard-sections {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: auto;
+    max-height: none;
+  }
+  
+  .chart-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
   }
   
   .dashboard-section {
     min-height: 200px;
-    max-height: 250px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .analytics-dashboard-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 8px 12px 20px 12px;
+  }
+  
+  .dashboard-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: auto;
+    max-height: none;
+  }
+  
+  .chart-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  
+  .dashboard-section {
+    min-height: 200px;
   }
 }
 
 @media (max-width: 768px) {
   .analytics-dashboard-container {
-    max-width: 98vw;
-    margin: 10px auto;
-    padding: 16px;
-    min-height: 250px;
-    max-height: 350px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 8px 8px 20px 8px;
+    min-height: auto;
   }
   
   .dashboard-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: auto;
+    max-height: none;
+  }
+  
+  .chart-row {
+    grid-template-columns: 1fr;
     gap: 12px;
   }
   
   .dashboard-section {
-    min-height: 180px;
-    max-height: 220px;
-    padding: 16px;
+    min-height: 200px;
+    padding: 12px;
+  }
+  
+  .chart-container {
+    min-height: 120px;
+    padding: 6px;
   }
 }
