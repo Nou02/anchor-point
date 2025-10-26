@@ -1497,13 +1497,14 @@
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px;
+  padding: 0;
+  margin: 0;
 }
 
 /* Medium screens - half browser width */
 @media (max-width: 1200px) {
   .homepage-main-content {
-    padding: 12px;
+    padding: 0;
   }
 }
 

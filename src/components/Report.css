@@ -211,6 +211,11 @@
     url('../assets/apone.png') center center/cover no-repeat fixed;
   min-height: 100vh;
   width: 100vw;
+  overflow-x: auto;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  position: relative;
 }
 .report-main-container {
   background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7));
@@ -673,4 +678,43 @@
   line-height: 1.6;
   max-width: 400px;
   margin: 0 auto;
+}
+
+/* Responsive Design Improvements */
+@media (max-width: 1400px) {
+  .report-page-bg {
+    padding: 5px;
+  }
+  
+  .report-main-container {
+    max-width: 95%;
+    margin: 10px auto;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .report-table-container {
+    min-width: 100%;
+    overflow-x: auto;
+  }
+  
+  .report-table {
+    min-width: 800px;
+  }
+}
+
+@media (max-width: 768px) {
+  .report-page-bg {
+    padding: 2px;
+  }
+  
+  .report-main-container {
+    padding: 15px;
+    margin: 5px auto;
+  }
+  
+  .report-table-container {
+    padding: 8px 4px;
+  }
 }

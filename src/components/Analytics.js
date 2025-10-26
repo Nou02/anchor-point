@@ -7,30 +7,30 @@ const Analytics = () => {
   const { refreshData } = useExcelData();
   
   return (
-    <div className="report-page-bg" style={{ minHeight: '100vh', width: '100vw' }}>
+    <div className="report-page-bg" style={{ minHeight: '100vh', width: '100vw', margin: 0, padding: 0 }}>
       <div style={{
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'flex-start',
         minHeight: '100vh',
-        padding: '20px'
+        padding: '5px'
       }}>
         <div style={{
-          background: 'white',
-          borderRadius: '20px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-          padding: '40px',
-          margin: '40px auto',
-          maxWidth: '1400px',
-          minWidth: '1200px',
-          width: '100%',
-          minHeight: '60vh',
-          maxHeight: 'calc(100vh - 80px)',
-          overflowY: 'auto',
-          overflowX: 'hidden'
+          background: 'rgba(255, 255, 255, 0.95)',
+          borderRadius: '16px',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 24px rgba(0, 0, 0, 0.1)',
+          padding: '20px',
+          margin: '10px',
+          maxWidth: 'calc(100vw - 20px)',
+          minWidth: '800px',
+          width: 'calc(100vw - 20px)',
+          height: 'calc(100vh - 20px)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ marginTop: 0, color: '#2F3B70' }}>Analytics</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexShrink: 0 }}>
+            <h2 style={{ marginTop: 0, color: '#1e3a8a', fontSize: '1.8rem', fontWeight: '800' }}>Analytics Dashboard</h2>
             <button
               onClick={() => {
                 // Force refresh by clearing any cached data and reloading
@@ -362,25 +362,25 @@ const AnalyticsContent = ({ refreshData }) => {
   );
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', flex: 1, overflow: 'hidden' }}>
       {/* Key Performance Indicators */}
       <Card title="Key Performance Indicators" style={{ gridColumn: '1 / -1' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', padding: '20px' }}>
-          <div style={{ textAlign: 'center', padding: '15px', background: '#f8f9fa', borderRadius: '8px' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2F3B70' }}>{stats.total}</div>
-            <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>Total Vessels</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', padding: '20px' }}>
+          <div style={{ textAlign: 'center', padding: '20px', background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', borderRadius: '12px', border: '1px solid rgba(30, 58, 138, 0.1)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1e3a8a', marginBottom: '8px' }}>{stats.total}</div>
+            <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>Total Vessels</div>
           </div>
-          <div style={{ textAlign: 'center', padding: '15px', background: '#e8f5e8', borderRadius: '8px' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#28a745' }}>{stats.byYear.length}</div>
-            <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>Years Active</div>
+          <div style={{ textAlign: 'center', padding: '20px', background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', borderRadius: '12px', border: '1px solid rgba(34, 197, 94, 0.2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#059669', marginBottom: '8px' }}>{stats.byYear.length}</div>
+            <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>Years Active</div>
           </div>
-          <div style={{ textAlign: 'center', padding: '15px', background: '#fff3cd', borderRadius: '8px' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ffc107' }}>{stats.topServices.length}</div>
-            <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>Service Types</div>
+          <div style={{ textAlign: 'center', padding: '20px', background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#d97706', marginBottom: '8px' }}>{stats.topServices.length}</div>
+            <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>Service Types</div>
           </div>
-          <div style={{ textAlign: 'center', padding: '15px', background: '#d1ecf1', borderRadius: '8px' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#17a2b8' }}>{stats.topVessels.length}</div>
-            <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>Unique Vessels</div>
+          <div style={{ textAlign: 'center', padding: '20px', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', borderRadius: '12px', border: '1px solid rgba(14, 165, 233, 0.2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#0284c7', marginBottom: '8px' }}>{stats.topVessels.length}</div>
+            <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>Unique Vessels</div>
           </div>
         </div>
       </Card>
@@ -388,13 +388,13 @@ const AnalyticsContent = ({ refreshData }) => {
       {/* Vessel Operations Overview */}
       <Card title="Vessel Operations Overview">
         <div style={{ padding: '20px' }}>
-          <div style={{ marginBottom: '20px' }}>
-            <h4 style={{ color: '#2F3B70', marginBottom: '10px' }}>Peak Quarter</h4>
+          <div style={{ marginBottom: '16px' }}>
+            <h4 style={{ color: '#2F3B70', marginBottom: '5px', fontSize: '0.9rem' }}>Peak Quarter</h4>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
               <div style={{ width: '60px', fontSize: '0.9rem', color: '#6c757d' }}>
                 {Object.keys(stats.byQuarter).reduce((a, b) => stats.byQuarter[a] > stats.byQuarter[b] ? a : b)}
               </div>
-              <div style={{ flex: 1, height: '20px', background: '#e9ecef', borderRadius: '10px', margin: '0 10px', overflow: 'hidden' }}>
+              <div style={{ flex: 1, height: '12px', background: '#e9ecef', borderRadius: '6px', margin: '0 10px', overflow: 'hidden' }}>
                 <div style={{ 
                   height: '100%', 
                   background: 'linear-gradient(90deg, #2F3B70, #4a6fa5)', 
@@ -412,7 +412,7 @@ const AnalyticsContent = ({ refreshData }) => {
               <div style={{ width: '60px', fontSize: '0.9rem', color: '#6c757d' }}>
                 {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][stats.byMonth.indexOf(Math.max(...stats.byMonth))]}
               </div>
-              <div style={{ flex: 1, height: '20px', background: '#e9ecef', borderRadius: '10px', margin: '0 10px', overflow: 'hidden' }}>
+              <div style={{ flex: 1, height: '12px', background: '#e9ecef', borderRadius: '6px', margin: '0 10px', overflow: 'hidden' }}>
                 <div style={{ 
                   height: '100%', 
                   background: 'linear-gradient(90deg, #28a745, #5cb85c)', 

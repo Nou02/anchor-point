@@ -262,49 +262,54 @@ const Report = () => {
   }, []);
 
   return (
-    <div className="report-page-bg" style={{ minHeight: '100vh', width: '100vw', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', padding: '10px' }}>
+    <div className="report-page-bg" style={{ minHeight: '100vh', width: '100vw', overflow: 'auto', margin: 0, padding: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', padding: '0', margin: 0 }}>
         <div style={{
-          background: 'rgba(255, 255, 255, 0.15)',
-          backdropFilter: 'blur(25px)',
-          borderRadius: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.3)',
-          boxShadow: '0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08)',
-          padding: '30px',
-          margin: '20px auto',
-          maxWidth: '1400px',
-          minWidth: '1200px',
-          maxHeight: 'calc(100vh - 60px)',
-          overflow: 'auto',
-          paddingBottom: '30px',
-          position: 'relative'
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '16px',
+          border: '1px solid rgba(255, 255, 255, 0.8)',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 24px rgba(0, 0, 0, 0.1)',
+          padding: '20px',
+          margin: '10px',
+          maxWidth: 'calc(100vw - 20px)',
+          minWidth: '800px',
+          width: 'calc(100vw - 20px)',
+          height: 'calc(100vh - 20px)',
+          overflow: 'hidden',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column'
         }}>
           {/* Report Header Title */}
           <div style={{
             textAlign: 'center',
-            marginBottom: '20px',
-            padding: '10px 0'
+            marginBottom: '24px',
+            padding: '16px 0',
+            flexShrink: 0,
+            background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.05) 0%, rgba(59, 130, 246, 0.05) 50%, rgba(6, 182, 212, 0.05) 100%)',
+            borderRadius: '12px',
+            border: '1px solid rgba(30, 58, 138, 0.1)'
           }}>
             <h1 style={{
-              fontSize: '2.2rem',
+              fontSize: '2rem',
               fontWeight: '800',
               background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
-              margin: '0 0 12px 0',
-              letterSpacing: '0.8px',
+              margin: '0 0 8px 0',
+              letterSpacing: '0.5px',
               textShadow: '0 4px 8px rgba(30, 58, 138, 0.2)',
               filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
             }}>
               Anchor Point Past History Reports
             </h1>
             <p style={{
-              fontSize: '1.1rem',
-              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: '1rem',
+              color: '#64748b',
               margin: '0',
-              fontWeight: '600',
-              textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+              fontWeight: '500',
               letterSpacing: '0.3px'
             }}>
               Comprehensive overview of all maritime operations and transaction history
@@ -313,30 +318,33 @@ const Report = () => {
 
           {/* Year Filter Section */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.2)',
+            background: 'rgba(255, 255, 255, 0.8)',
             backdropFilter: 'blur(20px)',
-            borderRadius: '20px',
-            padding: '20px',
-            border: '1px solid rgba(255, 255, 255, 0.4)',
+            borderRadius: '12px',
+            padding: '16px',
+            border: '1px solid rgba(30, 58, 138, 0.2)',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05)',
             marginBottom: '20px',
-            position: 'relative'
+            position: 'relative',
+            flexShrink: 0
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '16px',
-              flexWrap: 'wrap'
+              gap: '20px',
+              flexWrap: 'wrap',
+              justifyContent: 'space-between',
+              width: '100%'
             }}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                color: 'rgba(255, 255, 255, 0.95)',
+                gap: '12px',
+                color: '#1e3a8a',
                 fontWeight: '700',
                 fontSize: '1.1rem',
-                textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-                letterSpacing: '0.3px'
+                letterSpacing: '0.3px',
+                flexShrink: 0
               }}>
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M19,3H18V1H16V3H8V1H6V3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M19,19H5V8H19V19Z"/>
@@ -348,7 +356,9 @@ const Report = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                flexWrap: 'wrap'
+                flexWrap: 'wrap',
+                flex: '1',
+                justifyContent: 'center'
               }}>
                 <div style={{
                   display: 'flex',
@@ -369,7 +379,7 @@ const Report = () => {
                       padding: '8px 12px',
                       border: '2px solid #e5e7eb',
                       borderRadius: '8px',
-                      fontSize: '0.8rem',
+                      fontSize: '0.9rem',
                       color: '#374151',
                       background: 'white',
                       transition: 'all 0.3s ease',
@@ -419,12 +429,14 @@ const Report = () => {
                 gap: '8px',
                 color: '#6b7280',
                 fontSize: '0.9rem',
-                fontWeight: '500'
+                fontWeight: '500',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}>
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
                 </svg>
-                Showing {filteredTransactions.length} of {allTransactions.length} records
+                <span>Showing {filteredTransactions.length} of {allTransactions.length} records</span>
                 {yearFilter && (
                   <span style={{ color: '#1e40af', fontWeight: '600' }}>
                     for {yearFilter}
@@ -436,14 +448,18 @@ const Report = () => {
 
           {/* Report Content Container */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.2)',
+            background: 'rgba(255, 255, 255, 0.9)',
             backdropFilter: 'blur(20px)',
-            borderRadius: '20px',
+            borderRadius: '16px',
             padding: '20px',
-            border: '1px solid rgba(255, 255, 255, 0.4)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05)',
-            marginBottom: '30px',
-            position: 'relative'
+            border: '1px solid rgba(30, 58, 138, 0.2)',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08)',
+            marginBottom: '0',
+            position: 'relative',
+            flex: 1,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             {isLoadingTransactions ? (
               <div style={{
@@ -507,35 +523,39 @@ const Report = () => {
               </div>
             ) : transactions.length > 0 ? (
               <div style={{
-                background: 'rgba(255, 255, 255, 0.25)',
+                background: 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(15px)',
-                borderRadius: '20px',
-                border: '1px solid rgba(255, 255, 255, 0.5)',
+                borderRadius: '12px',
+                border: '1px solid rgba(30, 58, 138, 0.2)',
                 overflow: 'hidden',
                 boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08)',
-                position: 'relative'
+                position: 'relative',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column'
               }}>
                 {/* Table Header */}
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr 1fr',
-                  background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.9) 0%, rgba(59, 130, 246, 0.9) 50%, rgba(6, 182, 212, 0.9) 100%)',
+                  background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
                   backdropFilter: 'blur(10px)',
                   color: 'white',
-                  fontWeight: '800',
+                  fontWeight: '700',
                   fontSize: '0.85rem',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.8px',
+                  letterSpacing: '0.5px',
                   position: 'relative',
                   zIndex: 2,
-                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                  flexShrink: 0
                 }}>
                   <div style={{ 
-                    padding: '12px 10px', 
+                    padding: '12px 8px', 
                     borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '6px'
                   }}>
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,5V7H5V5H19M5,19V9H19V19H5Z"/>
@@ -543,11 +563,11 @@ const Report = () => {
                     Date
                   </div>
                   <div style={{ 
-                    padding: '12px 10px', 
+                    padding: '12px 8px', 
                     borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '6px'
                   }}>
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
@@ -555,11 +575,11 @@ const Report = () => {
                     Vessel
                   </div>
                   <div style={{ 
-                    padding: '12px 10px', 
+                    padding: '12px 8px', 
                     borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '6px'
                   }}>
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
@@ -567,11 +587,11 @@ const Report = () => {
                     Voyage
                   </div>
                   <div style={{ 
-                    padding: '12px 10px', 
+                    padding: '12px 8px', 
                     borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '6px'
                   }}>
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
@@ -579,11 +599,11 @@ const Report = () => {
                     Port
                   </div>
                   <div style={{ 
-                    padding: '12px 10px', 
+                    padding: '12px 8px', 
                     borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '6px'
                   }}>
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
@@ -591,11 +611,11 @@ const Report = () => {
                     Purpose
                   </div>
                   <div style={{ 
-                    padding: '12px 10px', 
+                    padding: '12px 8px', 
                     borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '6px'
                   }}>
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
@@ -603,10 +623,10 @@ const Report = () => {
                     Control ID
                   </div>
                   <div style={{ 
-                    padding: '12px 10px',
+                    padding: '12px 8px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '6px'
                   }}>
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
@@ -631,7 +651,7 @@ const Report = () => {
                       borderRight: '1px solid #f1f5f9',
                       color: 'rgba(255, 255, 255, 0.95)',
                       fontWeight: '600',
-                      fontSize: '0.95rem',
+                      fontSize: '0.9rem',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px'
@@ -693,7 +713,7 @@ const Report = () => {
                     <div style={{ 
                       padding: '10px 8px',
                       color: '#6b7280',
-                      fontSize: '0.8rem',
+                      fontSize: '0.9rem',
                       fontWeight: '400',
                       display: 'flex',
                       alignItems: 'center',
@@ -708,7 +728,7 @@ const Report = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: 'white',
-                        fontSize: '0.8rem',
+                        fontSize: '0.9rem',
                         fontWeight: '600',
                         flexShrink: 0
                       }}>
