@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './Homepage.css';
 import Scheduling from './Scheduling';
 import Report from './Report';
-import Payroll from './Payroll';
+import Payroll from './UpdatedPayroll';
 import Sidebar from './Sidebar';
 import InfoContent from './InfoContent';
 import NotificationContent from './NotificationContent';
