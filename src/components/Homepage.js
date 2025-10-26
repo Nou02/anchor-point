@@ -197,6 +197,25 @@ const Homepage = () => {
     fetchRegisteredUsers();
   }, []);
 
+  // Set initial menu for workers when user profile is loaded
+  useEffect(() => {
+    if (userProfile) {
+      const displayName = userProfile.fullName || '';
+      const isCarla = displayName === 'Carla Dela Peña' || 
+                     displayName === 'Carla' ||
+                     (displayName && displayName.toLowerCase().includes('carla'));
+      const isAlice = displayName === 'Alice Margaretha Santos' || 
+                     displayName === 'Alice' ||
+                     (displayName && displayName.toLowerCase().includes('alice'));
+      const isWorker = !isCarla && !isAlice;
+      
+      // If worker and current menu is 'home', set to 'scheduling'
+      if (isWorker && activeMenu === 'home') {
+        setActiveMenu('scheduling');
+      }
+    }
+  }, [userProfile, activeMenu]);
+
   // Fetch vessel data from Excel file
   useEffect(() => {
     const fetchVesselData = async () => {
@@ -532,9 +551,8 @@ const Homepage = () => {
         { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
       ];
     } else if (isWorker) {
-      // Workers: Only Home, Scheduling, and Payroll (no Reports, no Analytics)
+      // Workers: Only Scheduling and Payroll (no Home, no Reports, no Analytics)
       return [
-        ...baseMenu,
         { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
         { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
       ];
@@ -564,8 +582,9 @@ const Homepage = () => {
     const hasAccess = menuItems.some(item => item.id === activeMenu);
     
     if (!hasAccess) {
-      // Redirect to home if user doesn't have access to the requested section
-      setActiveMenu('home');
+      // Redirect to first available menu item if user doesn't have access to the requested section
+      const firstMenuItem = menuItems.length > 0 ? menuItems[0].id : 'home';
+      setActiveMenu(firstMenuItem);
       return (
         <div className="main-content" style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', overflow: 'hidden' }}>
           <video autoPlay loop muted playsInline style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}>
