@@ -4,6 +4,7 @@ import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, update
 import { getAuth } from 'firebase/auth';
 import '../firebase/config'; // Make sure this imports your firebase config
 import { getWeatherForecast, getMockWeatherData } from '../services/weatherService';
+import CrewAvailabilityTable from './CrewAvailabilityTable';
 
 const Scheduling = () => {
   // Initialize Firestore database
@@ -16,8 +17,6 @@ const Scheduling = () => {
   const [userName, setUserName] = useState('');
   const [userFullName, setUserFullName] = useState('');
   const [crewAvailability, setCrewAvailability] = useState({}); // Track availability for each worker
-  const [savedAvailability, setSavedAvailability] = useState({}); // Track saved availability from Firestore
-  const [isSaving, setIsSaving] = useState(false); // Track save button state
   const [assignedWorkers, setAssignedWorkers] = useState({}); // Track assigned workers for each appointment
   const [currentDateIndex, setCurrentDateIndex] = useState(0); // Track which selected date is being processed
   const [isInitialLoad, setIsInitialLoad] = useState(true); // Flag to prevent saving during initial load
@@ -251,45 +250,20 @@ const Scheduling = () => {
     setSavedEntries(entries);
   };
 
-  // Helper to build availability document ID
-  const buildAvailabilityDocId = (dateObj) => {
-    const month = dateObj.getMonth() + 1;
-    const day = dateObj.getDate();
-    const year = dateObj.getFullYear();
-    return `availabilityId(${month}, ${day}, ${year})`;
-  };
-
-  // Save selected dates to Firebase
-  const saveSelectedDatesToFirebase = async (dates) => {
+  // Fetch saved availability from Firestore
+  const fetchSavedAvailability = async () => {
     const db = getFirestore();
-    const auth = getAuth();
-    const user = auth.currentUser;
-    
-    if (!user) {
-      console.log('No user logged in, skipping Firebase save');
-      return;
-    }
-    
     try {
-      const userId = user.uid;
-      const userEmail = user.email;
-      
-      // Convert dates to ISO strings for storage
-      const datesData = {
-        selectedDates: dates.map(date => date.toISOString()),
-        userId: userId,
-        userEmail: userEmail,
-        lastUpdated: new Date().toISOString(),
-        updatedBy: userEmail
-      };
-      
-      // Save to user's selected dates document
-      const docRef = doc(db, 'selectedDates', userId);
-      await setDoc(docRef, datesData, { merge: true });
-      
-      console.log('Selected dates saved to Firebase for user:', userEmail);
-    } catch (error) {
-      console.error('Error saving selected dates to Firebase:', error);
+      const today = new Date();
+      const availabilityDocName = buildAvailabilityDocId(today);
+      const docRef = doc(db, 'availability', availabilityDocName);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        setCrewAvailability(data);
+      }
+    } catch (err) {
+      console.log('Error fetching saved availability:', err);
     }
   };
 
@@ -346,51 +320,34 @@ const Scheduling = () => {
     return validDates;
   };
 
-  // Fetch saved availability from Firestore
-  const fetchSavedAvailability = async () => {
-    const db = getFirestore();
+  // Save selected dates to Firebase
+  const saveSelectedDatesToFirebase = async (dates) => {
+    const user = getAuth().currentUser;
+    if (!user) {
+      console.log('No user logged in, cannot save selected dates');
+      return;
+    }
+
     try {
-      const today = new Date();
-      const availabilityDocName = buildAvailabilityDocId(today);
-      const docRef = doc(db, 'availability', availabilityDocName);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        setSavedAvailability(data);
-        setCrewAvailability(data);
-      }
-    } catch (err) {
-      console.log('Error fetching saved availability:', err);
+      const db = getFirestore();
+      const userId = user.uid;
+      const docRef = doc(db, 'selectedDates', userId);
+      
+      // Convert Date objects to ISO strings for storage
+      const datesToSave = dates.map(date => date.toISOString());
+      
+      await setDoc(docRef, {
+        selectedDates: datesToSave,
+        lastUpdated: new Date().toISOString(),
+        userId: userId
+      }, { merge: true });
+      
+      console.log('Selected dates saved to Firebase for user:', user.email);
+    } catch (error) {
+      console.error('Error saving selected dates to Firebase:', error);
     }
   };
 
-  // Save availability to Firestore
-  const handleSaveAvailability = async () => {
-    setIsSaving(true);
-    const db = getFirestore();
-    const auth = getAuth();
-    const user = auth.currentUser;
-    
-    try {
-      const today = new Date();
-      const availabilityDocName = buildAvailabilityDocId(today);
-      
-      const data = {
-        ...crewAvailability,
-        savedBy: user ? user.email : 'guest',
-        savedAt: new Date().toISOString(),
-        date: today.toISOString()
-      };
-      
-      await setDoc(doc(db, 'availability', availabilityDocName), data, { merge: true });
-      setSavedAvailability(data);
-      alert('Availability saved successfully!');
-    } catch (err) {
-      alert('Error saving availability: ' + err.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   // Mark appointment as done
   const handleDoneAppointment = async (id) => {
@@ -719,56 +676,6 @@ const Scheduling = () => {
     }
   };
 
-  // Handle crew availability toggle - only Alice can change availability
-  const handleAvailabilityToggle = async (workerName, dayIndex) => {
-    // Only allow Alice to change availability (Alice now has full control over scheduling)
-    if (!isAlice()) {
-      alert('Only Alice can change worker availability.');
-      return;
-    }
-
-    const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
-    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
-    const dayKey = dayNames[dayIndex];
-    
-    // Update local state
-    setCrewAvailability(prev => {
-      const currentAvailability = prev[workerKey] || {};
-      return {
-        ...prev,
-        [workerKey]: {
-          ...currentAvailability,
-          [dayKey]: !currentAvailability[dayKey] // Toggle availability
-        }
-      };
-    });
-
-    // Immediately save to database
-    try {
-      const today = new Date();
-      const availabilityDocName = buildAvailabilityDocId(today);
-      const updatedAvailability = {
-        ...crewAvailability,
-        [workerKey]: {
-          ...crewAvailability[workerKey],
-          [dayKey]: !crewAvailability[workerKey]?.[dayKey]
-        }
-      };
-
-      const data = {
-        ...updatedAvailability,
-        lastUpdated: new Date().toISOString(),
-        updatedBy: 'Alice'
-      };
-
-      await setDoc(doc(db, 'availability', availabilityDocName), data, { merge: true });
-      setSavedAvailability(data);
-      console.log('Availability updated and saved to database');
-    } catch (err) {
-      console.error('Error saving availability:', err);
-      alert('Error saving availability: ' + err.message);
-    }
-  };
 
   // Get available workers for a specific date
   const getAvailableWorkers = (date) => {
@@ -777,6 +684,8 @@ const Scheduling = () => {
     const dayKey = dayNames[dayIndex];
     
     const workers = [
+      'Alice Margaretha Santos',
+      'Carla Dela Peña',
       'Bryan Matthew Cruz',
       'David Emmanuel Reyes',
       'Junnel, Cusi',
@@ -854,97 +763,6 @@ const Scheduling = () => {
     }
   };
 
-  // Check if current user can edit a specific worker's availability
-  const canEditWorkerAvailability = (workerName) => {
-    // Only Alice can change worker availability
-    return isAlice();
-  };
-
-  // Check if a worker row corresponds to the current logged-in user
-  const isCurrentUserRow = (workerName) => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    const userEmail = user ? user.email : '';
-    const matchName = userFullName || userName;
-    
-    const workerNameLower = workerName.toLowerCase();
-    const matchNameLower = matchName.toLowerCase();
-    const userEmailLower = userEmail.toLowerCase();
-    
-    // Check for exact name match
-    if (workerNameLower === matchNameLower) return true;
-    
-    // Check for partial name match
-    const workerNameParts = workerNameLower.split(/[\s,]+/);
-    const matchNameParts = matchNameLower.split(/[\s,]+/);
-    
-    for (const workerPart of workerNameParts) {
-      for (const matchPart of matchNameParts) {
-        if (workerPart === matchPart && workerPart.length > 2) return true;
-      }
-    }
-    
-    // Check email matches
-    if (userEmailLower.includes(workerNameLower.replace(/[\s,]+/g, ''))) return true;
-    
-    const emailUsername = userEmail.split('@')[0].toLowerCase();
-    if (workerNameLower.includes(emailUsername)) return true;
-    
-    return false;
-  };
-
-  // Check if Alice can edit a specific worker's availability (Alice has full control)
-  const canAliceEditWorkerAvailability = (workerName) => {
-    // Alice has full control over all worker availability
-    return isAlice();
-  };
-
-  // Get availability status for a worker and day
-  const getAvailabilityStatus = (workerName, dayIndex) => {
-    const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
-    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
-    const dayKey = dayNames[dayIndex];
-    
-    const workerAvailability = crewAvailability[workerKey] || {};
-    const isAvailable = workerAvailability[dayKey] !== false; // Default to available (true) unless explicitly set to false
-    
-    // Check if this day has passed
-    const today = new Date();
-    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const isPastDay = dayIndex < currentDay;
-    
-    // Check if worker is assigned to any appointments on this day
-    const isAssignedToAppointment = checkIfWorkerAssignedToAppointment(workerName, dayIndex);
-    
-    // Return null for past days (no highlighting) or the actual availability for current/future days
-    if (isPastDay) return null;
-    if (isAssignedToAppointment) return 'assigned'; // Special status for assigned workers
-    return isAvailable; // true for available, false for unavailable
-  };
-
-  // Check if a worker is assigned to any appointments on a specific day
-  const checkIfWorkerAssignedToAppointment = (workerName, dayIndex) => {
-    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
-    const today = new Date();
-    const currentDay = today.getDay();
-    
-    // Calculate the date for the given day index
-    const targetDate = new Date(today);
-    const daysToAdd = dayIndex - currentDay;
-    targetDate.setDate(today.getDate() + daysToAdd);
-    
-    // Check if any saved entries have this worker assigned on this date
-    return savedEntries.some(entry => {
-      if (!entry.date || !entry.assignedWorkers) return false;
-      
-      const entryDate = new Date(entry.date);
-      const isSameDate = entryDate.getDate() === targetDate.getDate() &&
-                        entryDate.getMonth() === targetDate.getMonth() &&
-                        entryDate.getFullYear() === targetDate.getFullYear();
-      
-      return isSameDate && entry.assignedWorkers.includes(workerName);
-    });
-  };
 
   const dayVesselTypes = getDayVesselTypes();
   const calendarDays = generateCalendarDays();
@@ -955,120 +773,68 @@ return (
     <div className="scheduling-overlay" />
     
     {/* Alice message at the top */}
-    {isAlice() && (
-      <div style={{
-        backgroundColor: '#d4edda',
-        border: '1px solid #c3e6cb',
-        borderRadius: '4px',
-        padding: '4px 8px',
-        margin: '4px 8px',
-        textAlign: 'center',
-        position: 'relative',
-        zIndex: 10
-      }}>
-        <div style={{
-          color: '#155724',
-          fontWeight: '600',
-          fontSize: '0.8rem'
-        }}>
-          Alice - You can change worker availability by clicking on the availability cells
-        </div>
-      </div>
-    )}
 
-    {/* Create Button in Upper Left */}
-    <div className="scheduling-create-section">
-      <div className="create-button-container">
-        <button 
-          className="create-button"
-          onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-        >
-          <span className="create-icon">+</span>
-          Create
-          <span className="dropdown-arrow">▼</span>
-        </button>
-        {showCreateDropdown && (
-          <div className="create-dropdown">
-            <div 
-              className="dropdown-item"
-              onClick={() => {
-                setShowAppointmentModal(true);
-                setShowCreateDropdown(false);
-              }}
-            >
-              Appointment Schedule
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
     
     {/* Calendar header removed */}
 
     {/* Main content area: calendar or table */}
     <div className="scheduling-content">
       {view === 'calendar' ? (
-        <div className="calendar-wrapper" style={{ width: '100%', maxWidth: '1200px' }}>
+        <div className="calendar-wrapper" style={{ width: '100%', maxWidth: '800px' }}>
           <div className="calendar-header">
-            <button 
-              className="nav-arrow left-arrow" 
-              onClick={goToPreviousMonth}
-              aria-label="Previous month"
-            >
-              ←
-            </button>
-            <h2 className="month-year">
-              {monthNames[currentMonth]}, {currentYear}
-            </h2>
-            <button 
-              className="nav-arrow right-arrow" 
-              onClick={goToNextMonth}
-              aria-label="Next month"
-            >
-              →
-            </button>
-          </div>
-          <div className="calendar-grid">
-            {/* Weather Legend */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '4px',
-              marginBottom: '4px',
-              padding: '4px 8px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderRadius: '4px',
-              fontSize: '0.6rem',
-              flexWrap: 'wrap'
-            }}>
-              <span style={{ fontWeight: 'bold', color: '#2F3B70' }}>Weather:</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                <div style={{ width: '6px', height: '6px', background: '#FFD700', borderRadius: '1px' }}></div>
-                <span>Sunny</span>
+            <div className="calendar-header-left">
+              <div className="calendar-title">
+                <div className="calendar-icon">27</div>
+                Calendar
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                <div style={{ width: '6px', height: '6px', background: '#D3D3D3', borderRadius: '1px' }}></div>
-                <span>Cloudy</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                <div style={{ width: '6px', height: '6px', background: '#FFB6C1', borderRadius: '1px' }}></div>
-                <span>Light Rain</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                <div style={{ width: '6px', height: '6px', background: '#FF6B6B', borderRadius: '1px' }}></div>
-                <span>Rain</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                <div style={{ width: '6px', height: '6px', background: '#DC143C', borderRadius: '1px' }}></div>
-                <span>Heavy Rain</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                <div style={{ width: '6px', height: '6px', background: '#8B0000', borderRadius: '1px' }}></div>
-                <span>Storm</span>
+              <button className="today-button">
+                Today
+              </button>
+              <div className="create-button-container">
+                <button 
+                  className="create-button"
+                  onClick={() => setShowCreateDropdown(!showCreateDropdown)}
+                >
+                  <span className="create-icon">+</span>
+                  Create
+                  <span className="dropdown-arrow">▼</span>
+                </button>
+                {showCreateDropdown && (
+                  <div className="create-dropdown">
+                    <div 
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowAppointmentModal(true);
+                        setShowCreateDropdown(false);
+                      }}
+                    >
+                      Appointment Schedule
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            
+            <div className="calendar-navigation">
+              <button 
+                className="nav-arrow left-arrow" 
+                onClick={goToPreviousMonth}
+                aria-label="Previous month"
+              >
+                ←
+              </button>
+              <h2 className="month-year">
+                {monthNames[currentMonth]} {currentYear}
+              </h2>
+              <button 
+                className="nav-arrow right-arrow" 
+                onClick={goToNextMonth}
+                aria-label="Next month"
+              >
+                →
+              </button>
+            </div>
+          </div>
+          <div className="calendar-grid">
             {/* Weekday headers */}
             <div className="weekday-header">
               {['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'].map((day, index) => {
@@ -1206,228 +972,45 @@ return (
               </div>
             )}
           </div>
+          
+          {/* Weather Legend - Below Calendar */}
+          <div className="weather-legend-section">
+            <div className="weather-legend">
+              <span className="weather-legend-title">Weather:</span>
+              <div className="weather-legend-items">
+                <div className="weather-item">
+                  <div className="weather-indicator sunny"></div>
+                  <span className="weather-text">Sunny</span>
+                </div>
+                <div className="weather-item">
+                  <div className="weather-indicator cloudy"></div>
+                  <span className="weather-text">Cloudy</span>
+                </div>
+                <div className="weather-item">
+                  <div className="weather-indicator light-rain"></div>
+                  <span className="weather-text">Light Rain</span>
+                </div>
+                <div className="weather-item">
+                  <div className="weather-indicator rain"></div>
+                  <span className="weather-text">Rain</span>
+                </div>
+                <div className="weather-item">
+                  <div className="weather-indicator heavy-rain"></div>
+                  <span className="weather-text">Heavy Rain</span>
+                </div>
+                <div className="weather-item">
+                  <div className="weather-indicator storm"></div>
+                  <span className="weather-text">Storm</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="crew-availability-table-wrapper">
-          <table className="crew-availability-table">
-            <thead>
-              <tr>
-                <th colSpan="8" style={{ 
-                  textAlign: 'center', 
-                  padding: '24px', 
-                  backgroundColor: '#f8f9fa', 
-                  borderBottom: '2px solid #dee2e6',
-                  fontSize: '1.4rem',
-                  fontWeight: '800',
-                  color: '#2d3e5e',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px'
-                }}>
-                  {(() => {
-                    const today = new Date();
-                    const monthName = today.toLocaleDateString('en-US', { month: 'long' });
-                    const year = today.getFullYear();
-                    
-                    // Calculate current week
-                    const startOfYear = new Date(today.getFullYear(), 0, 1);
-                    const days = Math.floor((today - startOfYear) / (24 * 60 * 60 * 1000));
-                    const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
-                    
-                    return `${monthName} ${year} - Week ${weekNumber}`;
-                  })()}
-                </th>
-              </tr>
-              <tr>
-                <th style={{ 
-                  textAlign: 'left', 
-                  padding: '20px 24px', 
-                  backgroundColor: '#f8f9fa', 
-                  borderBottom: '2px solid #dee2e6',
-                  fontSize: '1.1rem',
-                  fontWeight: '700',
-                  color: '#2d3e5e',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  minWidth: '200px'
-                }}>
-                  Crew
-                </th>
-                {(() => {
-                  const today = new Date();
-                  const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-                  const dayNames = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
-                  
-                  // Calculate the start of the current week (Sunday)
-                  const startOfWeek = new Date(today);
-                  const dayOfWeek = today.getDay();
-                  startOfWeek.setDate(today.getDate() - dayOfWeek);
-                  
-                  return dayNames.map((day, index) => {
-                    const date = new Date(startOfWeek);
-                    date.setDate(startOfWeek.getDate() + index);
-                    const isCurrentDay = index === currentDay;
-                    
-                    return (
-                      <th 
-                        key={day}
-                        className={isCurrentDay ? 'current-day-header' : ''}
-                        style={{ 
-                          textAlign: 'center', 
-                          padding: '20px 16px', 
-                          borderBottom: '2px solid #dee2e6',
-                          fontSize: '1rem',
-                          fontWeight: '700',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
-                          minWidth: '120px'
-                        }}
-                      >
-                        {day}<br />
-                        <span style={{ 
-                          fontSize: '1.2rem', 
-                          fontWeight: '800',
-                          marginTop: '4px',
-                          display: 'block'
-                        }}>
-                          {date.getDate()}
-                        </span>
-                      </th>
-                    );
-                  });
-                })()}
-              </tr>
-            </thead>
-            <tbody>
-              {/* Show ALL workers in the table regardless of login status */}
-              {(() => {
-                // List of all workers
-                const workers = [
-                  { name: 'Alice Margaretha Santos', type: 'Senior Supervisor' },
-                  { name: 'Carla Dela Peña', type: 'Scheduler' },
-                  { name: 'Bryan Matthew Cruz', type: 'Dock Worker' },
-                  { name: 'David Emmanuel Reyes', type: 'Mechanic' },
-                  { name: 'Junnel, Cusi', type: 'Dock Worker' },
-                  { name: 'Aljon, Dipasupil', type: 'Dock Worker' },
-                  { name: 'Phil Allen, Eje', type: 'Dock Worker' },
-                  { name: 'Rhed, Escalon', type: 'Dock Worker' },
-                  { name: 'Fortune, Garcia Jr.', type: 'Dock Worker' },
-                  { name: 'Keith, Javier', type: 'Dock Worker' },
-                  { name: 'Ericson, Mendoza', type: 'Dock Worker' },
-                  { name: 'Alec, Sino-ag', type: 'Dock Worker' },
-                  { name: 'Romeo, Velasquez', type: 'Dock Worker' },
-                  { name: 'Rodel, Maranan', type: 'Dock Worker' },
-                  { name: 'Alloi, Sino-ag', type: 'Dock Worker' },
-                  { name: 'Renzy, Cantos', type: 'Dock Worker' },
-                  { name: 'PJ, Cusi', type: 'Dock Worker' }
-                ];
-                
-                // Get logged-in user's information for highlighting
-                const auth = getAuth();
-                const user = auth.currentUser;
-                const userEmail = user ? user.email : '';
-                const matchName = userFullName || userName;
-                
-                console.log('Debug - Crew Table - matchName:', matchName);
-                console.log('Debug - Crew Table - userEmail:', userEmail);
-                
-                // Get today's day index (0=Sun, 1=Mon, ..., 6=Sat)
-                const todayIdx = new Date().getDay();
-                const dayNames = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
-                
-                // Show all workers in the table
-                return workers.map((worker, idx) => {
-                  const canEdit = canEditWorkerAvailability(worker.name);
-                  const canAliceEdit = canAliceEditWorkerAvailability(worker.name);
-                  const isCurrentUser = isCurrentUserRow(worker.name); // Highlight if it's the current user's row
-                  const finalCanEdit = canEdit || canAliceEdit; // Allow editing if either condition is met
-                  
-                  return (
-                    <tr key={worker.name}>
-                      <td style={{ 
-                        fontWeight: '600', 
-                        padding: '16px 20px',
-                        backgroundColor: isCurrentUser ? '#f0f8ff' : '#f8f9fa',
-                        borderRight: '2px solid #4156a1',
-                        textAlign: 'left',
-                        position: 'sticky',
-                        left: 0,
-                        zIndex: 10
-                      }}>
-                        <div style={{ fontWeight: '600', color: '#2d3e5e' }}>
-                          {worker.name}
-                        </div>
-                        {isCurrentUser && (
-                          <div className="your-row" style={{ 
-                            fontSize: '0.8rem', 
-                            color: '#6c757d', 
-                            fontWeight: '400', 
-                            marginTop: '4px',
-                            fontStyle: 'italic'
-                          }}>
-                            ← Your row
-                          </div>
-                        )}
-                      </td>
-                      {Array(7).fill(null).map((_, i) => {
-                        const availabilityStatus = getAvailabilityStatus(worker.name, i);
-                        const isToday = i === todayIdx;
-                        const isPastDay = i < todayIdx;
-                        
-                        return (
-                          <td 
-                            key={i} 
-                            className={`${finalCanEdit ? "clickable-availability" : "non-clickable"} ${availabilityStatus === true ? "availability-available" : availabilityStatus === false ? "availability-unavailable" : availabilityStatus === 'assigned' ? "availability-assigned" : "availability-past"}`}
-                            style={{ 
-                              textAlign: 'center',
-                              padding: '16px 12px',
-                              borderRadius: '8px',
-                              border: isToday ? '2px solid #2d3e5e' : '1px solid #e0e0e0',
-                              cursor: finalCanEdit && !isPastDay ? 'pointer' : 'default',
-                              transition: 'all 0.2s ease',
-                              fontWeight: '600',
-                              background: availabilityStatus === 'assigned' ? '#2F3B70' : availabilityStatus === true ? '#fff3cd' : availabilityStatus === false ? '#f8d7da' : '#f8f9fa',
-                              color: availabilityStatus === 'assigned' ? 'white' : availabilityStatus === true ? '#856404' : availabilityStatus === false ? '#721c24' : '#6c757d'
-                            }}
-                            onClick={finalCanEdit && !isPastDay ? () => handleAvailabilityToggle(worker.name, i) : undefined}
-                            title={finalCanEdit && !isPastDay ? `Click to mark ${availabilityStatus ? 'unavailable' : 'available'} for ${['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'][i]}` : isPastDay ? 'Past day - no editing allowed' : 'Only Alice can change worker availability'}
-                          >
-                            <div style={{ fontWeight: '700', marginBottom: '4px' }}>
-                              {availabilityStatus === 'assigned' ? 'On Duty' : availabilityStatus === true ? 'Available' : availabilityStatus === false ? 'Not Available' : 'Past Day'}
-                            </div>
-                            {isToday && (
-                              <div className="today-indicator" style={{ 
-                                fontSize: '0.75rem', 
-                                color: availabilityStatus === 'assigned' ? 'white' : availabilityStatus === true ? '#2d3e5e' : '#2d3e5e', 
-                                fontWeight: '700', 
-                                marginTop: '4px',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
-                              }}>
-                                Today
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                });
-              })()}
-            </tbody>
-          </table>
-        </div>
-      )}
-      
-      {/* Save Button - only show in table view */}
-      {view === 'table' && (
-        <div className="save-availability-btn">
-          <button 
-            onClick={handleSaveAvailability}
-            disabled={isSaving}
-          >
-            {isSaving ? 'Saving...' : 'Save Availability'}
-          </button>
-        </div>
+        <CrewAvailabilityTable 
+          crewAvailability={crewAvailability}
+          setCrewAvailability={setCrewAvailability}
+        />
       )}
 
       {/* Navigation buttons - positioned at lower right */}
