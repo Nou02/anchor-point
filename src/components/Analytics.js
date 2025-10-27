@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import './Report.css';
+import './Analytics.css';
 // Using dynamic import for xlsx to handle potential module resolution issues
 let XLSX;
 
@@ -7,81 +7,30 @@ const Analytics = () => {
   const { refreshData } = useExcelData();
   
   return (
-    <div className="report-page-bg" style={{ minHeight: '100vh', width: '100vw', margin: 0, padding: 0 }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        minHeight: '100vh',
-        padding: '5px'
-      }}>
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.95)',
-          borderRadius: '16px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 24px rgba(0, 0, 0, 0.1)',
-          padding: '20px',
-          margin: '10px',
-          maxWidth: 'calc(100vw - 20px)',
-          minWidth: '800px',
-          width: 'calc(100vw - 20px)',
-          height: 'calc(100vh - 20px)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexShrink: 0 }}>
-            <h2 style={{ marginTop: 0, color: '#1e3a8a', fontSize: '1.8rem', fontWeight: '800' }}>Analytics Dashboard</h2>
+    <div className="analytics-page-bg">
+      <div className="analytics-main-container">
+        <div className="analytics-content-wrapper">
+          {/* Analytics Dashboard Header - inside container */}
+          <div className="analytics-header">
+            <h2 className="analytics-title">
+              Analytics Dashboard
+            </h2>
             <button
               onClick={() => {
                 // Force refresh by clearing any cached data and reloading
                 refreshData();
               }}
-              style={{
-                background: '#2F3B70',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '10px 20px',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                boxShadow: '0 2px 8px rgba(47, 59, 112, 0.3)',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = '#1e2a5e';
-                e.target.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = '#2F3B70';
-                e.target.style.transform = 'translateY(0)';
-              }}
+              className="analytics-refresh-btn"
             >
               Refresh Data
             </button>
           </div>
-          <AnalyticsContent refreshData={refreshData} />
+          
+          {/* Dashboard Content Container */}
+          <div className="analytics-scrollable">
+            <AnalyticsContent refreshData={refreshData} />
+          </div>
         </div>
-      </div>
-
-      <div className="report-nav-btns">
-        <button
-          className="report-nav-btn"
-          onClick={() => {
-            localStorage.setItem('activeMenu', 'reports');
-            window.location.reload();
-          }}
-          style={{ opacity: 1 }}
-        >
-          &#8592; Previous
-        </button>
-        <button
-          className="report-nav-btn"
-          style={{ opacity: 0.6, pointerEvents: 'none' }}
-          disabled
-        >
-          Next &#8594;
-        </button>
       </div>
     </div>
   );
@@ -351,388 +300,296 @@ const AnalyticsContent = ({ refreshData }) => {
     return { byMonth, byWeekday, byQuarter, byYear, total: parsed.length, topServices, topVessels };
   }, [parsed]);
 
-  if (loading) return <div style={{ color: '#2F3B70' }}>Loading analytics…</div>;
-  if (error) return <div style={{ color: '#dc3545' }}>Error: {error}</div>;
+  if (loading) return <div className="analytics-loading">Loading analytics…</div>;
+  if (error) return <div className="analytics-error">Error: {error}</div>;
   if (!stats.total) return (
-    <div style={{ textAlign: 'center', padding: '40px' }}>
-      <p style={{ color: '#6c757d' }}>No valid data rows found in Excel file.</p>
-      <p style={{ fontSize: '14px', color: '#666' }}>
+    <div className="analytics-no-data">
+      <p>No valid data rows found in Excel file.</p>
+      <p className="analytics-no-data-subtitle">
         Make sure the Excel file has columns: date, Vessel, Service, Control Number, Voyage number
       </p>
     </div>
   );
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', flex: 1, overflow: 'hidden' }}>
+    <div className="analytics-content-container">
       {/* Key Performance Indicators */}
-      <Card title="Key Performance Indicators" style={{ gridColumn: '1 / -1' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', padding: '20px' }}>
-          <div style={{ textAlign: 'center', padding: '20px', background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', borderRadius: '12px', border: '1px solid rgba(30, 58, 138, 0.1)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1e3a8a', marginBottom: '8px' }}>{stats.total}</div>
-            <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>Total Vessels</div>
+      <div className="analytics-card">
+        <div className="analytics-card-title">
+          Key Performance Indicators
+        </div>
+        <div className="analytics-kpi-grid">
+          <div className="analytics-kpi-item analytics-kpi-item-total">
+            <div className="analytics-kpi-value analytics-kpi-value-total">{stats.total}</div>
+            <div className="analytics-kpi-label">Total Vessels</div>
           </div>
-          <div style={{ textAlign: 'center', padding: '20px', background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', borderRadius: '12px', border: '1px solid rgba(34, 197, 94, 0.2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#059669', marginBottom: '8px' }}>{availableSheets.length}</div>
-            <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>Years Active</div>
-            <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '4px', opacity: 0.8 }}>
+          <div className="analytics-kpi-item analytics-kpi-item-years">
+            <div className="analytics-kpi-value analytics-kpi-value-years">{availableSheets.length}</div>
+            <div className="analytics-kpi-label">Years Active</div>
+            <div className="analytics-kpi-subtitle">
               {availableSheets.sort().join(', ')}
             </div>
           </div>
-          <div style={{ textAlign: 'center', padding: '20px', background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#d97706', marginBottom: '8px' }}>{stats.topServices.length}</div>
-            <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>Service Types</div>
+          <div className="analytics-kpi-item analytics-kpi-item-services">
+            <div className="analytics-kpi-value analytics-kpi-value-services">{stats.topServices.length}</div>
+            <div className="analytics-kpi-label">Service Types</div>
           </div>
-          <div style={{ textAlign: 'center', padding: '20px', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', borderRadius: '12px', border: '1px solid rgba(14, 165, 233, 0.2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#0284c7', marginBottom: '8px' }}>{stats.topVessels.length}</div>
-            <div style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600' }}>Unique Vessels</div>
+          <div className="analytics-kpi-item analytics-kpi-item-vessels">
+            <div className="analytics-kpi-value analytics-kpi-value-vessels">{stats.topVessels.length}</div>
+            <div className="analytics-kpi-label">Unique Vessels</div>
           </div>
         </div>
-      </Card>
+      </div>
 
-      {/* Vessel Operations Overview */}
-      <Card title="Vessel Operations Overview">
-        <div style={{ padding: '20px' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <h4 style={{ color: '#2F3B70', marginBottom: '5px', fontSize: '0.9rem' }}>Peak Quarter</h4>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-              <div style={{ width: '60px', fontSize: '0.9rem', color: '#6c757d' }}>
+      {/* Two Column Layout for Charts */}
+      <div className="analytics-two-column">
+        {/* Vessel Operations Overview */}
+        <div className="analytics-card">
+          <div className="analytics-card-title">
+            Vessel Operations Overview
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <h4 className="analytics-section-header">Peak Quarter</h4>
+            <div className="analytics-progress-container">
+              <div className="analytics-progress-label">
                 {Object.keys(stats.byQuarter).reduce((a, b) => stats.byQuarter[a] > stats.byQuarter[b] ? a : b)}
               </div>
-              <div style={{ flex: 1, height: '12px', background: '#e9ecef', borderRadius: '6px', margin: '0 10px', overflow: 'hidden' }}>
-                <div style={{ 
-                  height: '100%', 
-                  background: 'linear-gradient(90deg, #2F3B70, #4a6fa5)', 
-                  width: `${(Math.max(...Object.values(stats.byQuarter)) / Math.max(...Object.values(stats.byQuarter))) * 100}%`,
-                  borderRadius: '10px'
-                }}></div>
+              <div className="analytics-progress-bar">
+                <div 
+                  className="analytics-progress-fill analytics-progress-fill-quarter"
+                  style={{ width: `${(Math.max(...Object.values(stats.byQuarter)) / Math.max(...Object.values(stats.byQuarter))) * 100}%` }}
+                ></div>
               </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#2F3B70' }}>{Math.max(...Object.values(stats.byQuarter))}</div>
+              <div className="analytics-progress-value analytics-progress-value-quarter">{Math.max(...Object.values(stats.byQuarter))}</div>
             </div>
           </div>
           
-          <div style={{ marginBottom: '20px' }}>
-            <h4 style={{ color: '#2F3B70', marginBottom: '10px' }}>Busiest Month</h4>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-              <div style={{ width: '60px', fontSize: '0.9rem', color: '#6c757d' }}>
+          <div>
+            <h4 className="analytics-section-header">Busiest Month</h4>
+            <div className="analytics-progress-container">
+              <div className="analytics-progress-label">
                 {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][stats.byMonth.indexOf(Math.max(...stats.byMonth))]}
               </div>
-              <div style={{ flex: 1, height: '12px', background: '#e9ecef', borderRadius: '6px', margin: '0 10px', overflow: 'hidden' }}>
-                <div style={{ 
-                  height: '100%', 
-                  background: 'linear-gradient(90deg, #28a745, #5cb85c)', 
-                  width: `${(Math.max(...stats.byMonth) / Math.max(...stats.byMonth)) * 100}%`,
-                  borderRadius: '10px'
-                }}></div>
+              <div className="analytics-progress-bar">
+                <div 
+                  className="analytics-progress-fill analytics-progress-fill-month"
+                  style={{ width: `${(Math.max(...stats.byMonth) / Math.max(...stats.byMonth)) * 100}%` }}
+                ></div>
               </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#28a745' }}>{Math.max(...stats.byMonth)}</div>
+              <div className="analytics-progress-value analytics-progress-value-month">{Math.max(...stats.byMonth)}</div>
             </div>
           </div>
         </div>
-      </Card>
 
-      {/* Service Distribution */}
-      <Card title="Service Distribution">
-        <div style={{ padding: '20px' }}>
+        {/* Service Distribution */}
+        <div className="analytics-card">
+          <div className="analytics-card-title">
+            Service Distribution
+          </div>
           {stats.topServices.slice(0, 5).map((service, index) => (
-            <div key={index} style={{ marginBottom: '15px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                <span style={{ fontSize: '0.9rem', color: '#2F3B70' }}>{service.name}</span>
-                <span style={{ fontWeight: 'bold', color: '#2F3B70' }}>{service.count}</span>
+            <div key={index} className="analytics-service-item">
+              <div className="analytics-service-header">
+                <span className="analytics-service-name">{service.name}</span>
+                <span className="analytics-service-count">{service.count}</span>
               </div>
-              <div style={{ height: '8px', background: '#e9ecef', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ 
-                  height: '100%', 
-                  background: `hsl(${index * 60}, 70%, 50%)`,
-                  width: `${(service.count / stats.topServices[0].count) * 100}%`,
-                  borderRadius: '4px'
-                }}></div>
+              <div className="analytics-service-bar">
+                <div 
+                  className="analytics-service-fill"
+                  style={{ 
+                    background: `hsl(${index * 60}, 70%, 50%)`,
+                    width: `${(service.count / stats.topServices[0].count) * 100}%`
+                  }}
+                ></div>
               </div>
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
-      {/* Yearly Growth */}
-      <Card title="Yearly Growth">
-        <div style={{ padding: '20px' }}>
+      {/* Two Column Layout for More Charts */}
+      <div className="analytics-two-column">
+        {/* Yearly Growth */}
+        <div className="analytics-card">
+          <div className="analytics-card-title">
+            Yearly Growth
+          </div>
           {stats.byYear.map(({ year, count }, index) => (
-            <div key={year} style={{ marginBottom: '15px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                <span style={{ fontSize: '0.9rem', color: '#2F3B70' }}>{year}</span>
-                <span style={{ fontWeight: 'bold', color: '#2F3B70' }}>{count}</span>
+            <div key={year} className="analytics-year-item">
+              <div className="analytics-year-header">
+                <span className="analytics-year-label">{year}</span>
+                <span className="analytics-year-count">{count}</span>
               </div>
-              <div style={{ height: '12px', background: '#e9ecef', borderRadius: '6px', overflow: 'hidden' }}>
-                <div style={{ 
-                  height: '100%', 
-                  background: `linear-gradient(90deg, #17a2b8, #5bc0de)`,
-                  width: `${(count / Math.max(...stats.byYear.map(y => y.count))) * 100}%`,
-                  borderRadius: '6px'
-                }}></div>
+              <div className="analytics-year-bar">
+                <div 
+                  className="analytics-year-fill"
+                  style={{ width: `${(count / Math.max(...stats.byYear.map(y => y.count))) * 100}%` }}
+                ></div>
               </div>
             </div>
           ))}
         </div>
-      </Card>
 
-      {/* Top Vessels */}
-      <Card title="Top Vessels">
-        <div style={{ padding: '20px' }}>
+        {/* Top Vessels */}
+        <div className="analytics-card">
+          <div className="analytics-card-title">
+            Top Vessels
+          </div>
           {stats.topVessels.slice(0, 5).map((vessel, index) => (
-            <div key={index} style={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              padding: '16px 0',
-              borderBottom: index < 4 ? '1px solid #f0f0f0' : 'none',
-              transition: 'all 0.2s ease'
-            }}>
+            <div key={index} className="analytics-vessel-item">
               {/* Rank Number */}
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                background: index === 0 ? '#2F3B70' : '#f5f5f5',
-                color: index === 0 ? 'white' : '#666',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                marginRight: '16px',
-                flexShrink: 0
-              }}>
+              <div className={`analytics-vessel-rank ${index === 0 ? 'analytics-vessel-rank-first' : 'analytics-vessel-rank-other'}`}>
                 {index + 1}
               </div>
 
               {/* Vessel Info */}
-              <div style={{ 
-                flex: 1,
-                minWidth: 0
-              }}>
-                <div style={{ 
-                  fontSize: '1rem', 
-                  fontWeight: '500',
-                  color: '#2F3B70',
-                  marginBottom: '4px',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
-                }}>
+              <div className="analytics-vessel-info">
+                <div className="analytics-vessel-name">
                   {vessel.name}
                 </div>
-                <div style={{ 
-                  fontSize: '0.85rem',
-                  color: '#888'
-                }}>
+                <div className="analytics-vessel-operations">
                   {vessel.count} operations
                 </div>
               </div>
 
               {/* Count Badge */}
-              <div style={{ 
-                background: '#f8f9fa',
-                color: '#2F3B70',
-                padding: '6px 12px',
-                borderRadius: '16px',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                flexShrink: 0
-              }}>
+              <div className="analytics-vessel-badge">
                 {vessel.count}
               </div>
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
-      {/* Predictive Analytics */}
-      <Card title="Predictive Analytics" style={{ gridColumn: '1 / -1' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', padding: '20px' }}>
+      {/* Predictive Analytics - Full Width */}
+      <div className="analytics-card">
+        <div className="analytics-card-title">
+          Predictive Analytics
+        </div>
+        <div className="analytics-predictive-grid">
           {/* Next Quarter Forecast */}
-          <div>
-            <h4 style={{ color: '#2F3B70', marginBottom: '15px' }}>Next Quarter Forecast</h4>
-            <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.9rem', color: '#6c757d' }}>Expected Vessels</span>
-                <span style={{ fontWeight: 'bold', color: '#2F3B70' }}>
+          <div className="analytics-predictive-section">
+            <h4 className="analytics-section-header">Next Quarter Forecast</h4>
+            <div className="analytics-predictive-card analytics-predictive-card-forecast">
+              <div className="analytics-predictive-header">
+                <span className="analytics-predictive-label">Expected Vessels</span>
+                <span className="analytics-predictive-value">
                   {Math.round(stats.total / stats.byYear.length * 1.1)}
                 </span>
               </div>
-              <div style={{ height: '8px', background: '#e9ecef', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ 
-                  height: '100%', 
-                  background: 'linear-gradient(90deg, #28a745, #5cb85c)', 
-                  width: '85%',
-                  borderRadius: '4px'
-                }}></div>
+              <div className="analytics-predictive-bar">
+                <div className="analytics-predictive-fill" style={{ width: '85%' }}></div>
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#6c757d', marginTop: '5px' }}>
+              <div className="analytics-predictive-subtitle">
                 +10% growth projection
               </div>
             </div>
           </div>
 
           {/* Peak Period Prediction */}
-          <div>
-            <h4 style={{ color: '#2F3B70', marginBottom: '15px' }}>Peak Period Prediction</h4>
-            <div style={{ background: '#fff3cd', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.9rem', color: '#6c757d' }}>Predicted Peak Month</span>
-                <span style={{ fontWeight: 'bold', color: '#ffc107' }}>
+          <div className="analytics-predictive-section">
+            <h4 className="analytics-section-header">Peak Period Prediction</h4>
+            <div className="analytics-predictive-card analytics-predictive-card-peak">
+              <div className="analytics-predictive-header">
+                <span className="analytics-predictive-label">Predicted Peak Month</span>
+                <span className="analytics-predictive-value analytics-predictive-value-peak">
                   {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][stats.byMonth.indexOf(Math.max(...stats.byMonth))]}
                 </span>
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+              <div className="analytics-predictive-subtitle">
                 Based on historical patterns
               </div>
             </div>
           </div>
 
           {/* Service Demand Forecast */}
-          <div>
-            <h4 style={{ color: '#2F3B70', marginBottom: '15px' }}>Service Demand Forecast</h4>
-            <div style={{ background: '#d1ecf1', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.9rem', color: '#6c757d' }}>Top Service Demand</span>
-                <span style={{ fontWeight: 'bold', color: '#17a2b8' }}>
+          <div className="analytics-predictive-section">
+            <h4 className="analytics-section-header">Service Demand Forecast</h4>
+            <div className="analytics-predictive-card analytics-predictive-card-service">
+              <div className="analytics-predictive-header">
+                <span className="analytics-predictive-label">Top Service Demand</span>
+                <span className="analytics-predictive-value analytics-predictive-value-service">
                   {stats.topServices[0]?.name || 'N/A'}
                 </span>
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+              <div className="analytics-predictive-subtitle">
                 Expected to remain dominant
               </div>
             </div>
           </div>
 
           {/* Capacity Planning */}
-          <div>
-            <h4 style={{ color: '#2F3B70', marginBottom: '15px' }}>Capacity Planning</h4>
-            <div style={{ background: '#e8f5e8', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.9rem', color: '#6c757d' }}>Recommended Capacity</span>
-                <span style={{ fontWeight: 'bold', color: '#28a745' }}>
+          <div className="analytics-predictive-section">
+            <h4 className="analytics-section-header">Capacity Planning</h4>
+            <div className="analytics-predictive-card analytics-predictive-card-capacity">
+              <div className="analytics-predictive-header">
+                <span className="analytics-predictive-label">Recommended Capacity</span>
+                <span className="analytics-predictive-value analytics-predictive-value-capacity">
                   {Math.round(stats.total / stats.byYear.length * 1.2)} vessels
                 </span>
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+              <div className="analytics-predictive-subtitle">
                 +20% buffer for peak periods
               </div>
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
-      {/* Operational Insights */}
-      <Card title="Operational Insights">
-        <div style={{ padding: '20px' }}>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '20px' 
-          }}>
+      {/* Operational Insights - Full Width */}
+      <div className="analytics-card">
+        <div className="analytics-card-title">
+          Operational Insights
+        </div>
+        <div className="analytics-insights-grid">
             {/* Peak Day Card */}
-            <div style={{ 
-              background: '#f8f9fa', 
-              padding: '20px', 
-              borderRadius: '12px',
-              border: '1px solid #e9ecef',
-              textAlign: 'center'
-            }}>
-              <div style={{ 
-                fontSize: '2.5rem', 
-                fontWeight: 'bold', 
-                color: '#28a745',
-                marginBottom: '8px'
-              }}>
+            <div className="analytics-insight-card analytics-insight-card-peak">
+              <div className="analytics-insight-value analytics-insight-value-peak">
                 {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][stats.byWeekday.indexOf(Math.max(...stats.byWeekday))]}
               </div>
-              <div style={{ 
-                color: '#2F3B70', 
-                fontWeight: '600', 
-                marginBottom: '5px',
-                fontSize: '0.9rem'
-              }}>
+              <div className="analytics-insight-label">
                 Peak Day
               </div>
-              <div style={{ color: '#6c757d', fontSize: '0.8rem' }}>
+              <div className="analytics-insight-subtitle">
                 {Math.max(...stats.byWeekday)} vessels
               </div>
             </div>
 
             {/* Most Active Vessel Card */}
-            <div style={{ 
-              background: '#fff3cd', 
-              padding: '20px', 
-              borderRadius: '12px',
-              border: '1px solid #ffeaa7',
-              textAlign: 'center'
-            }}>
-              <div style={{ 
-                fontSize: '1.1rem', 
-                fontWeight: 'bold', 
-                color: '#2F3B70',
-                marginBottom: '8px',
-                wordBreak: 'break-word'
-              }}>
+            <div className="analytics-insight-card analytics-insight-card-vessel">
+              <div className="analytics-insight-value analytics-insight-value-vessel">
                 {stats.topVessels[0]?.name || 'N/A'}
               </div>
-              <div style={{ 
-                color: '#2F3B70', 
-                fontWeight: '600', 
-                marginBottom: '5px',
-                fontSize: '0.9rem'
-              }}>
+              <div className="analytics-insight-label">
                 Most Active Vessel
               </div>
-              <div style={{ color: '#6c757d', fontSize: '0.8rem' }}>
+              <div className="analytics-insight-subtitle">
                 {stats.topVessels[0]?.count || 0} operations
               </div>
             </div>
 
             {/* Service Efficiency Card */}
-            <div style={{ 
-              background: '#d1ecf1', 
-              padding: '20px', 
-              borderRadius: '12px',
-              border: '1px solid #bee5eb',
-              textAlign: 'center'
-            }}>
-              <div style={{ 
-                fontSize: '1.1rem', 
-                fontWeight: 'bold', 
-                color: '#17a2b8',
-                marginBottom: '8px',
-                wordBreak: 'break-word'
-              }}>
+            <div className="analytics-insight-card analytics-insight-card-service">
+              <div className="analytics-insight-value analytics-insight-value-service">
                 {stats.topServices[0]?.name || 'N/A'}
               </div>
-              <div style={{ 
-                color: '#2F3B70', 
-                fontWeight: '600', 
-                marginBottom: '5px',
-                fontSize: '0.9rem'
-              }}>
+              <div className="analytics-insight-label">
                 Service Efficiency
               </div>
-              <div style={{ color: '#6c757d', fontSize: '0.8rem' }}>
+              <div className="analytics-insight-subtitle">
                 {stats.topServices[0]?.count || 0} operations ({Math.round((stats.topServices[0]?.count || 0) / stats.total * 100)}% of total)
               </div>
             </div>
           </div>
         </div>
-      </Card>
-    </div>
+      </div>
   );
 };
 
-const Card = ({ title, children }) => (
-  <div style={{
-    background: '#fff',
-    borderRadius: '12px',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-    border: '1px solid #e9ecef',
-    padding: '20px'
-  }}>
-    <div style={{ color: '#2F3B70', fontWeight: 700, marginBottom: 12 }}>{title}</div>
+const Card = ({ title, children, style = {} }) => (
+  <div className="analytics-card-component" style={style}>
+    <div className="analytics-card-component-title">
+      {title}
+    </div>
     {children}
   </div>
 );
@@ -742,12 +599,15 @@ const Bar = ({ data }) => {
   return (
     <div>
       {data.map((d, idx) => (
-        <div key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-          <div style={{ width: 80, color: '#6c757d', fontSize: '0.9rem' }}>{d.label}</div>
-          <div style={{ flex: 1, background: '#f8f9fa', height: 12, borderRadius: 6, overflow: 'hidden', border: '1px solid #e9ecef' }}>
-            <div style={{ width: `${(d.value / max) * 100}%`, height: '100%', background: 'linear-gradient(135deg,#2F3B70,#4156a1)', borderRadius: 6 }} />
+        <div key={idx} className="analytics-bar-item">
+          <div className="analytics-bar-label">{d.label}</div>
+          <div className="analytics-bar-container">
+            <div 
+              className="analytics-bar-fill" 
+              style={{ width: `${(d.value / max) * 100}%` }} 
+            />
           </div>
-          <div style={{ width: 50, textAlign: 'right', marginLeft: 8, color: '#2F3B70', fontWeight: 600 }}>{d.value}</div>
+          <div className="analytics-bar-value">{d.value}</div>
         </div>
       ))}
     </div>
@@ -756,11 +616,11 @@ const Bar = ({ data }) => {
 
 const List = ({ data }) => (
   <div>
-    {data.length === 0 && <div style={{ color: '#6c757d' }}>No data</div>}
+    {data.length === 0 && <div className="analytics-list-empty">No data</div>}
     {data.map((d, idx) => (
-      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f3f5' }}>
-        <div style={{ color: '#2F3B70', fontWeight: 600 }}>{d.label}</div>
-        <div style={{ color: '#2F3B70' }}>{d.value}</div>
+      <div key={idx} className="analytics-list-item">
+        <div className="analytics-list-label">{d.label}</div>
+        <div className="analytics-list-value">{d.value}</div>
       </div>
     ))}
   </div>
