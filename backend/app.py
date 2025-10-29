@@ -708,9 +708,9 @@ def get_dashboard_analytics():
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
-    print("🚢 AnchorPoint API Server Starting...")
-    print("📍 Health Check: http://localhost:5000/api/health")
-    print("📋 Available Endpoints:")
+    print("AnchorPoint API Server Starting...")
+    print("Health Check: http://localhost:5000/api/health")
+    print("Available Endpoints:")
     print("   - GET  /api/health")
     print("   - POST /api/login")
     print("   - POST /api/register") 
@@ -718,5 +718,5 @@ if __name__ == '__main__':
     print("   - PUT  /api/users/<user_id>")
     print("   - GET  /api/ships")
     print("   - GET  /api/crew")
-    print("\n🌐 Server will be available at: http://localhost:5000")
+    print("\n Server will be available at: http://localhost:5000")
     app.run(debug=True, host='0.0.0.0', port=5000) 
