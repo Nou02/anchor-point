@@ -1268,7 +1268,7 @@ const Report = () => {
                         {transaction.controlId}
                       </span>
                     </div>
-                  </div>
+                    </div>
                   );
                 })}
                   </div>
