@@ -3,8 +3,6 @@ import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, getDocs 
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import api from '../services/api';
 import './Report.css';
-// Using dynamic import for xlsx to handle potential module resolution issues
-let XLSX;
 
 const Report = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -38,147 +36,114 @@ const Report = () => {
     return () => unsubscribe();
   }, []);
 
-  // Fetch Excel data from the Vessels Log.xlsx file
+  // Fetch vessel data from the backend API
   const fetchExcelData = async (retryCount = 0) => {
     try {
       setLoading(true);
       setError(null);
       
-      // Dynamically import xlsx library
-      if (!XLSX) {
-        XLSX = await import('xlsx');
-      }
+      console.log('Fetching vessel data from backend API...');
+      const response = await api.get('/excel/vessels-log');
       
-      // Fetch Excel file from public folder with cache busting
-      const cacheBuster = `?t=${Date.now()}`;
-      console.log('Fetching Excel file from /Vessels Log.xlsx' + cacheBuster);
-      const response = await fetch('/Vessels Log.xlsx' + cacheBuster);
-      if (!response.ok) {
-        console.error('Failed to fetch Excel file:', response.status, response.statusText);
-        throw new Error(`Failed to fetch Excel file: ${response.status} ${response.statusText}`);
-      }
-      console.log('Excel file fetched successfully, status:', response.status);
-      
-      const arrayBuffer = await response.arrayBuffer();
-      console.log('Excel file loaded, size:', arrayBuffer.byteLength);
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      console.log('Workbook loaded, sheets:', workbook.SheetNames);
-      
-      // Store available sheet names for dropdown
-      console.log('Detected sheets:', workbook.SheetNames);
-      setAvailableSheets(workbook.SheetNames);
-      
-      // Process all sheets and combine data
-      let allMappedRows = [];
-      
-      for (const sheetName of workbook.SheetNames) {
-        console.log(`Processing sheet: ${sheetName}`);
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      if (response.data.success && response.data.vessels) {
+        console.log(`📊 API response: Found ${response.data.vessels.length} vessels`);
         
-        // Debug: Log first few rows of each sheet
-        console.log(`Sheet ${sheetName} - First 3 rows:`, jsonData.slice(0, 3));
-        
-        // Find the header row - look for 'Vessel' column
-        let headerRowIndex = 0; // Start from row 0 (index 0) as headers are in row 1
-        for (let i = 0; i < jsonData.length; i++) {
-          if (jsonData[i] && jsonData[i].includes('Vessel')) {
-            headerRowIndex = i;
-            break;
-          }
-        }
-        
-        console.log(`Sheet ${sheetName} - Found header at row index:`, headerRowIndex);
-        
-        const headers = jsonData[headerRowIndex];
-        const dataRows = jsonData.slice(headerRowIndex + 1);
-        
-        console.log(`Sheet ${sheetName} - Headers:`, headers);
-        console.log(`Sheet ${sheetName} - First data row:`, dataRows[0]);
-        console.log(`Sheet ${sheetName} - Total data rows:`, dataRows.length);
-        console.log(`Sheet ${sheetName} - Raw JSON data:`, jsonData.slice(0, 5));
-        
-        // Convert to objects using actual headers from Excel
-        const mappedRows = dataRows.map((row, rowIndex) => {
-          const obj = {};
-          headers.forEach((header, index) => {
-            if (header) {
-              obj[header] = row[index] || '';
+        // Convert API data to the format expected by the reports page
+        const mappedRows = response.data.vessels.map((vessel, index) => {
+          // Determine sheet name from date
+          let sheetName = 'Unknown';
+          if (vessel.date) {
+            try {
+              const date = new Date(vessel.date);
+              if (!isNaN(date.getTime())) {
+                sheetName = date.getFullYear().toString();
+              }
+            } catch (e) {
+              console.warn('Could not parse date for sheet name:', vessel.date);
             }
-          });
-          
-          // Normalize column names for different sheet structures
-          if (obj['ID'] && !obj['Voyage Number']) {
-            obj['Voyage Number'] = obj['ID'];
-            delete obj['ID'];
           }
           
-          // Add sheet name to each row
-          obj['SheetName'] = sheetName;
+          // Only log problematic entries
+          if (!vessel.vessel || vessel.vessel.trim() === '' || vessel.vessel === 'N/A') {
+            console.log(`⚠️ Problematic vessel entry ${index + 1}:`, {
+              original: vessel,
+              mapped: {
+                'Date': vessel.date || '',
+                'Vessel': vessel.vessel || '',
+                'Voyage Number': vessel.voyage || '',
+                'Service': vessel.purpose || '',
+                'Control Number': vessel.controlId || '',
+                'Vessel Type': vessel.vesselType || 'Local',
+                'SheetName': sheetName
+              }
+            });
+          }
           
-        // Debug first few rows
-        if (rowIndex < 3) {
-          console.log(`Sheet ${sheetName} - Row ${rowIndex + 1} mapped:`, obj);
-          console.log(`Sheet ${sheetName} - Row ${rowIndex + 1} date value:`, obj['Date']);
-        }
-          
-          return obj;
+          return {
+            'Date': vessel.date || '',
+            'Vessel': vessel.vessel || '',
+            'Voyage Number': vessel.voyage || '',
+            'Service': vessel.purpose || '',
+            'Control Number': vessel.controlId || '',
+            'Vessel Type': vessel.vesselType || 'Local',
+            'Time': vessel.time || '',
+            'SheetName': sheetName
+          };
         });
         
-        allMappedRows = allMappedRows.concat(mappedRows);
-      }
-      
-      console.log('Final mapped data sample:', allMappedRows.slice(0, 3));
-      console.log('Total mapped rows:', allMappedRows.length);
-      console.log(`Successfully processed ${workbook.SheetNames.length} sheets:`, workbook.SheetNames);
-      
-      // Check if we have any data with dates
-      const rowsWithDates = allMappedRows.filter(row => row['Date'] && row['Date'].toString().trim() !== '');
-      console.log('Rows with dates:', rowsWithDates.length);
-      console.log('Sample rows with dates:', rowsWithDates.slice(0, 3));
-      
-      // Debug: Check if we're getting any data at all
-      if (allMappedRows.length === 0) {
-        console.error('No data mapped from Excel!');
+        console.log('Mapped rows from API:', mappedRows.slice(0, 3));
+        
+        // Extract available sheet names for dropdown
+        const sheetNames = [...new Set(mappedRows.map(row => row.SheetName))].filter(name => name !== 'Unknown');
+        setAvailableSheets(sheetNames);
+        
+        // Filter out empty rows and invalid data - be more lenient
+        const validRows = mappedRows.filter(row => {
+          const vesselName = row['Vessel'];
+          const isValid = vesselName && 
+                         vesselName.trim() !== '' && 
+                         vesselName !== 'N/A' && 
+                         vesselName.length > 1; // Reduced from 2 to 1
+          
+          if (!isValid) {
+            console.log('❌ Filtering out invalid row:', {
+              vessel: vesselName,
+              date: row['Date'],
+              reason: !vesselName ? 'No vessel name' :
+                      vesselName.trim() === '' ? 'Empty vessel name' :
+                      vesselName === 'N/A' ? 'N/A vessel name' :
+                      vesselName.length <= 1 ? 'Vessel name too short' : 'Unknown'
+            });
+          }
+          
+          return isValid;
+        });
+        
+        console.log(`📊 Data Summary:
+          - Total vessels from API: ${response.data.vessels.length}
+          - Mapped rows: ${mappedRows.length}
+          - Valid rows after filtering: ${validRows.length}
+          - Filtered out: ${mappedRows.length - validRows.length}`);
+        
+        setVesselData(validRows);
+        setLoading(false);
       } else {
-        console.log('Excel data loaded successfully, processing...');
+        console.error('API response failed or no vessels found:', response.data);
+        setVesselData([]);
+        setLoading(false);
       }
-      
-      // Filter out empty rows and invalid data
-      console.log('All mapped rows before filtering:', allMappedRows.length);
-      console.log('Sample rows before filtering:', allMappedRows.slice(0, 3));
-      
-      const validRows = allMappedRows.filter(row => {
-        const isValid = row['Vessel'] && 
-                       row['Vessel'].trim() !== '' && 
-                       row['Vessel'] !== 'Vessel' && // Exclude header row
-                       row['Vessel'] !== 'No.' && // Exclude header row
-                       row['Vessel'] !== 'N/A' && // Exclude placeholder data
-                       !row['Vessel'].match(/^\d+$/) && // Exclude numeric placeholders like "444"
-                       row['Vessel'].length > 2; // Exclude short placeholder values
-        if (!isValid) {
-          console.log('Filtering out invalid row:', row);
-        }
-        return isValid;
-      });
-      
-      console.log('Valid rows after filtering:', validRows.length);
-      console.log('Sample valid rows:', validRows.slice(0, 3));
-      
-      setVesselData(validRows);
-      setLoading(false);
     } catch (e) {
-      console.error('Error fetching Excel data:', e);
+      console.error('Error fetching vessel data from API:', e);
       setError(e.message);
       
       // Retry up to 3 times
       if (retryCount < 3) {
-        console.log(`Retrying Excel data fetch (attempt ${retryCount + 1}/3)...`);
+        console.log(`Retrying API fetch (attempt ${retryCount + 1}/3)...`);
         setTimeout(() => {
           fetchExcelData(retryCount + 1);
-        }, 2000 * (retryCount + 1)); // Exponential backoff
+        }, 2000 * (retryCount + 1));
       } else {
-        console.error('Failed to fetch Excel data after 3 attempts');
+        console.error('Failed to fetch vessel data after 3 attempts');
         setVesselData([]);
         setLoading(false);
       }
@@ -214,64 +179,84 @@ const Report = () => {
         }
         
         const excelData = vesselData.map((vessel, index) => {
-          // Parse date properly - now using MM/DD/YYYY format
+          // Parse date properly - handle YYYY-MM-DD format from Excel
           let parsedDate = new Date().toISOString();
           if (vessel['Date']) {
             const dateStr = vessel['Date'].toString().trim();
             console.log(`Processing date: "${dateStr}" for vessel: ${vessel['Vessel']}`);
             
-            // Parse "Month DD, YYYY" format - avoid timezone issues by using local date
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                             'July', 'August', 'September', 'October', 'November', 'December'];
-            
-            // Try parsing "Month DD,YYYY" format first (no space after comma)
-            let monthNameMatch = dateStr.match(/^(\w+)\s+(\d{1,2}),(\d{4})$/);
-            if (!monthNameMatch) {
-              // Try parsing "Month DD, YYYY" format (with space after comma)
-              monthNameMatch = dateStr.match(/^(\w+)\s+(\d{1,2}),\s+(\d{4})$/);
-            }
-            
-            if (monthNameMatch) {
-              const [, monthName, day, year] = monthNameMatch;
-              const monthIndex = monthNames.indexOf(monthName);
+            // First try YYYY-MM-DD format (what we're actually saving to Excel)
+            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              const parts = dateStr.split('-');
+              const year = parseInt(parts[0]);
+              const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+              const day = parseInt(parts[2]);
               
-              if (monthIndex !== -1) {
-                const parsed = new Date(parseInt(year), monthIndex, parseInt(day));
-                
-                if (!isNaN(parsed.getTime())) {
-                  // Format as YYYY-MM-DD to avoid timezone issues
-                  const yearStr = parsed.getFullYear();
-                  const monthStr = String(parsed.getMonth() + 1).padStart(2, '0');
-                  const dayStr = String(parsed.getDate()).padStart(2, '0');
-                  parsedDate = `${yearStr}-${monthStr}-${dayStr}T00:00:00.000Z`;
-                  console.log(`Successfully parsed date: "${dateStr}" -> ${parsed.toLocaleDateString()} -> ${parsedDate}`);
-                } else {
-                  console.error(`Failed to parse date: "${dateStr}"`);
-                }
+              const parsed = new Date(year, month, day);
+              
+              if (!isNaN(parsed.getTime())) {
+                const yearStr = parsed.getFullYear();
+                const monthStr = String(parsed.getMonth() + 1).padStart(2, '0');
+                const dayStr = String(parsed.getDate()).padStart(2, '0');
+                parsedDate = `${yearStr}-${monthStr}-${dayStr}T00:00:00.000Z`;
+                console.log(`Successfully parsed YYYY-MM-DD date: "${dateStr}" -> ${parsed.toLocaleDateString()} -> ${parsedDate}`);
               } else {
-                console.error(`Invalid month name: "${monthName}"`);
+                console.error(`Failed to parse YYYY-MM-DD date: "${dateStr}"`);
               }
-            } else {
-              // Fallback to MM/DD/YYYY format for backward compatibility
-              const parts = dateStr.split('/');
-              if (parts.length === 3) {
-                const year = parseInt(parts[2]);
-                const month = parseInt(parts[0]) - 1; // Month is 0-indexed
-                const day = parseInt(parts[1]);
+            }
+            // Try parsing "Month DD, YYYY" format for legacy data
+            else {
+              const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+              
+              // Try parsing "Month DD,YYYY" format first (no space after comma)
+              let monthNameMatch = dateStr.match(/^(\w+)\s+(\d{1,2}),(\d{4})$/);
+              if (!monthNameMatch) {
+                // Try parsing "Month DD, YYYY" format (with space after comma)
+                monthNameMatch = dateStr.match(/^(\w+)\s+(\d{1,2}),\s+(\d{4})$/);
+              }
+              
+              if (monthNameMatch) {
+                const [, monthName, day, year] = monthNameMatch;
+                const monthIndex = monthNames.indexOf(monthName);
                 
-                const parsed = new Date(year, month, day);
-                
-                if (!isNaN(parsed.getTime())) {
-                  const yearStr = parsed.getFullYear();
-                  const monthStr = String(parsed.getMonth() + 1).padStart(2, '0');
-                  const dayStr = String(parsed.getDate()).padStart(2, '0');
-                  parsedDate = `${yearStr}-${monthStr}-${dayStr}T00:00:00.000Z`;
-                  console.log(`Successfully parsed date (fallback): "${dateStr}" -> ${parsed.toLocaleDateString()} -> ${parsedDate}`);
+                if (monthIndex !== -1) {
+                  const parsed = new Date(parseInt(year), monthIndex, parseInt(day));
+                  
+                  if (!isNaN(parsed.getTime())) {
+                    const yearStr = parsed.getFullYear();
+                    const monthStr = String(parsed.getMonth() + 1).padStart(2, '0');
+                    const dayStr = String(parsed.getDate()).padStart(2, '0');
+                    parsedDate = `${yearStr}-${monthStr}-${dayStr}T00:00:00.000Z`;
+                    console.log(`Successfully parsed Month DD, YYYY date: "${dateStr}" -> ${parsed.toLocaleDateString()} -> ${parsedDate}`);
+                  } else {
+                    console.error(`Failed to parse date: "${dateStr}"`);
+                  }
                 } else {
-                  console.error(`Failed to parse date: "${dateStr}"`);
+                  console.error(`Invalid month name: "${monthName}"`);
                 }
               } else {
-                console.error(`Invalid date format: "${dateStr}"`);
+                // Fallback to MM/DD/YYYY format for backward compatibility
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                  const year = parseInt(parts[2]);
+                  const month = parseInt(parts[0]) - 1; // Month is 0-indexed
+                  const day = parseInt(parts[1]);
+                  
+                  const parsed = new Date(year, month, day);
+                  
+                  if (!isNaN(parsed.getTime())) {
+                    const yearStr = parsed.getFullYear();
+                    const monthStr = String(parsed.getMonth() + 1).padStart(2, '0');
+                    const dayStr = String(parsed.getDate()).padStart(2, '0');
+                    parsedDate = `${yearStr}-${monthStr}-${dayStr}T00:00:00.000Z`;
+                    console.log(`Successfully parsed MM/DD/YYYY date: "${dateStr}" -> ${parsed.toLocaleDateString()} -> ${parsedDate}`);
+                  } else {
+                    console.error(`Failed to parse date: "${dateStr}"`);
+                  }
+                } else {
+                  console.error(`Invalid date format: "${dateStr}"`);
+                }
               }
             }
           } else {
@@ -281,10 +266,12 @@ const Report = () => {
           const mappedTransaction = {
             id: `excel_${index}`,
             date: parsedDate,
+            time: vessel['Time'] || '',
             vesselName: vessel['Vessel'] || 'N/A',
             voyageNo: vessel['Voyage Number'] || 'N/A',
             purposeOfCall: vessel['Service'] || 'N/A',
             controlId: vessel['Control Number'] || 'N/A',
+            vesselType: vessel['Vessel Type'] || 'Local',
             workActivities: [],
             lastUpdated: new Date().toISOString(),
             updatedBy: 'system@anchorpoint.com',
@@ -326,10 +313,12 @@ const Report = () => {
         transactionData.push({
           id: doc.id,
           date: data.date,
+          time: data.time || '',
         vesselName: data.vesselName || 'N/A',
         voyageNo: data.voyageNo || 'N/A',
         purposeOfCall: data.purposeOfCall || 'N/A',
         controlId: data.controlId || 'N/A',
+        vesselType: data.vesselType || 'Local',
           workActivities: data.workActivities || [],
           lastUpdated: data.lastUpdated,
           updatedBy: data.updatedBy || 'Unknown'
@@ -353,10 +342,12 @@ const Report = () => {
     const processedData = vesselData.map((vessel, index) => ({
       id: `excel_${index}`,
       date: vessel['Date'] || new Date().toISOString(),
+      time: vessel['Time'] || '',
       vesselName: vessel['Vessel'] || 'N/A',
       voyageNo: vessel['Voyage Number'] || 'N/A',
       purposeOfCall: vessel['Service'] || 'N/A',
       controlId: vessel['Control Number'] || 'N/A',
+      vesselType: vessel['Vessel Type'] || 'Local',
       workActivities: [],
       lastUpdated: new Date().toISOString(),
       updatedBy: 'System'
@@ -720,7 +711,7 @@ const Report = () => {
                     
                     <button
                       onClick={async () => {
-                        console.log('Force refreshing data...');
+                        console.log('🔄 Force refreshing data...');
                         setVesselData([]);
                         setAllTransactions([]);
                         setTransactions([]);
@@ -1054,7 +1045,7 @@ const Report = () => {
                 {/* Table Header */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
+                  gridTemplateColumns: '1.2fr 0.8fr 0.8fr 1fr 1fr 1fr 1fr',
                   background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
                   backdropFilter: 'blur(10px)',
                   color: 'white',
@@ -1080,6 +1071,18 @@ const Report = () => {
                       <path d="M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,5V7H5V5H19M5,19V9H19V19H5Z"/>
                     </svg>
                     Date
+                  </div>
+                  <div style={{ 
+                    padding: '12px 8px', 
+                    borderRight: '1px solid rgba(255,255,255,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
+                    </svg>
+                    Time
                   </div>
                   <div style={{ 
                     padding: '12px 8px', 
@@ -1118,7 +1121,8 @@ const Report = () => {
                     Purpose
                   </div>
                   <div style={{ 
-                    padding: '12px 8px',
+                    padding: '12px 8px', 
+                    borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px'
@@ -1128,6 +1132,17 @@ const Report = () => {
                     </svg>
                     Control ID
                   </div>
+                  <div style={{ 
+                    padding: '12px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
+                    </svg>
+                    Type
+                  </div>
                 </div>
 
                 {/* Transaction Rows */}
@@ -1135,13 +1150,15 @@ const Report = () => {
                   console.log(`Rendering transaction ${index}:`, {
                     id: transaction.id,
                     date: transaction.date,
+                    time: transaction.time,
                     vesselName: transaction.vesselName,
-                    controlId: transaction.controlId
+                    controlId: transaction.controlId,
+                    vesselType: transaction.vesselType
                   });
                   return (
                     <div key={transaction.id} style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
+                    gridTemplateColumns: '1.2fr 0.8fr 0.8fr 1fr 1fr 1fr 1fr',
                     borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
                     background: index % 2 === 0 ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
                     backdropFilter: 'blur(5px)',
@@ -1201,6 +1218,54 @@ const Report = () => {
                       borderRight: '1px solid #f1f5f9',
                       color: '#1f2937',
                       fontWeight: '500',
+                      fontSize: '0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      minWidth: '80px'
+                    }}>
+                      {(() => {
+                        if (!transaction.time || transaction.time === 'N/A' || transaction.time === '') {
+                          return '-';
+                        }
+                        
+                        try {
+                          // Parse the time (assuming format like "14:30" or "2:30 PM")
+                          let timeStr = transaction.time.trim();
+                          
+                          // If it already has AM/PM, return as is
+                          if (timeStr.includes('AM') || timeStr.includes('PM')) {
+                            return timeStr;
+                          }
+                          
+                          // If it's in 24-hour format, convert to 12-hour
+                          if (timeStr.includes(':')) {
+                            const [hours, minutes] = timeStr.split(':');
+                            const hour24 = parseInt(hours, 10);
+                            const mins = minutes || '00';
+                            
+                            if (hour24 === 0) {
+                              return `12:${mins} AM`;
+                            } else if (hour24 < 12) {
+                              return `${hour24}:${mins} AM`;
+                            } else if (hour24 === 12) {
+                              return `12:${mins} PM`;
+                            } else {
+                              return `${hour24 - 12}:${mins} PM`;
+                            }
+                          }
+                          
+                          return timeStr;
+                        } catch (e) {
+                          console.error('Error formatting time:', e, 'for time:', transaction.time);
+                          return transaction.time;
+                        }
+                      })()}
+                    </div>
+                    <div style={{ 
+                      padding: '10px 8px', 
+                      borderRight: '1px solid #f1f5f9',
+                      color: '#1f2937',
+                      fontWeight: '500',
                       fontSize: '0.95rem',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -1233,7 +1298,8 @@ const Report = () => {
                       {transaction.purposeOfCall}
                     </div>
                     <div style={{ 
-                      padding: '10px 8px',
+                      padding: '10px 8px', 
+                      borderRight: '1px solid #f1f5f9',
                       color: '#1f2937',
                       fontWeight: '500',
                       fontSize: '0.95rem',
@@ -1242,6 +1308,17 @@ const Report = () => {
                       whiteSpace: 'nowrap'
                     }}>
                       {transaction.controlId}
+                    </div>
+                    <div style={{ 
+                      padding: '10px 8px',
+                      color: '#1f2937',
+                      fontWeight: '500',
+                      fontSize: '0.9rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {transaction.vesselType || 'Local'}
                     </div>
                   </div>
                   );

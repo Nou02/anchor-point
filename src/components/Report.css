@@ -312,13 +312,15 @@
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(47, 59, 112, 0.08);
-  padding: 16px 12px;
+  padding: 0;
   width: 100%;
   margin: 0 auto;
-  max-height: 85vh;
-  overflow-x: auto;
-  overflow-y: auto;
+  height: calc(100vh - 160px);
+  max-height: calc(100vh - 160px);
+  overflow: hidden;
   margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
 }
 
 .add-row-btn {
@@ -347,62 +349,223 @@
 
 .report-table {
   width: 100%;
-  min-width: 800px;
-  border-collapse: collapse;
+  border-collapse: separate;
   border-spacing: 0;
-  background: linear-gradient(135deg, #eaf3ff 0%, #f5f7fa 100%);
-  font-size: 1.08rem;
-  color: #222;
-  border-radius: 18px;
-  box-shadow: 0 6px 32px rgba(44,62,80,0.10);
+  background: #ffffff;
+  font-size: 0.9rem;
+  color: #333;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  margin-bottom: 24px;
-  table-layout: auto;
+  margin: 0;
+  table-layout: fixed;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
+  border: 1px solid #e5e7eb;
 }
+.report-table thead {
+  display: block;
+  width: 100%;
+  background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
+}
+
+.report-table tbody {
+  display: block;
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #2F3B70 #f1f1f1;
+  min-height: 0;
+}
+
+.report-table tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.report-table thead tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Custom scrollbar styling */
+.report-table tbody::-webkit-scrollbar {
+  width: 10px;
+}
+
+.report-table tbody::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 5px;
+}
+
+.report-table tbody::-webkit-scrollbar-thumb {
+  background: #2F3B70;
+  border-radius: 5px;
+  border: 2px solid #f1f5f9;
+}
+
+.report-table tbody::-webkit-scrollbar-thumb:hover {
+  background: #1e2a5e;
+}
+
+/* Row styling matching the design */
+.report-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.report-table tbody tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+.report-table tbody tr:nth-child(even):hover td {
+  background: #f1f5f9;
+}
+
+/* Date column styling with bullet points */
+.report-table td:nth-child(1) {
+  position: relative;
+  padding-left: 30px;
+}
+
+.report-table td:nth-child(1)::before {
+  content: "•";
+  color: #3b82f6;
+  font-size: 1.2rem;
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Header icons */
+.report-table th {
+  position: relative;
+  padding-left: 35px;
+}
+
+.report-table th::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+.report-table th:nth-child(1)::before {
+  background: white;
+  border-radius: 4px;
+  width: 14px;
+  height: 14px;
+}
+
+.report-table th:nth-child(2)::before,
+.report-table th:nth-child(3)::before,
+.report-table th:nth-child(4)::before,
+.report-table th:nth-child(5)::before,
+.report-table th:nth-child(6)::before,
+.report-table th:nth-child(7)::before {
+  background: white;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  box-shadow: inset 0 0 0 2px white, inset 0 0 0 4px #3b82f6;
+}
+
 .report-table th, .report-table td {
   border: none;
-  padding: 12px 8px;
+  border-right: 1px solid #e5e7eb;
+  padding: 16px 20px;
   text-align: left;
-  background: rgba(255,255,255,0.85);
   font-weight: normal;
   transition: background 0.2s;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: table-cell;
+  vertical-align: middle;
 }
 
-/* Column width optimizations */
-.report-table th:nth-child(1), .report-table td:nth-child(1) { /* No. */
-  width: 60px;
-  min-width: 60px;
-  text-align: center;
+.report-table th {
+  background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-right: 1px solid #3b82f6;
+  position: relative;
 }
 
-.report-table th:nth-child(2), .report-table td:nth-child(2) { /* Vessel */
-  width: 200px;
-  min-width: 150px;
+.report-table th:last-child {
+  border-right: none;
 }
 
-.report-table th:nth-child(3), .report-table td:nth-child(3) { /* Service */
-  width: 150px;
+.report-table td {
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.report-table td:last-child {
+  border-right: none;
+}
+
+.report-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Column widths matching the design */
+.report-table th:nth-child(1), .report-table td:nth-child(1) { /* DATE */
+  width: 140px;
+  min-width: 140px;
+}
+
+.report-table th:nth-child(2), .report-table td:nth-child(2) { /* TIME */
+  width: 100px;
+  min-width: 100px;
+}
+
+.report-table th:nth-child(3), .report-table td:nth-child(3) { /* VESSEL */
+  width: 180px;
+  min-width: 180px;
+}
+
+.report-table th:nth-child(4), .report-table td:nth-child(4) { /* VOYAGE */
+  width: 120px;
   min-width: 120px;
 }
 
-.report-table th:nth-child(4), .report-table td:nth-child(4) { /* Control Number */
-  width: 120px;
-  min-width: 100px;
+.report-table th:nth-child(5), .report-table td:nth-child(5) { /* PURPOSE */
+  width: 160px;
+  min-width: 160px;
 }
 
-.report-table th:nth-child(5), .report-table td:nth-child(5) { /* Voyage Number */
+.report-table th:nth-child(6), .report-table td:nth-child(6) { /* CONTROL ID */
+  width: 120px;
+  min-width: 120px;
+}
+
+.report-table th:nth-child(7), .report-table td:nth-child(7) { /* TYPE */
   width: 100px;
-  min-width: 80px;
-  text-align: center;
-}
-
-.report-table th:nth-child(6), .report-table td:nth-child(6) { /* Date */
-  width: 120px;
   min-width: 100px;
-  text-align: center;
 }
 .report-table th {
   font-weight: bold;

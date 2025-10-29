@@ -215,9 +215,50 @@ EXCEL_FILENAME = 'Vessels Log.xlsx'
 EXCEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'public', EXCEL_FILENAME)
 
 def _load_workbook_or_404(path):
+    print(f"Checking Excel file at: {path}")
+    print(f"File exists: {os.path.exists(path)}")
     if not os.path.exists(path):
         raise FileNotFoundError(f"Excel file not found at {path}")
-    return load_workbook(filename=path)
+    try:
+        wb = load_workbook(filename=path)
+        print(f"Successfully loaded workbook with sheets: {wb.sheetnames}")
+        return wb
+    except Exception as e:
+        print(f"Error loading workbook: {e}")
+        raise
+
+@app.route('/api/excel/debug', methods=['GET'])
+def debug_excel_file():
+    """Debug endpoint to check Excel file status."""
+    try:
+        file_info = {
+            "excel_path": EXCEL_PATH,
+            "file_exists": os.path.exists(EXCEL_PATH),
+            "file_size": os.path.getsize(EXCEL_PATH) if os.path.exists(EXCEL_PATH) else 0,
+            "current_directory": os.getcwd(),
+            "backend_directory": os.path.dirname(__file__)
+        }
+        
+        if os.path.exists(EXCEL_PATH):
+            try:
+                wb = load_workbook(filename=EXCEL_PATH)
+                file_info.update({
+                    "sheets": wb.sheetnames,
+                    "active_sheet": wb.active.title,
+                    "max_row": wb.active.max_row,
+                    "max_column": wb.active.max_column
+                })
+                
+                # Get headers if they exist
+                if wb.active.max_row >= 1:
+                    headers = [str(c.value).strip() if c.value is not None else '' for c in wb.active[1]]
+                    file_info["headers"] = headers
+            except Exception as e:
+                file_info["load_error"] = str(e)
+        
+        return jsonify({"success": True, "file_info": file_info})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/excel/read', methods=['GET'])
 def read_excel_as_json():
@@ -252,30 +293,181 @@ def append_excel_row():
     """
     try:
         payload = request.get_json(silent=True) or {}
+        print(f"Excel append request payload: {payload}")
+        
         if not payload:
             return jsonify({"success": False, "error": "Missing JSON body"}), 400
 
+        print(f"Loading workbook from: {EXCEL_PATH}")
         wb = _load_workbook_or_404(EXCEL_PATH)
         ws = wb.active
+        print(f"Active worksheet: {ws.title}")
+        print(f"Worksheet max row: {ws.max_row}")
 
         headers = []
         if ws.max_row >= 1:
             headers = [str(c.value).strip() if c.value is not None else '' for c in ws[1]]
+            print(f"Headers found: {headers}")
 
         if 'row' in payload and isinstance(payload['row'], list):
             values = payload['row']
-        elif 'object' in payload and isinstance(payload['object'], dict) and headers:
+            print(f"Using row format: {values}")
+        elif 'object' in payload and isinstance(payload['object'], dict):
+            if not headers:
+                print("No headers found, creating default headers")
+                # Create default headers if none exist
+                headers = ['Vessel', 'Voyage Number', 'Control Number', 'Service', 'Date', 'Time', 'Vessel Type']
+                # Add headers to first row if worksheet is empty
+                if ws.max_row == 0:
+                    ws.append(headers)
+                    print(f"Added default headers: {headers}")
+            
             values = [payload['object'].get(h, None) for h in headers]
+            print(f"Using object format with headers {headers}: {values}")
         else:
-            return jsonify({"success": False, "error": "Provide 'row' array or 'object' matching headers"}), 400
+            error_msg = f"Invalid payload format. Expected 'row' array or 'object' dict. Got: {type(payload)}"
+            print(error_msg)
+            return jsonify({"success": False, "error": error_msg}), 400
 
+        print(f"Appending values: {values}")
         ws.append(values)
+        
+        print(f"Saving workbook to: {EXCEL_PATH}")
         wb.save(EXCEL_PATH)
+        print(f"Successfully saved. New max row: {ws.max_row}")
 
         return jsonify({"success": True, "appended": values, "totalRows": ws.max_row})
     except FileNotFoundError as e:
+        error_msg = f"Excel file not found at {EXCEL_PATH}: {str(e)}"
+        print(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 404
+    except Exception as e:
+        error_msg = f"Unexpected error: {str(e)}"
+        print(error_msg)
+        print(f"Error type: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({"success": False, "error": error_msg}), 500
+
+@app.route('/api/excel/update-entry', methods=['PUT'])
+def update_excel_entry():
+    """Update an existing Excel entry by date and vessel name.
+    Expects: {
+        "date": "2024-10-29",
+        "vesselName": "OLD VESSEL NAME",
+        "newData": {
+            "Vessel": "NEW VESSEL NAME",
+            "Voyage Number": "NEW123",
+            "Control Number": "NEW-CTRL",
+            "Service": "NEW SERVICE",
+            "Date": "2024-10-29",
+            "Time": "2:00 PM",
+            "Vessel Type": "Foreign"
+        }
+    }
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        print(f"Update entry request payload: {payload}")
+        
+        if not payload:
+            return jsonify({"success": False, "error": "Missing JSON body"}), 400
+
+        date_str = payload.get('date')
+        vessel_name = payload.get('vesselName')
+        new_data = payload.get('newData')
+        
+        if not date_str or not vessel_name or not new_data:
+            return jsonify({"success": False, "error": "Missing required fields: date, vesselName, newData"}), 400
+
+        # Parse the date
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            year = date_obj.year
+            sheet_name = str(year)
+        except ValueError:
+            return jsonify({"success": False, "error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        print(f"Loading workbook for update...")
+        wb = _load_workbook_or_404(EXCEL_PATH)
+        
+        if sheet_name not in wb.sheetnames:
+            return jsonify({"success": False, "error": f"Sheet {sheet_name} not found"}), 404
+
+        ws = wb[sheet_name]
+        updated_rows = []
+
+        # Find and update rows matching the date and vessel name
+        for row_idx in range(2, ws.max_row + 1):  # Start from row 2 (skip header)
+            # Check date column
+            date_cell = None
+            vessel_cell = None
+            
+            if year == 2023:
+                date_cell = ws.cell(row=row_idx, column=6)  # Date column for 2023
+                vessel_cell = ws.cell(row=row_idx, column=2)  # Vessel column for 2023
+            elif year == 2024:
+                date_cell = ws.cell(row=row_idx, column=6)  # Date column for 2024
+                vessel_cell = ws.cell(row=row_idx, column=2)  # Vessel column for 2024
+            else:  # 2025+
+                date_cell = ws.cell(row=row_idx, column=6)  # Date column for 2025+
+                vessel_cell = ws.cell(row=row_idx, column=2)  # Vessel column for 2025+
+
+            if date_cell and vessel_cell and date_cell.value and vessel_cell.value:
+                # Check if this row matches our criteria
+                cell_date_str = str(date_cell.value).strip()
+                cell_vessel_str = str(vessel_cell.value).strip()
+                
+                # Parse and compare dates
+                cell_date_obj = None
+                for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y-%m-%d %H:%M:%S']:
+                    try:
+                        cell_date_obj = datetime.strptime(cell_date_str, fmt)
+                        break
+                    except ValueError:
+                        continue
+                
+                if (cell_date_obj and cell_date_obj.date() == date_obj.date() and 
+                    cell_vessel_str == vessel_name):
+                    
+                    print(f"Found matching row {row_idx}: {cell_vessel_str} on {cell_date_str}")
+                    
+                    # Update the row with new data
+                    headers = [str(c.value).strip() if c.value is not None else '' for c in ws[1]]
+                    
+                    for col_idx, header in enumerate(headers, 1):
+                        if header in new_data:
+                            ws.cell(row=row_idx, column=col_idx).value = new_data[header]
+                            print(f"Updated {header} to {new_data[header]}")
+                    
+                    updated_rows.append(row_idx)
+                    break  # Only update the first match
+
+        if not updated_rows:
+            return jsonify({
+                "success": False, 
+                "message": f"No entry found for vessel '{vessel_name}' on date {date_str}",
+                "updatedRows": 0
+            })
+
+        # Save the workbook
+        wb.save(EXCEL_PATH)
+        print(f"Successfully updated {len(updated_rows)} row(s)")
+
+        return jsonify({
+            "success": True, 
+            "message": f"Updated {len(updated_rows)} row(s) in {sheet_name} sheet",
+            "sheet": sheet_name,
+            "updatedRows": len(updated_rows),
+            "updatedRowNumbers": updated_rows
+        })
+
+    except FileNotFoundError as e:
         return jsonify({"success": False, "error": str(e)}), 404
     except Exception as e:
+        print(f"Error updating Excel entry: {e}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/excel/save-report', methods=['POST'])
@@ -300,6 +492,8 @@ def save_report_to_excel():
         voyage_no = payload.get('voyageNo', '')
         purpose_of_call = payload.get('purposeOfCall', '')
         control_id = payload.get('controlId', '')
+        vessel_type = payload.get('vesselType', 'Local')
+        time = payload.get('time', '')
 
         if not date_str:
             return jsonify({"success": False, "error": "Date is required"}), 400
@@ -320,11 +514,11 @@ def save_report_to_excel():
             ws = wb.create_sheet(sheet_name)
             # Add headers based on year
             if year == 2023:
-                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date']
+                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date', 'Time', 'Vessel Type']
             elif year == 2024:
-                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date']
+                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date', 'Time', 'Vessel Type']
             else:  # 2025 and future years
-                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date']
+                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date', 'Time', 'Vessel Type']
             
             ws.append(headers)
         else:
@@ -336,34 +530,40 @@ def save_report_to_excel():
 
         # Prepare the row data based on year structure
         if year == 2023:
-            # 2023 structure: No., Vessel, Service (control numbers), ID, Date
+            # 2023 structure: No., Vessel, Service (control numbers), ID, Date, Time, Vessel Type
             row_data = [
                 row_number,
                 vessel_name,
                 purpose_of_call,  # Service column
                 control_id,       # Control Number column
                 voyage_no,        # Voyage Number column
-                date_str          # Date column
+                date_str,         # Date column
+                time,             # Time column
+                vessel_type       # Vessel Type column
             ]
         elif year == 2024:
-            # 2024 structure: No., Vessel, Service (empty), Control Number, Voyage Number, Date
+            # 2024 structure: No., Vessel, Service, Control Number, Voyage Number, Date, Time, Vessel Type
             row_data = [
                 row_number,
                 vessel_name,
                 purpose_of_call,  # Service column
                 control_id,       # Control Number column
                 voyage_no,        # Voyage Number column
-                date_str          # Date column
+                date_str,         # Date column
+                time,             # Time column
+                vessel_type       # Vessel Type column
             ]
         else:
-            # 2025+ structure: No., Vessel, Service, Control Number, Voyage Number, Date
+            # 2025+ structure: No., Vessel, Service, Control Number, Voyage Number, Date, Time, Vessel Type
             row_data = [
                 row_number,
                 vessel_name,
                 purpose_of_call,  # Service column
                 control_id,       # Control Number column
                 voyage_no,        # Voyage Number column
-                date_str          # Date column
+                date_str,         # Date column
+                time,             # Time column
+                vessel_type       # Vessel Type column
             ]
 
         # Append the row
@@ -393,9 +593,10 @@ def save_report_to_excel():
 
 @app.route('/api/excel/delete-report', methods=['DELETE'])
 def delete_report_from_excel():
-    """Delete report data from Excel file by date.
+    """Delete report data from Excel file by date and vessel name.
     Expects: {
-        "date": "2024-01-15"
+        "date": "2024-01-15",
+        "vesselName": "VESSEL NAME" (optional)
     }
     """
     try:
@@ -403,18 +604,33 @@ def delete_report_from_excel():
         if not payload:
             return jsonify({"success": False, "error": "Missing JSON body"}), 400
 
-        # Extract date from payload
+        # Extract date and vessel name from payload
         date_str = payload.get('date')
+        vessel_name = payload.get('vesselName')
         if not date_str:
             return jsonify({"success": False, "error": "Date is required"}), 400
 
-        # Determine the year and sheet name
-        try:
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-            year = date_obj.year
-            sheet_name = str(year)
-        except ValueError:
-            return jsonify({"success": False, "error": "Invalid date format. Use YYYY-MM-DD"}), 400
+        # Try to parse the date in multiple formats
+        date_obj = None
+        date_formats = [
+            '%Y-%m-%d',      # 2024-10-29
+            '%m/%d/%Y',      # 10/29/2024
+            '%d/%m/%Y',      # 29/10/2024
+            '%Y-%m-%d %H:%M:%S',  # 2024-10-29 00:00:00
+        ]
+        
+        for fmt in date_formats:
+            try:
+                date_obj = datetime.strptime(date_str, fmt)
+                break
+            except ValueError:
+                continue
+        
+        if not date_obj:
+            return jsonify({"success": False, "error": f"Invalid date format: {date_str}. Supported formats: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY"}), 400
+
+        year = date_obj.year
+        sheet_name = str(year)
 
         # Load workbook
         wb = _load_workbook_or_404(EXCEL_PATH)
@@ -426,40 +642,79 @@ def delete_report_from_excel():
         ws = wb[sheet_name]
         deleted_rows = []
 
-        # Find and delete rows matching the date
+        # Find and delete rows matching the date (and vessel name if provided)
         # Start from the end to avoid index shifting issues
         for row_idx in range(ws.max_row, 1, -1):
             # Check if this row contains the target date
             date_cell = None
+            vessel_cell = None
+            
             if year == 2023:
                 date_cell = ws.cell(row=row_idx, column=5)  # Date column for 2023
+                vessel_cell = ws.cell(row=row_idx, column=2)  # Vessel column for 2023
             elif year == 2024:
                 date_cell = ws.cell(row=row_idx, column=6)  # Date column for 2024
+                vessel_cell = ws.cell(row=row_idx, column=2)  # Vessel column for 2024
             else:  # 2025+
                 date_cell = ws.cell(row=row_idx, column=6)  # Date column for 2025+
+                vessel_cell = ws.cell(row=row_idx, column=2)  # Vessel column for 2025+
 
             if date_cell and date_cell.value:
                 # Convert cell value to string and compare
                 cell_date_str = str(date_cell.value).strip()
-                if cell_date_str == date_str or cell_date_str == date_obj.strftime('%Y-%m-%d'):
-                    # Delete this row
+                cell_vessel_str = str(vessel_cell.value).strip() if vessel_cell and vessel_cell.value else ''
+                
+                # Try to parse the cell date and compare with target date
+                cell_date_obj = None
+                cell_date_formats = [
+                    '%Y-%m-%d',      # 2024-10-29
+                    '%m/%d/%Y',      # 10/29/2024
+                    '%d/%m/%Y',      # 29/10/2024
+                    '%Y-%m-%d %H:%M:%S',  # 2024-10-29 00:00:00
+                    '%Y-%m-%d %H:%M:%S.%f',  # 2024-10-29 00:00:00.000000
+                ]
+                
+                for fmt in cell_date_formats:
+                    try:
+                        cell_date_obj = datetime.strptime(cell_date_str, fmt)
+                        break
+                    except ValueError:
+                        continue
+                
+                # Check if date matches
+                date_matches = cell_date_obj and cell_date_obj.date() == date_obj.date()
+                
+                # Check if vessel name matches (if provided)
+                vessel_matches = True
+                if vessel_name:
+                    vessel_matches = cell_vessel_str == vessel_name
+                
+                # Delete this row if both date and vessel name match
+                if date_matches and vessel_matches:
                     ws.delete_rows(row_idx)
                     deleted_rows.append(row_idx)
-                    print(f"Deleted row {row_idx} from sheet {sheet_name}")
+                    print(f"Deleted row {row_idx} from sheet {sheet_name} (matched date: {cell_date_str}, vessel: {cell_vessel_str})")
 
         if not deleted_rows:
+            message = f"No data found for date {date_str} in sheet {sheet_name}"
+            if vessel_name:
+                message += f" with vessel name '{vessel_name}'"
             return jsonify({
                 "success": True, 
-                "message": f"No data found for date {date_str} in sheet {sheet_name}",
+                "message": message,
                 "deletedRows": 0
             })
 
         # Save the workbook to public location
         wb.save(EXCEL_PATH)
 
+        message = f"Deleted {len(deleted_rows)} row(s) from {sheet_name} sheet"
+        if vessel_name:
+            message += f" for vessel '{vessel_name}'"
+        
         return jsonify({
             "success": True, 
-            "message": f"Deleted {len(deleted_rows)} row(s) from {sheet_name} sheet",
+            "message": message,
             "sheet": sheet_name,
             "deletedRows": len(deleted_rows),
             "deletedRowNumbers": deleted_rows
@@ -507,6 +762,8 @@ def get_vessels_log_data():
                             'port': row_data.get('Service', ''),  # Service column often contains port info
                             'purpose': row_data.get('Service', ''),  # Service column contains purpose
                             'controlId': row_data.get('Control Number', ''),
+                            'vesselType': row_data.get('Vessel Type', 'Local'),  # Add vessel type
+                            'time': row_data.get('Time', ''),  # Add time field
                             'updatedBy': 'system@anchorpoint.com'  # Default since Excel doesn't track this
                         }
                         

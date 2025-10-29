@@ -2,13 +2,17 @@
 echo ⚓ Starting Anchor Point Application...
 echo.
 
-echo 📦 Starting Frontend (React)...
-start "Frontend" cmd /k "npm start"
-
-echo.
 echo 🐍 Starting Backend (Flask)...
 cd backend
-start "Backend" cmd /k "python app.py"
+start "Backend Server" cmd /k "python app.py"
+cd ..
+
+echo.
+echo Waiting 3 seconds for backend to initialize...
+timeout /t 3 /nobreak > nul
+
+echo 📦 Starting Frontend (React)...
+start "Frontend" cmd /k "npm start"
 
 echo.
 echo ✅ Both servers are starting...

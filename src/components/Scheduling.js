@@ -2,35 +2,70 @@ import React, { useState, useEffect } from 'react';
 import './Scheduling.css';
 import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import '../firebase/config'; // Make sure this imports your firebase config
+import '../firebase/config';
 import { getWeatherForecast, getMockWeatherData } from '../services/weatherService';
 import CrewAvailabilityTable from './CrewAvailabilityTable';
+import * as XLSX from 'xlsx';
+import api, { excelAPI } from '../services/api';
 
 const Scheduling = () => {
   // Initialize Firestore database
   const db = getFirestore();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDates, setSelectedDates] = useState([]); // Array of selected dates
-  const [view, setView] = useState('calendar'); // 'calendar' or 'table'
+  const [selectedDates, setSelectedDates] = useState([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // Vessel entry modal state
+  const [showVesselModal, setShowVesselModal] = useState(false);
+  const [clickedDate, setClickedDate] = useState(null);
+  const [isEditingVessel, setIsEditingVessel] = useState(false);
+  const [editingVesselId, setEditingVesselId] = useState(null);
+  const [vesselFormData, setVesselFormData] = useState({
+    vesselName: '',
+    voyageId: '',
+    controlId: '',
+    vesselType: 'Local',
+    purpose: [],
+    time: ''
+  });
+  
+  // State for recent finished vessels
+  const [recentFinishedVessels, setRecentFinishedVessels] = useState([]);
+  
+  // State for upcoming scheduled vessels
+  const [upcomingScheduledVessels, setUpcomingScheduledVessels] = useState([]);
+  
+  // Vessel entries storage - stores multiple vessels per date
+  const [vesselEntries, setVesselEntries] = useState({});
+
+
+
+
+
+  const [view, setView] = useState('calendar');
   const [formData, setFormData] = useState({});
   const [savedEntries, setSavedEntries] = useState([]);
   const [userName, setUserName] = useState('');
   const [userFullName, setUserFullName] = useState('');
-  const [crewAvailability, setCrewAvailability] = useState({}); // Track availability for each worker
-  const [assignedWorkers, setAssignedWorkers] = useState({}); // Track assigned workers for each appointment
-  const [currentDateIndex, setCurrentDateIndex] = useState(0); // Track which selected date is being processed
-  const [isInitialLoad, setIsInitialLoad] = useState(true); // Flag to prevent saving during initial load
-  const [weatherData, setWeatherData] = useState({}); // Store weather data for calendar dates
-  const [weatherLoading, setWeatherLoading] = useState(false); // Track weather loading state
-  const [selectedDateForAI, setSelectedDateForAI] = useState(null); // Track selected date for AI recommendation
-  const [showCreateDropdown, setShowCreateDropdown] = useState(false); // Track create dropdown visibility
-  const [showAppointmentModal, setShowAppointmentModal] = useState(false); // Track appointment modal visibility
+  const [crewAvailability, setCrewAvailability] = useState({});
+  const [assignedWorkers, setAssignedWorkers] = useState({});
+  const [currentDateIndex, setCurrentDateIndex] = useState(0);
+  const [weatherData, setWeatherData] = useState({});
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [selectedDateForAI, setSelectedDateForAI] = useState(null);
+  const [hoveredDate, setHoveredDate] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [hoverTimeout, setHoverTimeout] = useState(null);
+  const [showCreateDropdown, setShowCreateDropdown] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showExtendedView, setShowExtendedView] = useState(false);
+  const [timeTrackingRows, setTimeTrackingRows] = useState([]);
   const [appointmentFormData, setAppointmentFormData] = useState({
     time: '',
     serviceType: 'Mooring',
     vesselType: 'Local',
     selectedWorkers: []
-  }); // Track appointment form data
+  });
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();
@@ -38,8 +73,8 @@ const Scheduling = () => {
 
   // Month names
   const monthNames = [
-    'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
-    'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
   // Get the first day of the month and number of days
@@ -68,7 +103,7 @@ const Scheduling = () => {
     }
     
     // Add days from next month to complete the grid
-    const remainingCells = 42 - days.length; // 6 rows * 7 days = 42
+    const remainingCells = 42 - days.length;
     for (let day = 1; day <= remainingCells; day++) {
       days.push({ day, isCurrentMonth: false });
     }
@@ -84,13 +119,21 @@ const Scheduling = () => {
            currentYear === today.getFullYear();
   };
 
-  // Check if a day is selected (multiple selection)
+  // Check if a day is selected
   const isSelected = (day) => {
     return selectedDates.some(date =>
       day === date.getDate() &&
       currentMonth === date.getMonth() &&
       currentYear === date.getFullYear()
     );
+  };
+
+  // Build availability document ID
+  const buildAvailabilityDocId = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Check if a day is in the past
@@ -119,7 +162,6 @@ const Scheduling = () => {
     const userEmail = user ? user.email : '';
     const matchName = userFullName || userName;
     
-    // Check for Alice Margaretha Santos
     const isAliceUser = 
       matchName === 'Alice Margaretha Santos' || 
       matchName === 'Alice' ||
@@ -129,50 +171,511 @@ const Scheduling = () => {
     return isAliceUser;
   };
 
-  // Handle date selection (toggle multiple) - only allow Alice to select dates
+    
+  // Handle date click to show vessel entry modal
   const handleDateClick = (day, isCurrentMonth) => {
-    if (isCurrentMonth && day && isAlice()) {
+    
+    if (!isAlice()) {
+      alert('Only Alice can add vessel entries');
+      return;
+    }
+    
+    if (!isCurrentMonth || !day) {
+      return;
+    }
+    
       const clickedDate = new Date(currentYear, currentMonth, day);
-      
-      // Check if the clicked date is in the past
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      clickedDate.setHours(0, 0, 0, 0);
-      
-      if (clickedDate < today) {
-        // Don't allow selection of past dates
-        alert('Cannot select dates that have already passed');
+    const isPast = isPastDate(day);
+    
+    
+    if (isPast) {
+      alert('Cannot add vessels to dates that have already passed');
         return;
       }
       
-      setSelectedDates(prev => {
-        const exists = prev.some(date =>
-          date.getDate() === clickedDate.getDate() &&
-          date.getMonth() === clickedDate.getMonth() &&
-          date.getFullYear() === clickedDate.getFullYear()
-        );
-        if (exists) {
-          // Remove if already selected
-          const newDates = prev.filter(date =>
-            !(date.getDate() === clickedDate.getDate() &&
-              date.getMonth() === clickedDate.getMonth() &&
-              date.getFullYear() === clickedDate.getFullYear())
-          );
-          // If all dates are cleared, also clear from Firebase
-          if (newDates.length === 0) {
-            saveSelectedDatesToFirebase([]);
-          }
-          return newDates;
-        } else {
-          // Add new selected date
-          return [...prev, clickedDate];
-        }
-      });
-      // Set selected date for AI recommendation
-      setSelectedDateForAI(clickedDate);
-      // Reset current date index when selection changes
-      setCurrentDateIndex(0);
+    setClickedDate(clickedDate);
+    setIsEditingVessel(false);
+    setEditingVesselId(null);
+    setVesselFormData({
+      vesselName: '',
+      voyageId: '',
+      controlId: '',
+      vesselType: 'Local',
+      purpose: [],
+      time: ''
+    });
+    setShowVesselModal(true);
+  };
+
+  // Handle vessel form input changes
+  const handleVesselInputChange = (field, value) => {
+    setVesselFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Handle purpose checkbox changes
+  const handlePurposeChange = (purpose, isChecked) => {
+    setVesselFormData(prev => ({
+      ...prev,
+      purpose: isChecked 
+        ? [...prev.purpose, purpose]
+        : prev.purpose.filter(p => p !== purpose)
+    }));
+  };
+
+  // Handle vessel form submission
+  const handleVesselSubmit = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Prevent any form submission
+    if (e && e.preventDefault) {
+      e.preventDefault();
     }
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
+    
+    if (!vesselFormData.vesselName || !vesselFormData.voyageId || !vesselFormData.controlId) {
+      console.log('❌ Validation failed: Missing required fields');
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    if (vesselFormData.purpose.length === 0) {
+      alert('Please select at least one purpose');
+      return;
+    }
+    
+    
+    const dateKey = `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, '0')}-${String(clickedDate.getDate()).padStart(2, '0')}`;
+    
+    try {
+      if (isEditingVessel) {
+        // Find the original vessel data for Excel update
+        const originalVessel = vesselEntries[dateKey]?.find(v => v.id === editingVesselId);
+        if (!originalVessel) {
+          alert('Error: Could not find original vessel entry');
+          return;
+        }
+
+        // Update Excel file
+        const excelUpdateData = {
+          "Vessel": vesselFormData.vesselName,
+          "Voyage Number": vesselFormData.voyageId,
+          "Control Number": vesselFormData.controlId,
+          "Service": vesselFormData.purpose.join(', '),
+          "Vessel Type": vesselFormData.vesselType
+        };
+
+        await excelAPI.updateVesselEntry(
+          dateKey,
+          originalVessel.vesselName,
+          excelUpdateData
+        );
+
+        // Update local state
+        setVesselEntries(prev => {
+          const updatedEntries = {
+            ...prev,
+            [dateKey]: prev[dateKey]?.map(vessel => 
+              vessel.id === editingVesselId 
+                ? {
+                    ...vessel,
+                    vesselName: vesselFormData.vesselName,
+                    voyageId: vesselFormData.voyageId,
+                    controlId: vesselFormData.controlId,
+                    vesselType: vesselFormData.vesselType,
+                    purpose: vesselFormData.purpose
+                  }
+                : vessel
+            ) || []
+          };
+          // Save to local storage
+          saveVesselEntriesToLocalStorage(updatedEntries);
+          return updatedEntries;
+        });
+        
+        console.log('Vessel entry updated in Excel and local state:', { id: editingVesselId, ...vesselFormData });
+        alert('Vessel entry updated successfully!');
+      } else {
+        // Create new vessel entry for Excel
+        const excelData = {
+          date: dateKey,
+          vesselName: vesselFormData.vesselName,
+          voyageNo: vesselFormData.voyageId,
+          purposeOfCall: vesselFormData.purpose.join(', '),
+          controlId: vesselFormData.controlId,
+          vesselType: vesselFormData.vesselType,
+          time: vesselFormData.time
+        };
+
+        // Create local vessel entry first
+        const vesselEntry = {
+          id: `vessel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // More unique ID generation
+          vesselName: vesselFormData.vesselName,
+          voyageId: vesselFormData.voyageId,
+          controlId: vesselFormData.controlId,
+          vesselType: vesselFormData.vesselType,
+          purpose: vesselFormData.purpose,
+          time: vesselFormData.time,
+          date: clickedDate
+        };
+        
+        // Add vessel entry to local state immediately
+        const newVesselEntries = {
+          ...vesselEntries,
+          [dateKey]: [...(vesselEntries[dateKey] || []), vesselEntry]
+        };
+        
+        setVesselEntries(newVesselEntries);
+        saveVesselEntriesToLocalStorage(newVesselEntries);
+
+        // Try to save to Excel (but don't let it block the UI update)
+        try {
+          await excelAPI.addVesselEntry(excelData);
+        } catch (excelError) {
+          console.error('Excel save failed, but vessel added locally:', excelError);
+          // Don't throw - vessel is already added locally
+        }
+        
+        alert('Vessel entry added successfully!');
+      }
+    } catch (error) {
+      console.error('Error saving vessel entry:', error);
+      alert('Error saving vessel entry. Please try again.');
+      return;
+    }
+    
+    // Close modal and reset form
+    setShowVesselModal(false);
+    setIsEditingVessel(false);
+    setEditingVesselId(null);
+    setVesselFormData({
+      vesselName: '',
+      voyageId: '',
+      controlId: '',
+      vesselType: 'Local',
+      purpose: [],
+      time: ''
+    });
+    setClickedDate(null);
+    
+    // Prevent any default behavior
+    return false;
+  };
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setShowVesselModal(false);
+    setIsEditingVessel(false);
+    setEditingVesselId(null);
+    setVesselFormData({
+      vesselName: '',
+      voyageId: '',
+      controlId: '',
+      vesselType: 'Local',
+      purpose: [],
+      time: ''
+    });
+    setClickedDate(null);
+  };
+
+  // Get vessel entries for a specific date
+  const getVesselEntriesForDate = (day, isCurrentMonth) => {
+    if (!isCurrentMonth || !day) return [];
+    
+    const date = new Date(currentYear, currentMonth, day);
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    
+    const entries = vesselEntries[dateKey] || [];
+    
+    return entries;
+  };
+
+  // Load recent finished vessels
+  const loadRecentFinishedVessels = async () => {
+    try {
+      const response = await excelAPI.getVesselsData();
+      
+      if (response.success && response.vessels) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const finishedVessels = response.vessels
+          .filter(vessel => {
+            if (!vessel.date || vessel.date === 'N/A') return false;
+            
+            try {
+              const vesselDate = new Date(vessel.date);
+              vesselDate.setHours(0, 0, 0, 0);
+              return vesselDate < today;
+            } catch (e) {
+              return false;
+            }
+          })
+          .sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateB - dateA; // Most recent first
+          })
+          .slice(0, 5); // Show last 5 finished vessels
+        
+        setRecentFinishedVessels(finishedVessels);
+      }
+    } catch (error) {
+      console.error('Error loading recent finished vessels:', error);
+    }
+  };
+
+  const loadUpcomingScheduledVessels = async () => {
+    try {
+      const response = await excelAPI.getVesselsData();
+      
+      if (response.success && response.vessels) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const upcomingVessels = response.vessels
+          .filter(vessel => {
+            if (!vessel.date || vessel.date === 'N/A') return false;
+            
+            try {
+              const vesselDate = new Date(vessel.date);
+              vesselDate.setHours(0, 0, 0, 0);
+              return vesselDate >= today;
+            } catch (e) {
+              return false;
+            }
+          })
+          .sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateA - dateB; // Earliest first
+          })
+          .slice(0, 5); // Show next 5 upcoming vessels
+        
+        setUpcomingScheduledVessels(upcomingVessels);
+      }
+    } catch (error) {
+      console.error('Error loading upcoming scheduled vessels:', error);
+    }
+  };
+
+  // Load vessel entries from Excel file
+  const loadVesselEntriesFromExcel = async () => {
+    try {
+      const response = await excelAPI.getVesselsData();
+      
+      if (response.success && response.vessels) {
+        // Convert Excel data to vessel entries format
+        const entries = {};
+        
+        response.vessels.forEach((vessel, index) => {
+          const dateKey = vessel.date;
+          
+          if (!dateKey || dateKey === 'N/A') {
+            return;
+          }
+          
+          if (!entries[dateKey]) {
+            entries[dateKey] = [];
+          }
+          
+          const vesselEntry = {
+            id: `excel_${index}_${Date.now()}`,
+            vesselName: vessel.vessel || '',
+            voyageId: vessel.voyage || '',
+            controlId: vessel.controlId || '',
+            vesselType: vessel.vesselType || 'Local',
+            purpose: vessel.purpose ? vessel.purpose.split(', ').filter(p => p.trim()) : [],
+            time: vessel.time || '',
+            date: new Date(dateKey)
+          };
+          
+          entries[dateKey].push(vesselEntry);
+        });
+        
+        setVesselEntries(entries);
+        // Also save to local storage as backup
+        saveVesselEntriesToLocalStorage(entries);
+      } else {
+        // Try to load from local storage as fallback
+        loadVesselEntriesFromLocalStorage();
+      }
+    } catch (error) {
+      console.error('Error loading vessel entries from Excel:', error);
+      // Try to load from local storage as fallback
+      loadVesselEntriesFromLocalStorage();
+    }
+  };
+
+  // Load vessel entries from local storage (fallback)
+  const loadVesselEntriesFromLocalStorage = () => {
+    try {
+      const savedEntries = localStorage.getItem('vesselEntries');
+      
+      if (savedEntries) {
+        const entries = JSON.parse(savedEntries);
+        
+        // Convert date strings back to Date objects
+        Object.keys(entries).forEach(dateKey => {
+          entries[dateKey].forEach(entry => {
+            entry.date = new Date(entry.date);
+          });
+        });
+        
+        setVesselEntries(entries);
+      }
+    } catch (error) {
+      console.error('Error loading vessel entries from local storage:', error);
+    }
+  };
+
+  // Save vessel entries to local storage
+  const saveVesselEntriesToLocalStorage = (entries) => {
+    try {
+      localStorage.setItem('vesselEntries', JSON.stringify(entries));
+    } catch (error) {
+      console.error('Error saving vessel entries to local storage:', error);
+    }
+  };
+
+  // Handle vessel bar click for editing
+  const handleVesselBarClick = (vessel, day, isCurrentMonth, e) => {
+    e.stopPropagation(); // Prevent triggering date click
+    
+    if (!isAlice()) {
+      alert('Only Alice can edit vessel entries');
+      return;
+    }
+    
+    const date = new Date(currentYear, currentMonth, day);
+    setClickedDate(date);
+    setIsEditingVessel(true);
+    setEditingVesselId(vessel.id);
+    setVesselFormData({
+      vesselName: vessel.vesselName,
+      voyageId: vessel.voyageId,
+      controlId: vessel.controlId,
+      vesselType: vessel.vesselType,
+      purpose: [...vessel.purpose],
+      time: vessel.time || ''
+    });
+    setShowVesselModal(true);
+  };
+
+  // Handle vessel deletion
+  const handleVesselDelete = async (vesselId, day, isCurrentMonth) => {
+    if (!isAlice()) {
+      alert('Only Alice can delete vessel entries');
+      return;
+    }
+    
+    if (!window.confirm('Are you sure you want to delete this vessel entry?')) {
+      return;
+    }
+    
+    const date = new Date(currentYear, currentMonth, day);
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    
+    console.log(`🗑️ Deleting vessel with ID: ${vesselId} for date: ${dateKey}`);
+    console.log(`📋 Current vessels for this date:`, vesselEntries[dateKey]);
+    
+    try {
+      // Find the vessel to get its name for Excel deletion
+      const vesselToDelete = vesselEntries[dateKey]?.find(vessel => vessel.id === vesselId);
+      if (!vesselToDelete) {
+        console.error(`❌ Vessel with ID ${vesselId} not found in entries:`, vesselEntries[dateKey]);
+        alert('Error: Could not find vessel entry to delete');
+        return;
+      }
+
+      console.log(`✅ Found vessel to delete:`, vesselToDelete);
+
+      // Delete from Excel
+      await excelAPI.deleteVesselEntry(dateKey, vesselToDelete.vesselName);
+
+      // Delete from local state
+      setVesselEntries(prev => {
+        const beforeCount = prev[dateKey]?.length || 0;
+        const updatedEntries = {
+          ...prev,
+          [dateKey]: prev[dateKey]?.filter(vessel => {
+            const shouldKeep = vessel.id !== vesselId;
+            if (!shouldKeep) {
+              console.log(`🗑️ Removing vessel:`, vessel);
+            }
+            return shouldKeep;
+          }) || []
+        };
+        const afterCount = updatedEntries[dateKey]?.length || 0;
+        console.log(`📊 Vessel count for ${dateKey}: ${beforeCount} → ${afterCount}`);
+        
+        // Save to local storage
+        saveVesselEntriesToLocalStorage(updatedEntries);
+        return updatedEntries;
+      });
+      
+      console.log('✅ Vessel entry deleted from Excel and local state:', vesselToDelete);
+      alert('Vessel entry deleted successfully!');
+    } catch (error) {
+      console.error('❌ Error deleting vessel entry:', error);
+      alert('Error deleting vessel entry. Please try again.');
+    }
+  };
+  const handleDateHover = (day, isCurrentMonth, event) => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      setHoverTimeout(null);
+    }
+
+    if (isCurrentMonth && day) {
+      const hoveredDate = new Date(currentYear, currentMonth, day);
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      hoveredDate.setHours(0, 0, 0, 0);
+      
+      if (hoveredDate >= today) {
+        const timeout = setTimeout(() => {
+          setHoveredDate(hoveredDate);
+          
+          const rect = event.target.getBoundingClientRect();
+          const tooltipWidth = 320;
+          const viewportWidth = window.innerWidth;
+          
+          let x = rect.left + rect.width / 2;
+          let y = rect.top - 10;
+          
+          if (x + tooltipWidth / 2 > viewportWidth) {
+            x = viewportWidth - tooltipWidth / 2 - 10;
+          }
+          if (x - tooltipWidth / 2 < 0) {
+            x = tooltipWidth / 2 + 10;
+          }
+          
+          setTooltipPosition({ x, y });
+        }, 1000);
+        
+        setHoverTimeout(timeout);
+        } else {
+        setHoveredDate(null);
+      }
+    } else {
+      setHoveredDate(null);
+    }
+  };
+
+  // Handle date hover end
+  const handleDateHoverEnd = () => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      setHoverTimeout(null);
+    }
+    setHoveredDate(null);
   };
 
   // Handle form input change
@@ -186,317 +689,187 @@ const Scheduling = () => {
     }));
   };
 
-  // Save form data to Firestore
-  const handleFormSubmit = async (e, idx, date) => {
-    e.preventDefault();
-    const db = getFirestore();
-    const auth = getAuth();
-    const user = auth.currentUser;
-    
-    // Get assigned workers for this appointment
-    const assignedWorkersList = getAssignedWorkersForAppointment(idx);
-    
-    // Ensure all fields are present and defaulted
-    const data = {
-      name: formData[idx]?.name || '',
-      time: formData[idx]?.time || '',
-      serviceType: formData[idx]?.serviceType || 'Mooring',
-      vesselType: formData[idx]?.vesselType || 'Local',
-      date: date.toISOString(),
-      userEmail: user ? user.email : 'guest',
-      timestamp: new Date().toISOString(),
-      assignedWorkers: assignedWorkersList // Add assigned workers to the appointment
+  // Handle date click form input change
+
+
+  // Time tracking functions
+  const addTimeTrackingRow = () => {
+    const newRow = {
+      id: Date.now(),
+      operation: 'Mooring',
+      timeListed: '',
+      timeStarted: '',
+      timeFinished: ''
     };
+    setTimeTrackingRows(prev => [...prev, newRow]);
+  };
+
+  const removeTimeTrackingRow = (id) => {
+    setTimeTrackingRows(prev => prev.filter(row => row.id !== id));
+  };
+
+  const updateTimeTrackingRow = (id, field, value) => {
+    setTimeTrackingRows(prev => 
+      prev.map(row => 
+        row.id === id ? { ...row, [field]: value } : row
+      )
+    );
+  };
+
+
+
+  // Excel export functions
+  const saveToExcel = async (entryData, isUpdate = false, originalDate = null) => {
     try {
-      await addDoc(collection(db, 'appointments'), data);
-      // Clear the form data and assigned workers for this specific date index
-      setFormData(prev => {
-        const newFormData = { ...prev };
-        delete newFormData[idx];
-        return newFormData;
+      console.log('=== saveToExcel called ===');
+      console.log('isUpdate:', isUpdate);
+      console.log('originalDate:', originalDate);
+      console.log('entryData:', entryData);
+      
+      console.log('saveToExcel - entryData.date:', {
+        date: entryData.date,
+        dateISO: entryData.date.toISOString(),
+        dateLocal: entryData.date.toLocaleDateString(),
+        currentDate: new Date().toISOString()
       });
-      setAssignedWorkers(prev => {
-        const newAssignedWorkers = { ...prev };
-        delete newAssignedWorkers[idx];
-        return newAssignedWorkers;
+      
+      const year = entryData.date.getFullYear();
+      const month = String(entryData.date.getMonth() + 1).padStart(2, '0');
+      const day = String(entryData.date.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+      
+      console.log('saveToExcel - processed date:', {
+        year,
+        month,
+        day,
+        dateString
       });
-      fetchSavedEntries();
-      alert('Appointment saved successfully!');
-      moveToNextDate(); // Move to the next selected date after saving
-    } catch (err) {
-      alert('Error saving appointment: ' + err.message);
-    }
-  };
-
-  // Fetch saved entries for selected dates
-  const fetchSavedEntries = async () => {
-    const db = getFirestore();
-    if (selectedDates.length === 0) {
-      setSavedEntries([]);
-      return;
-    }
-    // Get ISO strings for selected dates
-    const selectedISO = selectedDates.map(d => d.toISOString().slice(0, 10));
-    const q = query(collection(db, 'appointments'));
-    const querySnapshot = await getDocs(q);
-    const entries = [];
-    querySnapshot.forEach(docSnap => {
-      const entry = docSnap.data();
-      // Only match if entry.date exists and not marked as done
-      if (entry.date && selectedISO.includes(entry.date.slice(0, 10)) && entry.status !== 'done') {
-        entries.push({ ...entry, id: docSnap.id });
-      }
-    });
-    setSavedEntries(entries);
-  };
-
-  // Fetch saved availability from Firestore
-  const fetchSavedAvailability = async () => {
-    const db = getFirestore();
-    try {
-      const today = new Date();
-      const availabilityDocName = buildAvailabilityDocId(today);
-      const docRef = doc(db, 'availability', availabilityDocName);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        setCrewAvailability(data);
-      }
-    } catch (err) {
-      console.log('Error fetching saved availability:', err);
-    }
-  };
-
-  // Load selected dates from Firebase
-  const loadSelectedDatesFromFirebase = async () => {
-    const db = getFirestore();
-    const auth = getAuth();
-    const user = auth.currentUser;
-    
-    if (!user) {
-      console.log('No user logged in, skipping Firebase load');
-      return [];
-    }
-    
-    try {
-      const userId = user.uid;
-      const docRef = doc(db, 'selectedDates', userId);
-      const docSnap = await getDoc(docRef);
       
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.selectedDates && Array.isArray(data.selectedDates)) {
-          // Convert ISO strings back to Date objects
-          const parsedDates = data.selectedDates.map(dateStr => new Date(dateStr));
-          console.log('Selected dates loaded from Firebase for user:', user.email);
-          return parsedDates;
-        }
-      }
-      
-      console.log('No selected dates found in Firebase for user:', user.email);
-      return [];
-    } catch (error) {
-      console.error('Error loading selected dates from Firebase:', error);
-      return [];
-    }
-  };
+      const newRow = {
+        'Vessel': entryData.vesselName,
+        'Voyage Number': entryData.voyageNumber,
+        'Control Number': entryData.controlId,
+        'Service': entryData.mooringOperations.join(', '),
+        'Date': dateString,
+        'Time': entryData.time,
+        'Vessel Type': entryData.vesselType
+      };
 
-  // Check and remove passed dates
-  const removePassedDates = (dates) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to start of today for accurate comparison
-    
-    const validDates = dates.filter(date => {
-      const dateOnly = new Date(date);
-      dateOnly.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
-      return dateOnly >= today; // Keep dates that are today or in the future
-    });
-    
-    const removedCount = dates.length - validDates.length;
-    if (removedCount > 0) {
-      console.log(`Removed ${removedCount} passed date(s) from selection`);
-    }
-    
-    return validDates;
-  };
+      console.log('Saving new/updated row with date:', newRow.Date);
+      console.log('Full new row:', newRow);
 
-  // Save selected dates to Firebase
-  const saveSelectedDatesToFirebase = async (dates) => {
-    const user = getAuth().currentUser;
-    if (!user) {
-      console.log('No user logged in, cannot save selected dates');
-      return;
-    }
-
-    try {
-      const db = getFirestore();
-      const userId = user.uid;
-      const docRef = doc(db, 'selectedDates', userId);
+      let response;
       
-      // Convert Date objects to ISO strings for storage
-      const datesToSave = dates.map(date => date.toISOString());
-      
-      await setDoc(docRef, {
-        selectedDates: datesToSave,
-        lastUpdated: new Date().toISOString(),
-        userId: userId
-      }, { merge: true });
-      
-      console.log('Selected dates saved to Firebase for user:', user.email);
-    } catch (error) {
-      console.error('Error saving selected dates to Firebase:', error);
-    }
-  };
-
-
-  // Mark appointment as done
-  const handleDoneAppointment = async (id) => {
-    const db = getFirestore();
-    try {
-      const appointmentRef = doc(db, 'appointments', id);
-      await updateDoc(appointmentRef, { status: 'done' });
-      
-      // Find the appointment to get assigned workers
-      const appointment = savedEntries.find(entry => entry.id === id);
-      if (appointment && appointment.assignedWorkers && appointment.assignedWorkers.length > 0) {
-        // Update crew availability to mark these workers as available again
-        const updatedCrewAvailability = { ...crewAvailability };
+      if (isUpdate && originalDate) {
+        // This is an update - use the update endpoint
+        console.log('This is an update - using update endpoint');
         
-        // For each assigned worker, ensure they are marked as available
-        appointment.assignedWorkers.forEach(workerName => {
-          const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
-          const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
+        // Get the original vessel name from the vessel entries
+        const originalYear = originalDate.getFullYear();
+        const originalMonth = String(originalDate.getMonth() + 1).padStart(2, '0');
+        const originalDay = String(originalDate.getDate()).padStart(2, '0');
+        const originalDateKey = `${originalYear}-${originalMonth}-${originalDay}`;
+        const originalEntry = vesselEntries[originalDateKey];
+        
+        if (originalEntry && originalEntry.vesselName) {
+          console.log('Updating existing entry for vessel:', originalEntry.vesselName);
           
-          // Get the day of the week for this appointment
-          const appointmentDate = new Date(appointment.date);
-          const dayIndex = appointmentDate.getDay();
-          const dayKey = dayNames[dayIndex];
+          response = await api.put('/excel/update-entry', {
+            date: dateString,
+            vesselName: originalEntry.vesselName,
+            newData: newRow
+          });
           
-          // Ensure the worker is marked as available (not false) for this day
-          if (!updatedCrewAvailability[workerKey]) {
-            updatedCrewAvailability[workerKey] = {};
-          }
-          updatedCrewAvailability[workerKey][dayKey] = true; // Mark as available
+          if (response.data.success) {
+            console.log('Entry updated successfully:', response.data);
+          } else {
+            console.warn('Update failed, falling back to append:', response.data.message);
+            // Fallback to append if update fails
+            response = await api.post('/excel/append', {
+          object: newRow
         });
-        
-        // Update local state
-        setCrewAvailability(updatedCrewAvailability);
-        
-        // Save updated availability to Firestore
-        const today = new Date();
-        const availabilityDocName = buildAvailabilityDocId(today);
-        
-        const data = {
-          ...updatedCrewAvailability,
-          savedBy: 'system',
-          savedAt: new Date().toISOString(),
-          date: today.toISOString()
-        };
-        
-        await setDoc(doc(db, 'availability', availabilityDocName), data, { merge: true });
+          }
+        } else {
+          console.warn('No original entry found, falling back to append');
+          response = await api.post('/excel/append', {
+            object: newRow
+          });
+        }
+      } else {
+        // This is a new entry - use the append endpoint
+        console.log('This is a new entry - using append endpoint');
+        response = await api.post('/excel/append', {
+          object: newRow
+        });
       }
-      
-      setSavedEntries(prev => prev.filter(entry => entry.id !== id)); // Remove from local state instantly
-      fetchSavedEntries();
-    } catch (err) {
-      alert('Error marking appointment as done: ' + err.message);
+
+        if (response.data.success) {
+          console.log('Vessel entry saved to Vessels Log.xlsx:', response.data);
+        if (isUpdate) {
+          console.log('Update completed successfully');
+        } else {
+          console.log('New entry created successfully');
+        }
+      } else {
+          throw new Error(response.data.error || 'Failed to save to Excel');
+      }
+    } catch (error) {
+      console.error('Error saving to Excel:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      // Don't use alert to prevent page refresh
+      console.warn('Excel save failed - check console for details');
     }
   };
+
+  const removeFromExcel = async (entryData) => {
+    try {
+      console.log('Entry cleared from calendar (Excel entry remains):', entryData);
+    } catch (error) {
+      console.error('Error processing clear request:', error);
+    }
+  };
+
+  // Handle vessel entry bar click
+
+  // Handle date click form submission
+
 
   // Load saved selected dates from Firebase and localStorage on component mount
   useEffect(() => {
     const loadSavedDates = async () => {
       try {
-        // First try to load from Firebase
-        const firebaseDates = await loadSelectedDatesFromFirebase();
-        
-        let datesToSet = [];
-        
-        if (firebaseDates.length > 0) {
-          // Use Firebase data if available
-          datesToSet = firebaseDates;
-          console.log('Loaded selected dates from Firebase');
-        } else {
-          // Fallback to localStorage if no Firebase data
           const savedDates = localStorage.getItem('schedulingSelectedDates');
           if (savedDates) {
             const parsedDates = JSON.parse(savedDates).map(dateStr => new Date(dateStr));
-            datesToSet = parsedDates;
-            console.log('Loaded selected dates from localStorage');
-          }
+          setSelectedDates(parsedDates);
         }
-        
-        // Clean up passed dates before setting
-        const cleanedDates = removePassedDates(datesToSet);
-        
-        // If dates were cleaned up, save the cleaned version back to Firebase
-        if (cleanedDates.length !== datesToSet.length) {
-          setSelectedDates(cleanedDates);
-          await saveSelectedDatesToFirebase(cleanedDates);
-          // Also update localStorage
-          localStorage.setItem('schedulingSelectedDates', JSON.stringify(cleanedDates));
-        } else {
-          setSelectedDates(cleanedDates);
-        }
-        
-        setIsInitialLoad(false); // Mark initial load as complete
+        setIsInitialLoad(false);
       } catch (error) {
         console.error('Error loading saved dates:', error);
         setIsInitialLoad(false);
       }
     };
+
     loadSavedDates();
   }, []);
 
-  // Save selected dates to Firebase and localStorage whenever they change
+  // Save selected dates to localStorage whenever they change
   useEffect(() => {
     if (isInitialLoad) {
-      return; // Don't save during initial load
+      return;
     }
     
-    const saveDates = async () => {
       try {
-        // Save to localStorage (for backward compatibility)
         localStorage.setItem('schedulingSelectedDates', JSON.stringify(selectedDates));
-        
-        // Save to Firebase
-        await saveSelectedDatesToFirebase(selectedDates);
       } catch (error) {
         console.error('Error saving dates:', error);
       }
-    };
-    
-    saveDates();
   }, [selectedDates, isInitialLoad]);
-
-  useEffect(() => {
-    fetchSavedEntries();
-    fetchSavedAvailability();
-    // eslint-disable-next-line
-  }, [selectedDates]);
-
-  // Periodic cleanup of passed dates
-  useEffect(() => {
-    const cleanupPassedDates = () => {
-      setSelectedDates(prev => {
-        const cleanedDates = removePassedDates(prev);
-        if (cleanedDates.length !== prev.length) {
-          // Save cleaned dates to Firebase and localStorage
-          saveSelectedDatesToFirebase(cleanedDates);
-          localStorage.setItem('schedulingSelectedDates', JSON.stringify(cleanedDates));
-        }
-        return cleanedDates;
-      });
-    };
-
-    // Run cleanup immediately
-    cleanupPassedDates();
-
-    // Set up interval to check every hour
-    const interval = setInterval(cleanupPassedDates, 60 * 60 * 1000); // 1 hour
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Get logged-in user's name and full name from Firestore if needed
   useEffect(() => {
@@ -504,43 +877,29 @@ const Scheduling = () => {
     const db = getFirestore();
     const unsubscribe = auth.onAuthStateChanged(async user => {
       if (user) {
-        console.log('Debug - Firebase user:', user);
-        console.log('Debug - user.displayName:', user.displayName);
-        console.log('Debug - user.email:', user.email);
-        
         let name = user.displayName || (user.email ? user.email.split('@')[0] : '');
         setUserName(name);
-        console.log('Debug - set userName to:', name);
         
-        // Try to get full name from Firestore if displayName is missing or is just email username
         if (!user.displayName || name === user.email.split('@')[0]) {
-          // Query Firestore for user info by email
           const q = query(collection(db, 'users'), where('email', '==', user.email));
           const querySnapshot = await getDocs(q);
-          console.log('Debug - Firestore query result:', querySnapshot.empty ? 'No user found' : 'User found');
           
           if (!querySnapshot.empty) {
             const userData = querySnapshot.docs[0].data();
-            console.log('Debug - Firestore userData:', userData);
             if (userData.fullName) {
               setUserFullName(userData.fullName);
-              console.log('Debug - set userFullName to:', userData.fullName);
             } else {
               setUserFullName(name);
-              console.log('Debug - set userFullName to name:', name);
             }
           } else {
             setUserFullName(name);
-            console.log('Debug - set userFullName to name (no Firestore data):', name);
           }
         } else {
           setUserFullName(name);
-          console.log('Debug - set userFullName to name (has displayName):', name);
         }
       } else {
         setUserName('');
         setUserFullName('');
-        console.log('Debug - No user logged in');
       }
     });
     return () => unsubscribe();
@@ -551,30 +910,41 @@ const Scheduling = () => {
     const fetchWeatherData = async () => {
       setWeatherLoading(true);
       try {
-        // Try to get real weather data first
         const forecast = await getWeatherForecast();
         if (Object.keys(forecast).length > 0) {
           setWeatherData(forecast);
-          console.log('Weather data loaded:', forecast);
         } else {
-          // Fallback to mock data if API fails
           const mockData = getMockWeatherData();
           setWeatherData(mockData);
-          console.log('Using mock weather data:', mockData);
         }
       } catch (error) {
         console.error('Error fetching weather data:', error);
-        // Use mock data as fallback
         const mockData = getMockWeatherData();
         setWeatherData(mockData);
-        console.log('Using mock weather data due to error:', mockData);
       } finally {
         setWeatherLoading(false);
       }
     };
 
     fetchWeatherData();
-  }, [currentDate]); // Refetch when month changes
+  }, [currentDate]);
+
+  // Load vessel entries on component mount
+  useEffect(() => {
+    loadVesselEntriesFromExcel();
+    loadRecentFinishedVessels();
+    loadUpcomingScheduledVessels();
+  }, []);
+
+  // Debug vessel entries changes (only log when entries are added/removed)
+  useEffect(() => {
+    const totalEntries = Object.values(vesselEntries).flat().length;
+    if (totalEntries > 0) {
+      console.log(`Vessel entries updated: ${totalEntries} total entries across ${Object.keys(vesselEntries).length} dates`);
+    }
+  }, [vesselEntries]);
+
+
 
   // Helper: get vessel type info for each day in current month
   const getDayVesselTypes = () => {
@@ -616,7 +986,6 @@ const Scheduling = () => {
     const temperature = weatherInfo.temperature;
     const windSpeed = weatherInfo.windSpeed || 0;
 
-    // Generate recommendations based on weather conditions
     if (condition.includes('clear') || condition.includes('sunny')) {
       return {
         title: "✅ Optimal Conditions for Operations",
@@ -676,220 +1045,286 @@ const Scheduling = () => {
     }
   };
 
-
-  // Get available workers for a specific date
-  const getAvailableWorkers = (date) => {
-    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
-    const dayIndex = date.getDay();
-    const dayKey = dayNames[dayIndex];
-    
-    const workers = [
-      'Alice Margaretha Santos',
-      'Carla Dela Peña',
-      'Bryan Matthew Cruz',
-      'David Emmanuel Reyes',
-      'Junnel, Cusi',
-      'Aljon, Dipasupil',
-      'Phil Allen, Eje',
-      'Rhed, Escalon',
-      'Fortune, Garcia Jr.',
-      'Keith, Javier',
-      'Ericson, Mendoza',
-      'Alec, Sino-ag',
-      'Romeo, Velasquez',
-      'Rodel, Maranan',
-      'Alloi, Sino-ag',
-      'Renzy, Cantos',
-      'PJ, Cusi'
-    ];
-    
-    return workers.filter(workerName => {
-      const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
-      const workerAvailability = crewAvailability[workerKey] || {};
-      const isAvailable = workerAvailability[dayKey] !== false; // Available if not explicitly set to false
-      
-      // Check if worker is already assigned to an appointment on this date
-      const dateISO = date.toISOString().slice(0, 10);
-      const isAlreadyAssigned = savedEntries.some(entry => {
-        if (!entry.date || !entry.assignedWorkers) return false;
-        const entryDate = entry.date.slice(0, 10);
-        return entryDate === dateISO && entry.assignedWorkers.includes(workerName);
-      });
-      
-      return isAvailable && !isAlreadyAssigned; // Only show if available AND not already assigned
-    });
-  };
-
-  // Handle worker assignment for an appointment
-  const handleWorkerAssignment = (dateIdx, workerName, isAssigned) => {
-    setAssignedWorkers(prev => ({
-      ...prev,
-      [dateIdx]: {
-        ...prev[dateIdx],
-        [workerName]: isAssigned
-      }
-    }));
-  };
-
-  // Get assigned workers for a specific appointment
-  const getAssignedWorkersForAppointment = (dateIdx) => {
-    const assigned = assignedWorkers[dateIdx] || {};
-    return Object.keys(assigned).filter(worker => assigned[worker]);
-  };
-
-  // Move to next selected date after appointment is saved
-  const moveToNextDate = () => {
-    if (currentDateIndex < selectedDates.length - 1) {
-      setCurrentDateIndex(currentDateIndex + 1);
-      // Clear form data for the new date
-      setFormData(prev => {
-        const newFormData = { ...prev };
-        delete newFormData[currentDateIndex];
-        return newFormData;
-      });
-      setAssignedWorkers(prev => {
-        const newAssignedWorkers = { ...prev };
-        delete newAssignedWorkers[currentDateIndex];
-        return newAssignedWorkers;
-      });
-    } else {
-      // All dates processed, reset to first date and clear selection
-      setCurrentDateIndex(0);
-      setSelectedDates([]);
-      setFormData({});
-      setAssignedWorkers({});
-      // Clear from Firebase as well
-      saveSelectedDatesToFirebase([]);
-    }
-  };
-
-
   const dayVesselTypes = getDayVesselTypes();
   const calendarDays = generateCalendarDays();
 
 return (
   <div className="scheduling-container">
-    {/* Semi-transparent overlay */}
     <div className="scheduling-overlay" />
     
-    {/* Alice message at the top */}
-
-    
-    {/* Calendar header removed */}
-
-    {/* Main content area: calendar or table */}
     <div className="scheduling-content">
       {view === 'calendar' ? (
-        <div className="calendar-wrapper" style={{ width: '100%', maxWidth: '800px' }}>
-          <div className="calendar-header">
-            <div className="calendar-header-left">
-              <div className="calendar-title">
-                <div className="calendar-icon">27</div>
-                Calendar
+        <div className="calendar-layout">
+          {/* Left Sidebar - Recent Finished Vessels */}
+          <div className="calendar-sidebar">
+            {/* Upcoming Scheduled Vessels Widget */}
+            <div className="upcoming-vessels-widget">
+              <div className="widget-header">
+                <h3>Upcoming Schedules</h3>
+                <span className="vessel-count">{upcomingScheduledVessels.length}</span>
               </div>
-              <button className="today-button">
+              
+              <div className="upcoming-vessels-scroll">
+                {upcomingScheduledVessels.length === 0 ? (
+                  <div className="no-vessels-message">
+                    <p>No upcoming schedules</p>
+                  </div>
+                ) : (
+                  upcomingScheduledVessels.map((vessel, index) => {
+                    const vesselDate = new Date(vessel.date);
+                    const formattedDate = vesselDate.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    });
+                    
+                    const formattedTime = vessel.time ? (() => {
+                      try {
+                        const timeStr = vessel.time.trim();
+                        if (timeStr.includes('AM') || timeStr.includes('PM')) {
+                          return timeStr;
+                        }
+                        if (timeStr.includes(':')) {
+                          const [hours, minutes] = timeStr.split(':');
+                          const hour24 = parseInt(hours, 10);
+                          const mins = minutes || '00';
+                          
+                          if (hour24 === 0) return `12:${mins} AM`;
+                          if (hour24 < 12) return `${hour24}:${mins} AM`;
+                          if (hour24 === 12) return `12:${mins} PM`;
+                          return `${hour24 - 12}:${mins} PM`;
+                        }
+                        return timeStr;
+                      } catch (e) {
+                        return vessel.time;
+                      }
+                    })() : '';
+                    
+                    return (
+                      <div key={index} className="upcoming-vessel-card">
+                        <div className="vessel-info">
+                          <div className="vessel-name">{vessel.vessel}</div>
+                          <div className="vessel-details">
+                            <span className="vessel-date">{formattedDate}</span>
+                            {formattedTime && <span className="vessel-time">{formattedTime}</span>}
+                          </div>
+                          <div className="vessel-meta">
+                            <span className="vessel-type">{vessel.vesselType || 'Local'}</span>
+                            <span className="voyage-id">{vessel.voyage || 'N/A'}</span>
+                          </div>
+                        </div>
+                        <div className="vessel-status">
+                          <span className="status-badge upcoming">Upcoming</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Recent Finished Vessels Widget */}
+            <div className="recent-vessels-widget">
+              <div className="widget-header">
+                <h3>Recent Finished</h3>
+              </div>
+              
+              <div className="finished-vessels-scroll">
+                {recentFinishedVessels.length === 0 ? (
+                  <div className="no-vessels-message">
+                    <p>No recent finished vessels</p>
+                  </div>
+                ) : (
+                  recentFinishedVessels.map((vessel, index) => {
+                    const vesselDate = new Date(vessel.date);
+                    const formattedDate = vesselDate.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    });
+                    
+                    const formattedTime = vessel.time ? (() => {
+                      try {
+                        const timeStr = vessel.time.trim();
+                        if (timeStr.includes('AM') || timeStr.includes('PM')) {
+                          return timeStr;
+                        }
+                        if (timeStr.includes(':')) {
+                          const [hours, minutes] = timeStr.split(':');
+                          const hour24 = parseInt(hours, 10);
+                          const mins = minutes || '00';
+                          
+                          if (hour24 === 0) return `12:${mins} AM`;
+                          if (hour24 < 12) return `${hour24}:${mins} AM`;
+                          if (hour24 === 12) return `12:${mins} PM`;
+                          return `${hour24 - 12}:${mins} PM`;
+                        }
+                        return timeStr;
+                      } catch (e) {
+                        return vessel.time;
+                      }
+                    })() : '';
+                    
+                    return (
+                      <div key={index} className="finished-vessel-card">
+                        <div className="vessel-info">
+                          <div className="vessel-name">{vessel.vessel}</div>
+                          <div className="vessel-details">
+                            <span className="vessel-date">{formattedDate}</span>
+                            {formattedTime && <span className="vessel-time">{formattedTime}</span>}
+                          </div>
+                          <div className="vessel-meta">
+                            <span className="vessel-type">{vessel.vesselType || 'Local'}</span>
+                            <span className="voyage-id">{vessel.voyage || 'N/A'}</span>
+                          </div>
+                        </div>
+                        <div className="vessel-status">
+                          <span className="status-badge completed">Completed</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side - Calendar */}
+          <div className="calendar-main">
+            <div className="modern-calendar">
+            {/* Modern Calendar Header */}
+            <div className="calendar-header-modern">
+            <div className="calendar-header-left">
+                <div className="calendar-title-modern">
+                  <div className="calendar-icon-modern">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                  </svg>
+                </div>
+                  <h1 className="calendar-title-text">Vessel Scheduling</h1>
+              </div>
+              <button 
+                  className="today-btn-modern" 
+                  onClick={() => setCurrentDate(new Date())}
+              >
                 Today
               </button>
+            </div>
+              
+              <div className="calendar-navigation-modern">
+            <button 
+                  className="nav-btn-modern" 
+              onClick={goToPreviousMonth}
+              aria-label="Previous month"
+            >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                </svg>
+            </button>
+                <h2 className="month-year-modern">
+                {monthNames[currentMonth]} {currentYear}
+            </h2>
+            <button 
+                  className="nav-btn-modern"
+              onClick={goToNextMonth}
+              aria-label="Next month"
+            >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                </svg>
+            </button>
+          </div>
+
+              
+              
+
+            <div className="calendar-header-right">
               <div className="create-button-container">
                 <button 
-                  className="create-button"
+                    className="create-btn-modern"
                   onClick={() => setShowCreateDropdown(!showCreateDropdown)}
                 >
-                  <span className="create-icon">+</span>
-                  Create
-                  <span className="dropdown-arrow">▼</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                  </svg>
+                    Add Vessel
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="dropdown-arrow">
+                    <path d="M7 10l5 5 5-5z"/>
+                  </svg>
                 </button>
                 {showCreateDropdown && (
-                  <div className="create-dropdown">
+                    <div className="create-dropdown-modern">
                     <div 
-                      className="dropdown-item"
+                        className="dropdown-item-modern"
                       onClick={() => {
                         setShowAppointmentModal(true);
                         setShowCreateDropdown(false);
                       }}
                     >
-                      Appointment Schedule
-                    </div>
-                  </div>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                      </svg>
+                        Schedule Appointment
+              </div>
+              </div>
                 )}
               </div>
-            </div>
-            <div className="calendar-navigation">
-              <button 
-                className="nav-arrow left-arrow" 
-                onClick={goToPreviousMonth}
-                aria-label="Previous month"
-              >
-                ←
-              </button>
-              <h2 className="month-year">
-                {monthNames[currentMonth]} {currentYear}
-              </h2>
-              <button 
-                className="nav-arrow right-arrow" 
-                onClick={goToNextMonth}
-                aria-label="Next month"
-              >
-                →
-              </button>
-            </div>
-          </div>
-          <div className="calendar-grid">
+              </div>
+              </div>
+
+            {/* Modern Calendar Grid */}
+            <div className="calendar-grid-modern">
             {/* Weekday headers */}
-            <div className="weekday-header">
-              {['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'].map((day, index) => {
+              <div className="weekday-header-modern">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => {
                 const today = new Date();
                 const isCurrentDay = today.getDay() === index;
                 return (
                   <div 
                     key={day}
-                    className={`weekday ${isCurrentDay ? 'current-day' : ''}`}
+                      className={`weekday-modern ${isCurrentDay ? 'current-day' : ''}`}
                   >
                     {day}
                   </div>
                 );
               })}
             </div>
+              
             {/* Calendar days */}
-            <div className="calendar-days">
+              <div className="calendar-days-modern">
               {calendarDays.map((dayData, index) => {
                 let bgColor = '';
                 let weatherInfo = null;
                 
                 if (dayData.isCurrentMonth && dayData.day) {
-                  // Get vessel types for background color
                   const vesselTypes = dayVesselTypes[dayData.day];
                   if (vesselTypes) {
                     if (vesselTypes.has('Local') && vesselTypes.has('International')) {
-                      bgColor = '#e6d6ff'; // light purple
+                        bgColor = '#e6d6ff';
                     } else if (vesselTypes.has('Local')) {
-                      bgColor = '#d6f5d6'; // light green
+                        bgColor = '#d6f5d6';
                     } else if (vesselTypes.has('International')) {
-                      bgColor = '#d6eaff'; // light blue
+                        bgColor = '#d6eaff';
                     }
                   }
                   
-                  // Get weather data for this date
                   weatherInfo = getWeatherForDate(dayData);
                 }
 
                 const isPast = dayData.isCurrentMonth && dayData.day && isPastDate(dayData.day);
                 const canClick = isAlice() && dayData.isCurrentMonth && dayData.day && !isPast;
                 
-                // Create title with weather information
                 let titleText = '';
                 if (!isAlice() && dayData.isCurrentMonth && dayData.day) {
                   titleText = 'Only Alice can select dates';
                 } else if (isPast) {
                   titleText = 'This date has already passed';
-                } else if (weatherInfo) {
-                  titleText = `Weather: ${weatherInfo.condition} - ${weatherInfo.temperature}°C`;
                 }
                 
                 return (
                   <div
                     key={index}
-                    className={`calendar-day ${
+                      className={`calendar-day-modern ${
                       dayData.isCurrentMonth ? 'current-month' : 'other-month'
                     } ${dayData.isToday ? 'today' : ''} ${
                       dayData.isSelected ? 'selected' : ''
@@ -906,103 +1341,107 @@ return (
                       cursor: canClick ? 'pointer' : 'default'
                     }}
                     onClick={() => handleDateClick(dayData.day, dayData.isCurrentMonth)}
+                    onMouseEnter={(e) => handleDateHover(dayData.day, dayData.isCurrentMonth, e)}
+                    onMouseLeave={handleDateHoverEnd}
                     title={titleText}
                   >
-                    <div>{dayData.day}</div>
+                      <div className="day-number-modern">{dayData.day}</div>
                     {weatherInfo && (
-                      <div style={{ 
-                        fontSize: '0.7rem', 
-                        marginTop: '2px',
-                        opacity: 0.8
-                      }}>
+                        <div className="weather-indicator-modern">
                         {weatherInfo.temperature}°C
                       </div>
                     )}
-                  </div>
-                );
-              })}
-            </div>
-            
-            {/* AI Weather Recommendation Section - Now inside calendar */}
-            {selectedDateForAI && (
-              <div className="ai-recommendation-section" style={{ marginTop: '20px', width: '100%' }}>
-                <div className="ai-recommendation-header" style={{ padding: '12px 16px', marginBottom: '8px' }}>
-                  <div className="date-badge" style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>
-                      {selectedDateForAI.toLocaleDateString('en-US', { 
-                        weekday: 'short', 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
-                    </div>
-                    <div style={{ fontSize: '0.6rem', textAlign: 'center', lineHeight: '1.2' }}>
-                      AI Weather Recommendation
-                    </div>
-                  </div>
-                </div>
-                
-                {(() => {
-                  const dateKey = selectedDateForAI.toISOString().split('T')[0];
-                  const weatherInfo = weatherData[dateKey];
-                  const recommendation = generateAIRecommendation(weatherInfo, selectedDateForAI);
-                  
-                  return (
-                    <div className="ai-recommendation-card" style={{ padding: '16px' }}>
-                      <div className="recommendation-header">
-                        <div className="status-indicator">
-                          <div className="status-text">
-                            <h4 style={{ fontSize: '1rem', margin: '0 0 8px 0' }}>{recommendation.title}</h4>
-                            <div className="priority-badge" style={{ fontSize: '0.7rem', padding: '4px 8px' }}>
-                              {recommendation.type === 'success' ? 'OPTIMAL' : 
-                               recommendation.type === 'warning' ? 'CAUTION' : 
-                               recommendation.type === 'danger' ? 'CRITICAL' : 'ADVISORY'}
+                    
+                    {/* Vessel entry bars */}
+                    <div className="vessel-container-modern">
+                      {(() => {
+                        const vessels = getVesselEntriesForDate(dayData.day, dayData.isCurrentMonth);
+                        
+                        if (vessels.length === 0) {
+                          return null;
+                        }
+                        
+                        return vessels.map((vessel, index) => {
+                        console.log(`🎨 Rendering vessel bar ${index + 1}:`, {
+                          id: vessel.id,
+                          vesselName: vessel.vesselName,
+                          day: dayData.day
+                        });
+                        
+                        return (
+                          <div 
+                            key={vessel.id} 
+                            className="vessel-bar-modern"
+                            title={`${vessel.vesselName} - ${vessel.vesselType} - ${vessel.purpose.join(', ')}`}
+                            onClick={(e) => handleVesselBarClick(vessel, dayData.day, dayData.isCurrentMonth, e)}
+                          >
+                            <div className="vessel-bar-content">
+                              <div className="vessel-main-info">
+                                {vessel.time && (
+                                  <span className="vessel-time">{vessel.time}</span>
+                                )}
+                                <span className="vessel-name">{vessel.vesselName}</span>
+                              </div>
+                              <div className="vessel-bar-actions">
+                                <span className="vessel-type">{vessel.vesselType}</span>
+                                <button 
+                                  className="vessel-delete-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    console.log(`🔘 Delete button clicked for vessel:`, {
+                                      id: vessel.id,
+                                      vesselName: vessel.vesselName,
+                                      day: dayData.day
+                                    });
+                                    handleVesselDelete(vessel.id, dayData.day, dayData.isCurrentMonth);
+                                  }}
+                                  title="Delete vessel entry"
+                                >
+                                  ×
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                      
-                      <div className="recommendation-content">
-                        <p className="recommendation-message" style={{ fontSize: '0.9rem', margin: '8px 0' }}>
-                          {recommendation.message}
-                        </p>
-                      </div>
+                        );
+                      });
+                    })()}
                     </div>
+                </div>
                   );
-                })()}
+              })}
               </div>
-            )}
           </div>
           
-          {/* Weather Legend - Below Calendar */}
-          <div className="weather-legend-section">
-            <div className="weather-legend">
-              <span className="weather-legend-title">Weather:</span>
+            {/* Weather Legend */}
+            <div className="weather-legend-modern">
+              <span className="weather-legend-title">Weather Conditions:</span>
               <div className="weather-legend-items">
-                <div className="weather-item">
+                <div className="weather-item-modern">
                   <div className="weather-indicator sunny"></div>
-                  <span className="weather-text">Sunny</span>
-                </div>
-                <div className="weather-item">
+                  <span>Sunny</span>
+                        </div>
+                <div className="weather-item-modern">
                   <div className="weather-indicator cloudy"></div>
-                  <span className="weather-text">Cloudy</span>
-                </div>
-                <div className="weather-item">
+                  <span>Cloudy</span>
+                          </div>
+                <div className="weather-item-modern">
                   <div className="weather-indicator light-rain"></div>
-                  <span className="weather-text">Light Rain</span>
-                </div>
-                <div className="weather-item">
+                  <span>Light Rain</span>
+                            </div>
+                <div className="weather-item-modern">
                   <div className="weather-indicator rain"></div>
-                  <span className="weather-text">Rain</span>
-                </div>
-                <div className="weather-item">
+                  <span>Rain</span>
+                              </div>
+                <div className="weather-item-modern">
                   <div className="weather-indicator heavy-rain"></div>
-                  <span className="weather-text">Heavy Rain</span>
-                </div>
-                <div className="weather-item">
+                  <span>Heavy Rain</span>
+        </div>
+                <div className="weather-item-modern">
                   <div className="weather-indicator storm"></div>
-                  <span className="weather-text">Storm</span>
-                </div>
+                  <span>Storm</span>
               </div>
+            </div>
+          </div>
             </div>
           </div>
         </div>
@@ -1013,146 +1452,211 @@ return (
         />
       )}
 
-      {/* Navigation buttons - positioned at lower right */}
+        {/* Navigation buttons */}
       <div className="report-nav-btns">
         <button
           className="report-nav-btn"
           onClick={() => setView('calendar')}
           disabled={view === 'calendar'}
         >
-          &#8592; Previous
+            ← Calendar
         </button>
         <button
           className="report-nav-btn"
           onClick={() => setView('table')}
           disabled={view === 'table'}
         >
-          Next &#8594;
+            Crew Table →
         </button>
       </div>
     </div>
 
-    {/* Appointment Creation Modal */}
-    {showAppointmentModal && (
-      <div className="modal-overlay" onClick={() => setShowAppointmentModal(false)}>
-        <div className="appointment-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2>Create Appointment</h2>
-            <button 
-              className="close-button"
-              onClick={() => setShowAppointmentModal(false)}
-            >
-              ×
-            </button>
+      {/* Weather Hover Tooltip */}
+      {hoveredDate && (
+        <div 
+          className="weather-tooltip-modern"
+          style={{
+            left: tooltipPosition.x,
+            top: tooltipPosition.y,
+            transform: 'translateX(-50%)'
+          }}
+        >
+          <div className="tooltip-content-modern">
+            <div className="tooltip-header-modern">
+              <div className="tooltip-date-modern">
+                {hoveredDate.toLocaleDateString('en-US', { 
+                  weekday: 'short', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
           </div>
-          
-          <div className="modal-content">
-            <div className="form-group">
-              <label>TIME:</label>
-              <div className="time-input-container">
-                <input
-                  type="time"
-                  value={appointmentFormData.time}
-                  onChange={(e) => setAppointmentFormData(prev => ({...prev, time: e.target.value}))}
-                  className="time-input"
-                />
-                <span className="clock-icon">🕐</span>
+              <div className="tooltip-title-modern">Weather Forecast</div>
+            </div>
+
+            {(() => {
+              const dateKey = hoveredDate.toISOString().split('T')[0];
+              const weatherInfo = weatherData[dateKey];
+              const recommendation = generateAIRecommendation(weatherInfo, hoveredDate);
+              
+              return (
+                <div className="tooltip-body-modern">
+                  <div className="recommendation-header-modern">
+                    <h4 className="recommendation-title-modern">{recommendation.title}</h4>
+                    <div className={`priority-badge-modern ${recommendation.type}`}>
+                      {recommendation.type === 'success' ? 'OPTIMAL' : 
+                       recommendation.type === 'warning' ? 'CAUTION' : 
+                       recommendation.type === 'danger' ? 'CRITICAL' : 'ADVISORY'}
+            </div>
               </div>
+                  <p className="recommendation-message-modern">
+                    {recommendation.message}
+                  </p>
             </div>
+              );
+            })()}
+        </div>
+      </div>
+    )}
 
-            <div className="form-group">
-              <label>TYPE OF SERVICE:</label>
-              <select
-                value={appointmentFormData.serviceType}
-                onChange={(e) => setAppointmentFormData(prev => ({...prev, serviceType: e.target.value}))}
-                className="form-select"
-              >
-                <option value="Mooring">Mooring</option>
-                <option value="Unmooring">Unmooring</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>VESSEL TYPE:</label>
-              <select
-                value={appointmentFormData.vesselType}
-                onChange={(e) => setAppointmentFormData(prev => ({...prev, vesselType: e.target.value}))}
-                className="form-select"
-              >
-                <option value="Local">Local</option>
-                <option value="International">International</option>
-              </select>
-            </div>
-
-            <div className="workers-section">
-              <h3>Assign Available Workers</h3>
-              <p>Select workers who are available for this appointment:</p>
-              <div className="workers-list">
-                {[
-                  'Bryan Matthew Cruz',
-                  'David Emmanuel Reyes',
-                  'Junnel, Cusi',
-                  'Aljon, Dipasupil',
-                  'Phil Allen, Eje',
-                  'Rhed, Escalon',
-                  'Fortune, Garcia Jr.',
-                  'Keith, Javier',
-                  'Ericson, Mendoza',
-                  'Alec, Sino-ag',
-                  'Romeo, Velasquez',
-                  'Rodel, Maranan',
-                  'Alloi, Sino-ag',
-                  'Renzy, Cantos',
-                  'PJ, Cusi'
-                ].map(worker => (
-                  <label key={worker} className="worker-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={appointmentFormData.selectedWorkers.includes(worker)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setAppointmentFormData(prev => ({
-                            ...prev,
-                            selectedWorkers: [...prev.selectedWorkers, worker]
-                          }));
-                        } else {
-                          setAppointmentFormData(prev => ({
-                            ...prev,
-                            selectedWorkers: prev.selectedWorkers.filter(w => w !== worker)
-                          }));
-                        }
-                      }}
-                    />
-                    <span>{worker}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="modal-actions">
+    {/* Vessel Entry Modal */}
+    {showVesselModal && (
+      <div className="modal-overlay-modern" onClick={handleModalClose}>
+        <div className="date-modal-modern" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content-modern">
+            <div className="modal-header-modern">
+              <h2>{isEditingVessel ? 'Edit Vessel Entry' : 'Add Vessel Entry'}</h2>
               <button 
-                className="add-appointment-button"
-                onClick={() => {
-                  // Handle appointment creation logic here
-                  console.log('Creating appointment:', appointmentFormData);
-                  setShowAppointmentModal(false);
-                  setAppointmentFormData({
-                    time: '',
-                    serviceType: 'Mooring',
-                    vesselType: 'Local',
-                    selectedWorkers: []
-                  });
-                }}
+                className="close-button-modern"
+                onClick={handleModalClose}
               >
-                ADD APPOINTMENT & FINISH
+                ×
               </button>
             </div>
+
+            <div className="modal-body-modern">
+              <div className="form-section-modern">
+                <div className="date-display-modern">
+                <strong>Date:</strong> {clickedDate && clickedDate.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </div>
+
+                <form className="vessel-form-modern">
+                  <div className="form-group-modern">
+                  <label>Vessel Name:</label>
+                  <input
+                    type="text"
+                      value={vesselFormData.vesselName}
+                      onChange={(e) => handleVesselInputChange('vesselName', e.target.value)}
+                      className="form-input-modern"
+                    placeholder="Enter vessel name"
+                    required
+                  />
+                </div>
+
+                  <div className="form-group-modern">
+                    <label>Voyage ID:</label>
+                  <input
+                    type="text"
+                      value={vesselFormData.voyageId}
+                      onChange={(e) => handleVesselInputChange('voyageId', e.target.value)}
+                      className="form-input-modern"
+                      placeholder="Enter voyage ID"
+                    required
+                  />
+                </div>
+
+                  <div className="form-group-modern">
+                  <label>Control ID:</label>
+                  <input
+                    type="text"
+                      value={vesselFormData.controlId}
+                      onChange={(e) => handleVesselInputChange('controlId', e.target.value)}
+                      className="form-input-modern"
+                    placeholder="Enter control ID"
+                    required
+                  />
+                </div>
+
+                  <div className="form-group-modern">
+                  <label>Time:</label>
+                  <input
+                    type="time"
+                      value={vesselFormData.time}
+                      onChange={(e) => handleVesselInputChange('time', e.target.value)}
+                      className="form-input-modern"
+                    placeholder="Select time"
+                  />
+                </div>
+
+                  <div className="form-group-modern">
+                  <label>Vessel Type:</label>
+                  <select
+                      value={vesselFormData.vesselType}
+                      onChange={(e) => handleVesselInputChange('vesselType', e.target.value)}
+                      className="form-select-modern"
+                  >
+                    <option value="Local">Local</option>
+                    <option value="Foreign">Foreign</option>
+                  </select>
+                </div>
+
+                  <div className="mooring-operations-section-modern">
+                  <label>Purpose:</label>
+                    <p className="mooring-help-text">
+                    Select all applicable operations
+                  </p>
+                    <div className="checkbox-group-modern">
+                      {['W/ MOORING BUOY', 'SHIFTING', 'UNMOORING'].map(purpose => (
+                        <label key={purpose} className="checkbox-label-modern">
+                        <input
+                          type="checkbox"
+                            checked={vesselFormData.purpose.includes(purpose)}
+                            onChange={(e) => handlePurposeChange(purpose, e.target.checked)}
+                            className="checkbox-input-modern"
+                          />
+                          <span className="checkbox-text-modern">{purpose}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                  <div className="modal-actions-modern">
+                  <button 
+                    type="button"
+                      className="cancel-btn-modern"
+                      onClick={handleModalClose}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="button"
+                      className="save-btn-modern"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🔘 SUBMIT BUTTON CLICKED');
+                        console.log('🔘 Form data at click:', vesselFormData);
+                        console.log('🔘 Clicked date at click:', clickedDate);
+                        handleVesselSubmit(e);
+                      }}
+                    >
+                      {isEditingVessel ? 'Update Vessel' : 'Add Vessel'}
+                  </button>
+                </div>
+              </form>
+              </div>
+                </div>
           </div>
         </div>
       </div>
     )}
+
   </div>
-)
+  );
 };
 
 export default Scheduling;

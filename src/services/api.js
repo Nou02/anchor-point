@@ -94,4 +94,37 @@ export const healthAPI = {
   }
 };
 
+// Excel API calls
+export const excelAPI = {
+  // Add vessel entry to Excel
+  addVesselEntry: async (vesselData) => {
+    const response = await api.post('/excel/save-report', vesselData);
+    return response.data;
+  },
+
+  // Update vessel entry in Excel
+  updateVesselEntry: async (date, oldVesselName, newData) => {
+    const response = await api.put('/excel/update-entry', {
+      date,
+      vesselName: oldVesselName,
+      newData
+    });
+    return response.data;
+  },
+
+  // Delete vessel entry from Excel
+  deleteVesselEntry: async (date, vesselName) => {
+    const response = await api.delete('/excel/delete-report', {
+      data: { date, vesselName }
+    });
+    return response.data;
+  },
+
+  // Get all vessel data
+  getVesselsData: async () => {
+    const response = await api.get('/excel/vessels-log');
+    return response.data;
+  }
+};
+
 export default api; 
