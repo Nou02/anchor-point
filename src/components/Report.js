@@ -149,13 +149,11 @@ const Report = () => {
       console.log('Sample rows before filtering:', allMappedRows.slice(0, 3));
       
       const validRows = allMappedRows.filter(row => {
+        // Only exclude obvious header rows and completely empty rows
         const isValid = row['Vessel'] && 
                        row['Vessel'].trim() !== '' && 
                        row['Vessel'] !== 'Vessel' && // Exclude header row
-                       row['Vessel'] !== 'No.' && // Exclude header row
-                       row['Vessel'] !== 'N/A' && // Exclude placeholder data
-                       !row['Vessel'].match(/^\d+$/) && // Exclude numeric placeholders like "444"
-                       row['Vessel'].length > 2; // Exclude short placeholder values
+                       row['Vessel'] !== 'No.'; // Exclude header row
         if (!isValid) {
           console.log('Filtering out invalid row:', row);
         }
@@ -196,12 +194,10 @@ const Report = () => {
         console.log('Total vessel data rows:', vesselData.length);
         console.log('First 3 vessel data rows:', vesselData.slice(0, 3));
         
-        // Check if we have valid data (not just placeholders)
+        // Check if we have any data at all
         const hasValidData = vesselData.some(vessel => 
           vessel['Vessel'] && 
-          vessel['Vessel'] !== 'N/A' && 
-          !vessel['Vessel'].match(/^\d+$/) &&
-          vessel['Vessel'].length > 2
+          vessel['Vessel'].trim() !== ''
         );
         
         if (!hasValidData) {
@@ -538,7 +534,9 @@ const Report = () => {
           overflow: 'hidden',
           position: 'relative',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          zIndex: 1,
+          minHeight: 0
         }}>
           {/* Report Header Title */}
           <div style={{
@@ -952,18 +950,23 @@ const Report = () => {
 
           {/* Report Content Container */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(20px)',
+            background: 'white',
             borderRadius: '16px',
-            padding: '20px',
+            padding: '0',
             border: '1px solid rgba(30, 58, 138, 0.2)',
             boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08)',
             marginBottom: '0',
             position: 'relative',
             flex: 1,
-            overflow: 'hidden',
+            overflow: 'visible',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            zIndex: 2,
+            minHeight: 0,
+            width: '100%',
+            boxSizing: 'border-box',
+            maxHeight: 'calc(100vh - 20px)',
+            height: 'calc(100vh - 20px)'
           }}>
             {isLoadingTransactions ? (
               <div style={{
@@ -1025,52 +1028,44 @@ const Report = () => {
                   </div>
                 </div>
               </div>
-            ) : transactions.length > 0 && transactions.some(t => 
-              t.vesselName && 
-              t.vesselName !== 'N/A' && 
-              !t.vesselName.match(/^\d+$/) &&
-              t.vesselName.length > 2
-            ) ? (
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(15px)',
-                borderRadius: '12px',
-                border: '1px solid rgba(30, 58, 138, 0.2)',
-                overflow: 'hidden',
-                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08)',
-                position: 'relative',
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column'
-              }}>
-                <div style={{
+            ) : transactions.length > 0 ? (
+              <>
+                {/* Scrollable Table Container */}
+                <div className="report-table-container-scrollable" style={{
                   overflowX: 'auto',
                   overflowY: 'auto',
                   flex: 1,
-                  maxHeight: 'calc(100vh - 200px)',
                   width: '100%',
-                  maxWidth: '100%'
-                }}>
-                {/* Table Header */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
-                  background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
-                  backdropFilter: 'blur(10px)',
-                  color: 'white',
-                  fontWeight: '700',
-                  fontSize: '0.85rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
                   position: 'relative',
-                  zIndex: 2,
-                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-                  flexShrink: 0,
-                  width: '100%',
-                  minWidth: '500px'
+                  maxHeight: 'calc(100vh - 150px)',
+                  minHeight: '500px',
+                  height: 'calc(100vh - 200px)'
                 }}>
+                  {/* Table Header */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.2fr 1.5fr 0.8fr 1.8fr 1fr',
+                    background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
+                    backdropFilter: 'blur(10px)',
+                    color: 'white',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10,
+                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                    flexShrink: 0,
+                    width: '100%',
+                    minWidth: '600px',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
+                    borderRadius: '16px 16px 0 0',
+                    overflow: 'hidden'
+                  }}>
                   <div style={{ 
-                    padding: '12px 8px', 
+                    padding: '8px 6px', 
                     borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
@@ -1082,7 +1077,7 @@ const Report = () => {
                     Date
                   </div>
                   <div style={{ 
-                    padding: '12px 8px', 
+                    padding: '8px 6px', 
                     borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
@@ -1094,7 +1089,7 @@ const Report = () => {
                     Vessel
                   </div>
                   <div style={{ 
-                    padding: '12px 8px', 
+                    padding: '8px 6px', 
                     borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
@@ -1106,7 +1101,7 @@ const Report = () => {
                     Voyage
                   </div>
                   <div style={{ 
-                    padding: '12px 8px', 
+                    padding: '8px 6px', 
                     borderRight: '1px solid rgba(255,255,255,0.15)',
                     display: 'flex',
                     alignItems: 'center',
@@ -1118,7 +1113,7 @@ const Report = () => {
                     Purpose
                   </div>
                   <div style={{ 
-                    padding: '12px 8px',
+                    padding: '8px 6px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px'
@@ -1128,10 +1123,16 @@ const Report = () => {
                     </svg>
                     Control ID
                   </div>
-                </div>
+                  </div>
 
-                {/* Transaction Rows */}
-                {transactions.map((transaction, index) => {
+                  {/* Table Body Container */}
+                  <div className="report-table-body" style={{
+                    background: 'white',
+                    borderRadius: '0 0 16px 16px',
+                    overflow: 'hidden'
+                  }}>
+                  {/* Transaction Rows */}
+                  {transactions.map((transaction, index) => {
                   console.log(`Rendering transaction ${index}:`, {
                     id: transaction.id,
                     date: transaction.date,
@@ -1139,27 +1140,26 @@ const Report = () => {
                     controlId: transaction.controlId
                   });
                   return (
-                    <div key={transaction.id} style={{
+                    <div key={transaction.id} className="report-table-row" style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-                    background: index % 2 === 0 ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(5px)',
+                    gridTemplateColumns: '1.2fr 1.5fr 0.8fr 1.8fr 1fr',
+                    borderBottom: '1px solid #f1f5f9',
+                    background: index % 2 === 0 ? 'white' : 'rgba(248, 250, 252, 0.5)',
                     transition: 'all 0.3s ease',
                     position: 'relative',
                     width: '100%',
-                    minWidth: '500px'
+                    minWidth: '600px',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
+                    alignItems: 'center'
                   }}>
-                    <div style={{ 
-                      padding: '10px 8px', 
-                      borderRight: '1px solid #f1f5f9',
-                      color: '#1f2937',
+                    <div className="report-table-cell" style={{ 
+                      color: '#1e40af',
                       fontWeight: '600',
-                      fontSize: '0.9rem',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      minWidth: '120px'
+                      padding: '6px 8px'
                     }}>
                       <div style={{
                         width: '8px',
@@ -1196,58 +1196,77 @@ const Report = () => {
                         }
                       })()}
                     </div>
-                    <div style={{ 
-                      padding: '10px 8px', 
-                      borderRight: '1px solid #f1f5f9',
+                    <div className="report-table-cell" style={{ 
                       color: '#1f2937',
                       fontWeight: '500',
-                      fontSize: '0.95rem',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '6px 8px'
                     }}>
                       {transaction.vesselName}
                     </div>
-                    <div style={{ 
-                      padding: '10px 8px', 
-                      borderRight: '1px solid #f1f5f9',
+                    <div className="report-table-cell" style={{ 
                       color: '#1f2937',
                       fontWeight: '500',
-                      fontSize: '0.95rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      padding: '6px 8px'
                     }}>
-                      {transaction.voyageNo}
+                      <span style={{ 
+                        width: '100%', 
+                        textAlign: 'center'
+                      }}>
+                        {transaction.voyageNo}
+                      </span>
                     </div>
-                    <div style={{ 
-                      padding: '10px 8px', 
-                      borderRight: '1px solid #f1f5f9',
-                      color: '#1f2937',
-                      fontWeight: '500',
-                      fontSize: '0.95rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
+                    <div
+                      className="report-table-cell"
+                      style={{ 
+                        color: '#1f2937',
+                        fontWeight: '500',
+                        fontSize: '0.8rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        cursor: 'help',
+                        textAlign: 'center',
+                        padding: '6px 8px'
+                      }}
+                      title={transaction.purposeOfCall}
+                    >
                       {transaction.purposeOfCall}
                     </div>
-                    <div style={{ 
-                      padding: '10px 8px',
+                    <div className="report-table-cell" style={{ 
                       color: '#1f2937',
                       fontWeight: '500',
                       fontSize: '0.95rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      padding: '6px 8px'
                     }}>
-                      {transaction.controlId}
+                      <span style={{ 
+                        width: '100%', 
+                        textAlign: 'center'
+                      }}>
+                        {transaction.controlId}
+                      </span>
                     </div>
                   </div>
                   );
                 })}
+                  </div>
                 </div>
-              </div>
+              </>
             ) : (
               <div style={{
                 textAlign: 'center',

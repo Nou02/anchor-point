@@ -83,15 +83,12 @@ const Homepage = () => {
             email: userData.email || user.email
           });
           
-          // Show info button for both Alice and Carla
+          // Show info button only for Alice
           const displayName = userData.fullName || user.displayName || '';
           const isAlice = displayName === 'Alice Margaretha Santos' || 
                          displayName === 'Alice' ||
                          (displayName && displayName.toLowerCase().includes('alice'));
-          const isCarla = displayName === 'Carla Dela Peña' || 
-                         displayName === 'Carla' ||
-                         (displayName && displayName.toLowerCase().includes('carla'));
-          setShowInfoButton(isAlice || isCarla);
+          setShowInfoButton(isAlice);
           
           // Show notification button for all users
           setShowNotificationButton(true);

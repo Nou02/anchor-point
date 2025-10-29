@@ -10,9 +10,10 @@
   padding: 0;
 }
 
-/* Ensure no overflow hidden on any homepage elements */
-.homepage * {
-  overflow: visible !important;
+/* Ensure proper overflow handling for homepage elements */
+.homepage {
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Hide scrollbar but maintain scroll functionality */
@@ -1676,6 +1677,7 @@ body, html {
   margin-left: 250px;
   position: relative;
   left: 0;
+  contain: layout;
 }
 
 /* Medium screens - half browser width */

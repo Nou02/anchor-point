@@ -307,19 +307,6 @@
   overflow-y: auto;
 }
 
-.report-table-container {
-  position: relative;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(47, 59, 112, 0.08);
-  padding: 16px 12px;
-  width: 100%;
-  margin: 0 auto;
-  max-height: 85vh;
-  overflow-x: auto;
-  overflow-y: auto;
-  margin-bottom: 32px;
-}
 
 .add-row-btn {
   position: static;
@@ -345,151 +332,8 @@
   box-shadow: 0 4px 16px #ffe14d88;
 }
 
-.report-table {
-  width: 100%;
-  min-width: 800px;
-  border-collapse: collapse;
-  border-spacing: 0;
-  background: linear-gradient(135deg, #eaf3ff 0%, #f5f7fa 100%);
-  font-size: 1.08rem;
-  color: #222;
-  border-radius: 18px;
-  box-shadow: 0 6px 32px rgba(44,62,80,0.10);
-  overflow: hidden;
-  margin-bottom: 24px;
-  table-layout: auto;
-}
-.report-table th, .report-table td {
-  border: none;
-  padding: 12px 8px;
-  text-align: left;
-  background: rgba(255,255,255,0.85);
-  font-weight: normal;
-  transition: background 0.2s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
-/* Column width optimizations */
-.report-table th:nth-child(1), .report-table td:nth-child(1) { /* No. */
-  width: 60px;
-  min-width: 60px;
-  text-align: center;
-}
 
-.report-table th:nth-child(2), .report-table td:nth-child(2) { /* Vessel */
-  width: 200px;
-  min-width: 150px;
-}
-
-.report-table th:nth-child(3), .report-table td:nth-child(3) { /* Service */
-  width: 150px;
-  min-width: 120px;
-}
-
-.report-table th:nth-child(4), .report-table td:nth-child(4) { /* Control Number */
-  width: 120px;
-  min-width: 100px;
-}
-
-.report-table th:nth-child(5), .report-table td:nth-child(5) { /* Voyage Number */
-  width: 100px;
-  min-width: 80px;
-  text-align: center;
-}
-
-.report-table th:nth-child(6), .report-table td:nth-child(6) { /* Date */
-  width: 120px;
-  min-width: 100px;
-  text-align: center;
-}
-.report-table th {
-  font-weight: bold;
-  font-size: 1.15rem;
-  background: linear-gradient(90deg, #6A78C0 0%, #4e5d94 100%);
-  color: #fff;
-  letter-spacing: 1px;
-  border-bottom: 3px solid #dbeafe;
-}
-.report-table .work-header th {
-  text-align: center;
-  font-size: 1.18rem;
-  background: linear-gradient(90deg, #6A78C0 0%, #4e5d94 100%);
-  color: #ffe14d;
-  letter-spacing: 1.5px;
-  border-bottom: 3px solid #ffe14d;
-  box-shadow: 0 2px 8px rgba(44,62,80,0.08);
-}
-.report-table .work-subheader th {
-  text-align: center;
-  background: #eaf3ff;
-  color: #2d3e5e;
-  font-size: 1.08rem;
-}
-.report-table tr {
-  border-radius: 12px;
-  overflow: hidden;
-}
-.report-table tr:nth-child(even) td:not(.highlight) {
-  background: #f5f7fa;
-}
-.report-table tr:nth-child(odd) td:not(.highlight) {
-  background: #fff;
-}
-.report-table td.highlight {
-  background: #ffe14d !important;
-  color: #222;
-  font-weight: bold;
-  text-align: center;
-  box-shadow: 0 0 8px #ffe14d44;
-  border-radius: 8px;
-}
-.report-table td {
-  border-bottom: 1.5px solid #dbeafe;
-}
-.report-table tr:last-child td {
-  border-bottom: none;
-}
-
-/* Enhanced dropdown styling */
-.report-table select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232F3B70' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 16px;
-  padding-right: 40px;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
-  word-wrap: break-word;
-  min-width: 100%;
-}
-
-.report-table select option {
-  padding: 12px 16px;
-  background: white;
-  color: #2F3B70;
-  font-weight: 500;
-  border: none;
-  white-space: normal;
-  word-wrap: break-word;
-  min-width: 100%;
-  max-width: none;
-}
-
-.report-table select option:hover {
-  background: #e3f2fd;
-  color: #1a2332;
-}
-
-.report-table select option:checked {
-  background: #2F3B70;
-  color: white;
-}
 
 /* Save Button */
 .report-save-btn {
@@ -589,36 +433,55 @@
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(47, 59, 112, 0.12);
   position: relative;
+  height: fit-content;
+  width: 100%;
+  display: block;
+}
+
+.report-table-body {
+  display: block;
+  height: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .report-table-header {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1.2fr 1.5fr 0.8fr 1.8fr 1fr;
   background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
   color: white;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   position: relative;
   z-index: 2;
+  width: 100%;
+  overflow: hidden;
 }
 
 .report-table-header-cell {
-  padding: 20px 15px;
+  padding: 8px 6px;
   border-right: 1px solid rgba(255,255,255,0.15);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .report-table-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1.2fr 1.5fr 0.8fr 1.8fr 1fr;
   border-bottom: 1px solid #f1f5f9;
   background: white;
   transition: all 0.3s ease;
   position: relative;
+  width: 100%;
+  overflow: hidden;
+  height: auto;
 }
 
 .report-table-row:hover {
@@ -632,11 +495,18 @@
 }
 
 .report-table-cell {
-  padding: 18px 15px;
+  padding: 6px 8px;
   border-right: 1px solid #f1f5f9;
   color: #1f2937;
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .report-table-cell.date {
@@ -786,4 +656,24 @@
 
 .analytics-scrollable::-webkit-scrollbar-thumb:hover {
   background: #a0aec0;
+}
+
+/* Table scrollbar styling - Hidden */
+.report-table-scrollable {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.report-table-scrollable::-webkit-scrollbar {
+  display: none; /* WebKit browsers (Chrome, Safari, Edge) */
+}
+
+/* Enhanced scrollbar for table container - Hidden */
+.report-table-container-scrollable {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.report-table-container-scrollable::-webkit-scrollbar {
+  display: none; /* WebKit browsers (Chrome, Safari, Edge) */
 }
