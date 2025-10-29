@@ -752,36 +752,55 @@
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(47, 59, 112, 0.12);
   position: relative;
+  height: fit-content;
+  width: 100%;
+  display: block;
+}
+
+.report-table-body {
+  display: block;
+  height: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .report-table-header {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1.2fr 1.5fr 0.8fr 1.8fr 1fr;
   background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
   color: white;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   position: relative;
   z-index: 2;
+  width: 100%;
+  overflow: hidden;
 }
 
 .report-table-header-cell {
-  padding: 20px 15px;
+  padding: 8px 6px;
   border-right: 1px solid rgba(255,255,255,0.15);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .report-table-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1.2fr 1.5fr 0.8fr 1.8fr 1fr;
   border-bottom: 1px solid #f1f5f9;
   background: white;
   transition: all 0.3s ease;
   position: relative;
+  width: 100%;
+  overflow: hidden;
+  height: auto;
 }
 
 .report-table-row:hover {
@@ -795,11 +814,18 @@
 }
 
 .report-table-cell {
-  padding: 18px 15px;
+  padding: 6px 8px;
   border-right: 1px solid #f1f5f9;
   color: #1f2937;
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .report-table-cell.date {
@@ -949,4 +975,24 @@
 
 .analytics-scrollable::-webkit-scrollbar-thumb:hover {
   background: #a0aec0;
+}
+
+/* Table scrollbar styling - Hidden */
+.report-table-scrollable {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.report-table-scrollable::-webkit-scrollbar {
+  display: none; /* WebKit browsers (Chrome, Safari, Edge) */
+}
+
+/* Enhanced scrollbar for table container - Hidden */
+.report-table-container-scrollable {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.report-table-container-scrollable::-webkit-scrollbar {
+  display: none; /* WebKit browsers (Chrome, Safari, Edge) */
 }

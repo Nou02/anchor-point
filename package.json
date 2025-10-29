@@ -9,6 +9,8 @@
     "start:dev": "concurrently \"npm run start:backend\" \"npm start\"",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:coverage": "react-scripts test --coverage --watchAll=false",
+    "test:ci": "react-scripts test --coverage --watchAll=false --ci",
     "eject": "react-scripts eject"
   },
   "dependencies": {
@@ -35,6 +37,10 @@
   },
   "devDependencies": {
     "ajv": "^8.17.1",
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/user-event": "^14.5.2",
+    "jest-environment-jsdom": "^29.7.0"
   }
 }
