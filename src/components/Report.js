@@ -157,9 +157,6 @@ const Report = () => {
       
       // Process Excel data that was already loaded
       if (vesselData.length > 0) {
-        console.log('Sample vessel data:', vesselData[0]);
-        console.log('Total vessel data rows:', vesselData.length);
-        console.log('First 3 vessel data rows:', vesselData.slice(0, 3));
         
         // Check if we have any data at all
         const hasValidData = vesselData.some(vessel => 
@@ -1033,306 +1030,207 @@ const Report = () => {
                   position: 'relative',
                   maxHeight: 'calc(100vh - 150px)',
                   minHeight: '500px',
-                  height: 'calc(100vh - 200px)'
+                  height: 'calc(100vh - 200px)',
+                  borderRadius: '16px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
                 }}>
-                  {/* Table Header */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.2fr 0.8fr 1.5fr 0.8fr 1.8fr 1fr',
-                    background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
-                    backdropFilter: 'blur(10px)',
-                    color: 'white',
-                    fontWeight: '700',
-                    fontSize: '0.85rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 10,
-                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-                    flexShrink: 0,
+                  <table style={{
                     width: '100%',
-                    minWidth: '600px',
-                    maxWidth: '100%',
-                    boxSizing: 'border-box',
-                    borderRadius: '16px 16px 0 0',
-                    overflow: 'hidden'
-                  }}>
-                  <div style={{ 
-                    padding: '8px 6px', 
-                    borderRight: '1px solid rgba(255,255,255,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,5V7H5V5H19M5,19V9H19V19H5Z"/>
-                    </svg>
-                    Date
-                  </div>
-                  <div style={{ 
-                    padding: '8px 6px', 
-                    borderRight: '1px solid rgba(255,255,255,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
-                    </svg>
-                    Time
-                  </div>
-                  <div style={{ 
-                    padding: '12px 8px', 
-                    borderRight: '1px solid rgba(255,255,255,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
-                    </svg>
-                    Vessel
-                  </div>
-                  <div style={{ 
-                    padding: '8px 6px', 
-                    borderRight: '1px solid rgba(255,255,255,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
-                    </svg>
-                    Voyage
-                  </div>
-                  <div style={{ 
-                    padding: '8px 6px', 
-                    borderRight: '1px solid rgba(255,255,255,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
-                    </svg>
-                    Purpose
-                  </div>
-                  <div style={{ 
-                    padding: '8px 6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
-                    </svg>
-                    Control ID
-                  </div>
-
-                  {/* Table Body Container */}
-                  <div className="report-table-body" style={{
+                    borderCollapse: 'collapse',
                     background: 'white',
-                    borderRadius: '0 0 16px 16px',
+                    borderRadius: '16px',
                     overflow: 'hidden'
                   }}>
-                  {/* Transaction Rows */}
-                  {transactions.map((transaction, index) => {
-                  console.log(`Rendering transaction ${index}:`, {
-                    id: transaction.id,
-                    date: transaction.date,
-                    time: transaction.time,
-                    vesselName: transaction.vesselName,
-                    controlId: transaction.controlId,
-                    vesselType: transaction.vesselType
-                  });
-                  return (
-                    <div key={transaction.id} className="report-table-row" style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.2fr 0.8fr 1.5fr 0.8fr 1.8fr 1fr',
-                    borderBottom: '1px solid #e5e7eb',
-                    background: index % 2 === 0 ? 'white' : 'rgba(248, 250, 252, 0.5)',
-                    borderLeft: '1px solid #e5e7eb',
-                    borderRight: '1px solid #e5e7eb',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                    width: '100%',
-                    minWidth: '600px',
-                    maxWidth: '100%',
-                    boxSizing: 'border-box',
-                    alignItems: 'center',
-                    ':hover': {
-                      background: 'rgba(59, 130, 246, 0.05)',
-                      transform: 'translateY(-1px)',
-                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.1)'
-                    }
-                  }}>
-                    <div className="report-table-cell" style={{ 
-                      color: '#1e40af',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '6px 8px',
-                      borderRight: '1px solid #e5e7eb'
-                    }}>
-                      <div style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        background: '#3b82f6',
-                        flexShrink: 0
-                      }}></div>
-                      {(() => {
-                        try {
-                          const date = new Date(transaction.date);
-                          console.log(`Displaying date for transaction ${transaction.id}:`, {
-                            originalDate: transaction.date,
-                            parsedDate: date,
-                            isValid: !isNaN(date.getTime()),
-                            displayString: date.toLocaleDateString()
-                          });
-                          if (isNaN(date.getTime())) {
-                            console.error('Invalid date for transaction:', transaction.id, transaction.date);
-                            return 'Invalid Date';
-                          }
-                          // Use UTC methods to avoid timezone issues and format month as word
-                          const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                                           'July', 'August', 'September', 'October', 'November', 'December'];
-                          const month = monthNames[date.getUTCMonth()];
-                          const day = String(date.getUTCDate()).padStart(2, '0');
-                          const year = date.getUTCFullYear();
-                          const displayString = `${month} ${day}, ${year}`;
-                          console.log(`Display string: ${displayString}`);
-                          return displayString;
-                        } catch (e) {
-                          console.error('Error displaying date:', e, 'for transaction:', transaction.id);
-                          return 'Error';
-                        }
-                      })()}
-                    </div>
-                    <div className="report-table-cell" style={{ 
-                      color: '#1f2937',
-                      fontWeight: '500',
-                      fontSize: '0.85rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      padding: '6px 8px',
-                      borderRight: '1px solid #e5e7eb'
-                    }}>
-                      {(() => {
-                        if (!transaction.time || transaction.time === 'N/A' || transaction.time === '') {
-                          return '-';
-                        }
-                        
-                        try {
-                          // Parse the time (assuming format like "14:30" or "2:30 PM")
-                          let timeStr = transaction.time.trim();
-                          
-                          // If it already has AM/PM, return as is
-                          if (timeStr.includes('AM') || timeStr.includes('PM')) {
-                            return timeStr;
-                          }
-                          
-                          // If it's in 24-hour format, convert to 12-hour
-                          if (timeStr.includes(':')) {
-                            const [hours, minutes] = timeStr.split(':');
-                            const hour24 = parseInt(hours, 10);
-                            const mins = minutes || '00';
-                            
-                            if (hour24 === 0) {
-                              return `12:${mins} AM`;
-                            } else if (hour24 < 12) {
-                              return `${hour24}:${mins} AM`;
-                            } else if (hour24 === 12) {
-                              return `12:${mins} PM`;
-                            } else {
-                              return `${hour24 - 12}:${mins} PM`;
+                    <thead>
+                      <tr style={{
+                        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
+                        color: 'white',
+                        fontWeight: '700',
+                        fontSize: '0.85rem',
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 10
+                      }}>
+                        <th style={{ 
+                          padding: '16px 12px',
+                          textAlign: 'center',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                          width: '15%'
+                        }}>
+                          DATE
+                        </th>
+                        <th style={{ 
+                          padding: '16px 12px',
+                          textAlign: 'center',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                          width: '12%'
+                        }}>
+                          TIME
+                        </th>
+                        <th style={{ 
+                          padding: '16px 12px',
+                          textAlign: 'center',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                          width: '20%'
+                        }}>
+                          VESSEL
+                        </th>
+                        <th style={{ 
+                          padding: '16px 12px',
+                          textAlign: 'center',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                          width: '12%'
+                        }}>
+                          VOYAGE
+                        </th>
+                        <th style={{ 
+                          padding: '16px 12px',
+                          textAlign: 'center',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                          width: '25%'
+                        }}>
+                          PURPOSE
+                        </th>
+                        <th style={{ 
+                          padding: '16px 12px',
+                          textAlign: 'center',
+                          width: '16%'
+                        }}>
+                          CONTROL ID
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {transactions.map((transaction, index) => {
+                        return (
+                          <tr key={transaction.id} style={{
+                            background: index % 2 === 0 ? 'white' : 'rgba(248, 250, 252, 0.5)',
+                            borderBottom: '1px solid #e5e7eb',
+                            transition: 'all 0.3s ease',
+                            ':hover': {
+                              background: 'rgba(59, 130, 246, 0.05)',
+                              transform: 'translateY(-1px)',
+                              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.1)'
                             }
-                          }
-                          
-                          return timeStr;
-                        } catch (e) {
-                          console.error('Error formatting time:', e, 'for time:', transaction.time);
-                          return transaction.time;
-                        }
-                      })()}
-                    </div>
-                    <div className="report-table-cell" style={{ 
-                      color: '#1f2937',
-                      fontWeight: '500',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '6px 8px',
-                      borderRight: '1px solid #e5e7eb'
-                    }}>
-                      {transaction.vesselName}
-                    </div>
-                    <div className="report-table-cell" style={{ 
-                      color: '#1f2937',
-                      fontWeight: '500',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      padding: '6px 8px',
-                      borderRight: '1px solid #e5e7eb'
-                    }}>
-                      <span style={{ 
-                        width: '100%', 
-                        textAlign: 'center'
-                      }}>
-                        {transaction.voyageNo}
-                      </span>
-                    </div>
-                    <div
-                      className="report-table-cell"
-                      style={{ 
-                        color: '#1f2937',
-                        fontWeight: '500',
-                        fontSize: '0.8rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        cursor: 'help',
-                        textAlign: 'center',
-                        padding: '6px 8px',
-                        borderRight: '1px solid #e5e7eb'
-                      }}
-                      title={transaction.purposeOfCall}
-                    >
-                      {transaction.purposeOfCall}
-                    </div>
-                    <div className="report-table-cell" style={{ 
-                      color: '#1f2937',
-                      fontWeight: '500',
-                      fontSize: '0.95rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      padding: '6px 8px'
-                    }}>
-                      <span style={{ 
-                        width: '100%', 
-                        textAlign: 'center'
-                      }}>
-                        {transaction.controlId}
-                      </span>
-                    </div>
-                    </div>
-                  );
-                })}
-                  </div>
-                </div>
+                          }}>
+                            <td style={{ 
+                              padding: '12px',
+                              color: '#1e40af',
+                              fontWeight: '600',
+                              borderRight: '1px solid #e5e7eb'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  background: '#3b82f6',
+                                  flexShrink: 0
+                                }}></div>
+                                {(() => {
+                                  try {
+                                    const date = new Date(transaction.date);
+                                    if (isNaN(date.getTime())) {
+                                      return 'Invalid Date';
+                                    }
+                                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                                     'July', 'August', 'September', 'October', 'November', 'December'];
+                                    const month = monthNames[date.getUTCMonth()];
+                                    const day = String(date.getUTCDate()).padStart(2, '0');
+                                    const year = date.getUTCFullYear();
+                                    return `${month} ${day}, ${year}`;
+                                  } catch (e) {
+                                    return 'Error';
+                                  }
+                                })()}
+                              </div>
+                            </td>
+                            <td style={{ 
+                              padding: '12px',
+                              color: '#1f2937',
+                              fontWeight: '500',
+                              textAlign: 'center',
+                              borderRight: '1px solid #e5e7eb'
+                            }}>
+                              {(() => {
+                                if (!transaction.time || transaction.time === 'N/A' || transaction.time === '') {
+                                  return '-';
+                                }
+                                
+                                try {
+                                  let timeStr = transaction.time.trim();
+                                  
+                                  if (timeStr.includes('AM') || timeStr.includes('PM')) {
+                                    return timeStr;
+                                  }
+                                  
+                                  if (timeStr.includes(':')) {
+                                    const [hours, minutes] = timeStr.split(':');
+                                    const hour24 = parseInt(hours, 10);
+                                    const mins = minutes || '00';
+                                    
+                                    if (hour24 === 0) {
+                                      return `12:${mins} AM`;
+                                    } else if (hour24 < 12) {
+                                      return `${hour24}:${mins} AM`;
+                                    } else if (hour24 === 12) {
+                                      return `12:${mins} PM`;
+                                    } else {
+                                      return `${hour24 - 12}:${mins} PM`;
+                                    }
+                                  }
+                                  
+                                  return timeStr;
+                                } catch (e) {
+                                  return transaction.time;
+                                }
+                              })()}
+                            </td>
+                            <td style={{ 
+                              padding: '12px',
+                              color: '#1f2937',
+                              fontWeight: '500',
+                              borderRight: '1px solid #e5e7eb'
+                            }}>
+                              {transaction.vesselName}
+                            </td>
+                            <td style={{ 
+                              padding: '12px',
+                              color: '#1f2937',
+                              fontWeight: '500',
+                              textAlign: 'center',
+                              borderRight: '1px solid #e5e7eb'
+                            }}>
+                              {transaction.voyageNo}
+                            </td>
+                            <td style={{ 
+                              padding: '12px',
+                              color: '#1f2937',
+                              fontWeight: '500',
+                              textAlign: 'center',
+                              borderRight: '1px solid #e5e7eb',
+                              maxWidth: '200px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }} title={transaction.purposeOfCall}>
+                              {transaction.purposeOfCall}
+                            </td>
+                            <td style={{ 
+                              padding: '12px',
+                              color: '#1f2937',
+                              fontWeight: '500',
+                              textAlign: 'center'
+                            }}>
+                              {transaction.controlId}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </>
             ) : (
