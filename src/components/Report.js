@@ -1038,7 +1038,7 @@ const Report = () => {
                   {/* Table Header */}
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '1.2fr 1.5fr 0.8fr 1.8fr 1fr',
+                    gridTemplateColumns: '1.2fr 0.8fr 1.5fr 0.8fr 1.8fr 1fr',
                     background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
                     backdropFilter: 'blur(10px)',
                     color: 'white',
@@ -1149,16 +1149,23 @@ const Report = () => {
                   return (
                     <div key={transaction.id} className="report-table-row" style={{
                     display: 'grid',
-                    gridTemplateColumns: '1.2fr 1.5fr 0.8fr 1.8fr 1fr',
-                    borderBottom: '1px solid #f1f5f9',
+                    gridTemplateColumns: '1.2fr 0.8fr 1.5fr 0.8fr 1.8fr 1fr',
+                    borderBottom: '1px solid #e5e7eb',
                     background: index % 2 === 0 ? 'white' : 'rgba(248, 250, 252, 0.5)',
+                    borderLeft: '1px solid #e5e7eb',
+                    borderRight: '1px solid #e5e7eb',
                     transition: 'all 0.3s ease',
                     position: 'relative',
                     width: '100%',
                     minWidth: '600px',
                     maxWidth: '100%',
                     boxSizing: 'border-box',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    ':hover': {
+                      background: 'rgba(59, 130, 246, 0.05)',
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.1)'
+                    }
                   }}>
                     <div className="report-table-cell" style={{ 
                       color: '#1e40af',
@@ -1166,7 +1173,8 @@ const Report = () => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      padding: '6px 8px'
+                      padding: '6px 8px',
+                      borderRight: '1px solid #e5e7eb'
                     }}>
                       <div style={{
                         width: '8px',
@@ -1206,12 +1214,62 @@ const Report = () => {
                     <div className="report-table-cell" style={{ 
                       color: '#1f2937',
                       fontWeight: '500',
+                      fontSize: '0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      padding: '6px 8px',
+                      borderRight: '1px solid #e5e7eb'
+                    }}>
+                      {(() => {
+                        if (!transaction.time || transaction.time === 'N/A' || transaction.time === '') {
+                          return '-';
+                        }
+                        
+                        try {
+                          // Parse the time (assuming format like "14:30" or "2:30 PM")
+                          let timeStr = transaction.time.trim();
+                          
+                          // If it already has AM/PM, return as is
+                          if (timeStr.includes('AM') || timeStr.includes('PM')) {
+                            return timeStr;
+                          }
+                          
+                          // If it's in 24-hour format, convert to 12-hour
+                          if (timeStr.includes(':')) {
+                            const [hours, minutes] = timeStr.split(':');
+                            const hour24 = parseInt(hours, 10);
+                            const mins = minutes || '00';
+                            
+                            if (hour24 === 0) {
+                              return `12:${mins} AM`;
+                            } else if (hour24 < 12) {
+                              return `${hour24}:${mins} AM`;
+                            } else if (hour24 === 12) {
+                              return `12:${mins} PM`;
+                            } else {
+                              return `${hour24 - 12}:${mins} PM`;
+                            }
+                          }
+                          
+                          return timeStr;
+                        } catch (e) {
+                          console.error('Error formatting time:', e, 'for time:', transaction.time);
+                          return transaction.time;
+                        }
+                      })()}
+                    </div>
+                    <div className="report-table-cell" style={{ 
+                      color: '#1f2937',
+                      fontWeight: '500',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
                       display: 'flex',
                       alignItems: 'center',
-                      padding: '6px 8px'
+                      padding: '6px 8px',
+                      borderRight: '1px solid #e5e7eb'
                     }}>
                       {transaction.vesselName}
                     </div>
@@ -1222,7 +1280,8 @@ const Report = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       textAlign: 'center',
-                      padding: '6px 8px'
+                      padding: '6px 8px',
+                      borderRight: '1px solid #e5e7eb'
                     }}>
                       <span style={{ 
                         width: '100%', 
@@ -1245,7 +1304,8 @@ const Report = () => {
                         textOverflow: 'ellipsis',
                         cursor: 'help',
                         textAlign: 'center',
-                        padding: '6px 8px'
+                        padding: '6px 8px',
+                        borderRight: '1px solid #e5e7eb'
                       }}
                       title={transaction.purposeOfCall}
                     >
