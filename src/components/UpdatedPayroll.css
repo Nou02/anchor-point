@@ -1,4 +1,4 @@
- .payroll-center-content {
+.payroll-center-content {
   position: relative;
   min-height: 100vh;
   flex: 1;
@@ -8,7 +8,7 @@
   justify-content: flex-start;
   background: #ffffff; /* solid white background */
   backdrop-filter: none;
-  padding: 20px;
+  padding: 10px 12px;
   overflow-y: auto;
   z-index: 1;
 }
@@ -577,9 +577,18 @@
 /* Workers column - bigger for better readability */
 .manager-table th:first-child,
 .manager-table td:first-child {
-  width: 15%;
+  width: 22%;
   text-align: left;
   padding-left: 16px;
+}
+
+/* Align first column left; rest right */
+.manager-table th:first-child,
+.manager-table td:first-child {
+  text-align: left;
+}
+.manager-table td:nth-child(n+2) {
+  text-align: right;
 }
 
 /* Vessel columns (Local Mooring, Local Unmooring, Foreign Mooring, Foreign Unmooring) */
@@ -2713,7 +2722,7 @@
 /* Alice Payroll Validation Styles */
 .alice-payroll-validation {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 24px;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
@@ -3464,7 +3473,7 @@
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 24px 16px;
+  padding: 16px 12px;
   text-align: center;
   border: none;
   position: relative;
@@ -3472,6 +3481,14 @@
   white-space: nowrap;
   min-width: 90px;
   font-family: inherit;
+}
+
+/* Center and slightly shrink second header row (Mooring / Unmooring) */
+.manager-table thead tr:nth-child(2) th {
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  padding: 10px 8px;
 }
 
 .manager-table th::after {
@@ -3501,6 +3518,7 @@
   color: #1e293b;
   font-weight: 600;
   background: #ffffff;
+  text-align: right;
   font-family: inherit;
 }
 
