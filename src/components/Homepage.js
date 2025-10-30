@@ -741,7 +741,7 @@ const Homepage = () => {
                       {/* Next Quarter Forecast */}
                       <div className="dashboard-section">
                         <h3 className="section-title">Next Quarter Forecast</h3>
-                        <p className="section-subtitle">Predictive Analytics</p>
+                        {/* Removed subtitle per request */}
                         <div className="forecast-content">
                           <div className="forecast-metrics">
                             <div className="forecast-item">
@@ -809,7 +809,7 @@ const Homepage = () => {
                       {/* Peak Performance */}
                       <div className="dashboard-section">
                         <h3 className="section-title">Peak Performance</h3>
-                        <p className="section-subtitle">Operational Insights</p>
+                        {/* Removed subtitle per request */}
                         <div className="peak-performance-metrics">
                           <div className="performance-item">
                             <div className="performance-label">Busiest Month</div>
@@ -943,7 +943,7 @@ const Homepage = () => {
   return (
     <div className="homepage">
       <Sidebar
-        activeMenu={activeMenu === 'analytics' ? 'reports' : activeMenu}
+        activeMenu={activeMenu}
         setActiveMenu={handleMenuClick}
         menuItems={menuItems}
         handleLogout={handleLogout}
