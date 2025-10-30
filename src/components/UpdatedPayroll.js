@@ -662,6 +662,7 @@ const UpdatedPayroll = () => {
       <div className="payroll-center-content">
         <div className="manager-view">
           <div className="manager-header">
+            <h2>Worker Payroll Management</h2>
             <div className="manager-controls">
               <button
                 onClick={() => setShowPricingConfig(!showPricingConfig)}
@@ -670,7 +671,6 @@ const UpdatedPayroll = () => {
                 Pricing Configuration
               </button>
             </div>
-            <h2>Worker Payroll Management</h2>
           </div>
           
           {/* Pricing Configuration Panel */}
