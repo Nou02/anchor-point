@@ -1459,14 +1459,14 @@ return (
           onClick={() => setView('calendar')}
           disabled={view === 'calendar'}
         >
-            ← Calendar
+            Calendar
         </button>
         <button
           className="report-nav-btn"
           onClick={() => setView('table')}
           disabled={view === 'table'}
         >
-            Crew Table →
+            Crew Table
         </button>
       </div>
     </div>
