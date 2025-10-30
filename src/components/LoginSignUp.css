@@ -4,18 +4,18 @@
   display: flex;
   align-items: stretch;
   background: #d1d5db;
-  padding: 20px;
+  padding: 24px; /* add space around the container */
   box-sizing: border-box;
 }
 
 .login-signup-split-container {
   display: flex;
   width: 100%;
-  height: calc(100vh - 40px);
-  max-width: 1200px;
+  height: calc(100vh - 48px); /* account for outer padding */
+  max-width: none;
   margin: 0 auto;
   box-shadow: 0 8px 32px rgba(44,62,80,0.10);
-  border-radius: 24px;
+  border-radius: 20px;
   background: transparent;
   overflow: hidden;
   gap: 8px;
@@ -30,27 +30,44 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  border-top-left-radius: 24px;
-  border-bottom-left-radius: 24px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+  border-top-left-radius: inherit;   /* keep outer rounding */
+  border-bottom-left-radius: inherit;/* keep outer rounding */
+  border-top-right-radius: 0;        /* remove inner rounding */
+  border-bottom-right-radius: 0;     /* remove inner rounding */
+  box-shadow: none;
   max-height: 100vh;
   overflow-y: auto; /* enable scrolling if needed */
 }
 
 .login-right-panel {
-  flex: 0 0 75%;
-  background: 
-    linear-gradient(135deg, rgba(44,62,80,0.4), rgba(44,62,80,0.2)),
-    url('../assets/apone.png') center center/cover no-repeat;
+  flex: 1 1 auto; /* take remaining width to reach the right edge */
+  background: rgba(0,0,0,0.25); /* subtle dark base under video */
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   min-height: 0;
+  height: 100%; /* ensure it fills the container height */
   overflow: hidden;
-  border-radius: 0 20px 20px 0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+  border-top-left-radius: 0;         /* remove inner rounding */
+  border-bottom-left-radius: 0;      /* remove inner rounding */
+  border-top-right-radius: inherit;  /* keep outer rounding */
+  border-bottom-right-radius: inherit;/* keep outer rounding */
+  box-shadow: none;
+}
+
+/* Ensure the background image fully fits and respects rounding */
+/* corner radii handled in main rule above */
+
+/* Full-cover background video for login */
+.login-bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
 }
 
 .right-content {
@@ -104,13 +121,11 @@
   margin-bottom: 16px;
   filter: none;
   transition: all 0.3s ease;
+  animation: waterWave 2.5s ease-in-out infinite; /* always animate */
   position: relative;
 }
 
-.logo-section .hero-logo:hover {
-  transform: scale(1.05);
-  animation: waterWave 2s ease-in-out infinite;
-}
+/* Remove hover-only animation; animation now runs permanently */
 
 @keyframes waterWave {
   0%, 100% {
@@ -166,7 +181,7 @@
 .input-field {
   width: 100%;
   margin-bottom: 1.4rem;
-  padding: 1.2rem 1.4rem;
+  padding: 1.2rem 2.8rem 1.2rem 1.4rem; /* extra right padding for eye icon */
   border-radius: 12px;
   border: 2px solid #e8ecf4;
   background: #fafbfc;
@@ -216,9 +231,11 @@
 /* Eye icon styling */
 .eye-icon {
   position: absolute;
-  right: 1.2rem;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 12px;
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  transform: translateY(-5px); /* subtle upward nudge for optical centering */
   cursor: pointer;
   color: #b0b7d1;
   font-size: 1.25rem;
@@ -228,6 +245,17 @@
   outline: none;
   padding: 0;
   z-index: 3;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.eye-icon svg {
+  display: block; /* avoid baseline offset */
+  width: 18px;
+  height: 18px;
 }
 .eye-icon:hover {
   color: #5c6ab0;
@@ -238,6 +266,8 @@
   position: relative;
   width: 100%;
   margin-bottom: 0.6rem; /* decreased from 1.2rem */
+  display: flex;
+  align-items: center;
 }
 
 /* Link styling */
@@ -280,14 +310,7 @@
   position: relative;
   width: 100%;
 }
-.eye-icon {
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #888;
-}
+/* remove duplicate rule to avoid overrides */
 
 .main-btn.login-btn {
   width: 100%;
@@ -552,6 +575,7 @@
   max-height: 90vh;
   overflow-y: auto;
   animation: popupSlideIn 0.3s ease-out;
+  margin-top: -24px; /* nudge slightly upward while staying centered */
 }
 
 @keyframes popupSlideIn {
@@ -568,8 +592,8 @@
 .popup-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px 0 24px;
+  align-items: center; /* vertical centering */
+  padding: 16px 24px; /* balanced padding */
   border-bottom: 1px solid #e5e7eb;
   margin-bottom: 20px;
 }
@@ -579,6 +603,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   color: #1f2937;
+  line-height: 1; /* match button centering */
 }
 
 .close-btn {
@@ -590,6 +615,12 @@
   padding: 4px 8px;
   border-radius: 4px;
   transition: all 0.2s;
+  display: flex;            /* center the X */
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  line-height: 1;
 }
 
 .close-btn:hover {
@@ -743,4 +774,21 @@
   .popup-btn {
     width: 100%;
   }
+}
+
+/* Custom select arrow positioning */
+.select-field {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  color: #333;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5' stroke='%23222' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 44px;
 }
