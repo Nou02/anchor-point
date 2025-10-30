@@ -289,7 +289,7 @@ body, html {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #2F3B70 0%, #4A90E2 50%, #2F3B70 100%);
+  background: #1e2a5e; /* deep blue */
   border-radius: 16px 16px 0 0;
 }
 
@@ -340,15 +340,7 @@ body, html {
 }
 
 .dashboard-main-title::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 2px;
-  background: linear-gradient(90deg, #2F3B70 0%, #4A90E2 100%);
-  border-radius: 2px;
+  content: none; /* remove underline line */
 }
 
 .dashboard-sections {
@@ -392,6 +384,11 @@ body, html {
   z-index: 203;
 }
 
+/* Hide any optional section subtitles like 'Predictive Analytics' */
+.dashboard-section .section-subtitle {
+  display: none !important;
+}
+
 /* Specific overflow handling for Top Vessels section */
 .dashboard-section:has(.vessels-list) {
   overflow: hidden;
@@ -427,15 +424,7 @@ body, html {
 }
 
 .section-title::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 2px;
-  background: linear-gradient(90deg, #2F3B70 0%, #4A90E2 100%);
-  border-radius: 1px;
+  content: none; /* remove underline line */
 }
 
 
@@ -869,9 +858,14 @@ body, html {
 
 .vessel-name {
   font-weight: 700;
-  color: #1a2332;
+  color: #000000;
   font-size: 1.2rem;
   margin-bottom: 8px;
+}
+
+/* Ensure homepage vessel names are black regardless of other styles */
+.vessels-list .vessel-item .vessel-info .vessel-name {
+  color: #000000 !important;
 }
 
 .vessel-count {
@@ -1116,7 +1110,7 @@ body, html {
 .forecast-trend {
   font-size: 0.8rem;
   font-weight: 500;
-  color: #10b981;
+  color: #ffffff;
   text-align: right;
   margin-top: 4px;
 }
@@ -1380,11 +1374,11 @@ body, html {
   align-items: center;
   gap: 4px;
   font-size: 0.75rem;
-  color: #10b981;
+  color: #ffffff;
 }
 
 .trend-indicator.up {
-  color: #10b981;
+  color: #ffffff;
 }
 
 /* Maintenance Compliance */
@@ -1412,7 +1406,7 @@ body, html {
 
 .compliance-text {
   font-size: 0.75rem;
-  color: #10b981;
+  color: #ffffff;
   font-weight: 600;
 }
 
@@ -1858,7 +1852,7 @@ body, html {
 .feature-tag {
   background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
   border: 1px solid #cbd5e1;
-  color: #475569;
+  color: #000000; /* set pill text to black */
   padding: 8px 16px;
   border-radius: 20px;
   font-size: 0.8rem;
