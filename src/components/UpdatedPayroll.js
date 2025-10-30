@@ -1011,7 +1011,6 @@ const UpdatedPayroll = () => {
         <div className="alice-payroll-list">
           <div className="payroll-list-header">
             <h2>Payroll Management</h2>
-            <p>Review and manage payroll data submitted by Carla</p>
           </div>
           
           {/* Tab Navigation */}
