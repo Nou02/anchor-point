@@ -6,28 +6,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
+  background: #ffffff; /* solid white background */
+  backdrop-filter: none;
   padding: 20px;
   overflow-y: auto;
   z-index: 1;
 }
 
-.payroll-center-content::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 320px;
-  width: calc(100vw - 320px);
-  height: 100vh;
-  background-image: url('../assets/apone.png');
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-position: center center;
-  opacity: 0.15;
-  z-index: 0;
-  pointer-events: none;
-}
+.payroll-center-content::before { content: none; }
 
 .payroll-center-content > * {
   position: relative;
