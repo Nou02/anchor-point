@@ -326,7 +326,7 @@ body, html {
   color: #1e293b;
   font-size: 2.2rem;
   font-weight: 800;
-  margin: 0 0 24px 0;
+  margin: 12px 0 24px 0; /* nudge title downward */
   text-align: center;
   background: linear-gradient(135deg, #1e293b 0%, #3b82f6 100%);
   -webkit-background-clip: text;
