@@ -494,14 +494,14 @@
   background: white;
   border: 1.5px solid #e9ecef;
   border-radius: 8px;
-  padding: 12px;
+  padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
   cursor: pointer;
   position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;   /* avoid clipping inner content */
   width: 100%;
   height: auto;
   min-height: 80px;
@@ -509,20 +509,22 @@
 }
 
 .worker-card:not(.selected) {
-  min-height: 80px;
-  max-height: 80px;
+  min-height: 80px;    /* baseline height */
+  height: auto;        /* autosize to content */
+  max-height: none;    /* remove cap */
 }
 
 .worker-card.selected {
   min-height: 280px;
-  max-height: 350px;
+  height: auto;       /* autosize when expanded */
+  max-height: none;   /* remove cap to prevent cutting */
   border-color: #2F3B70;
   box-shadow: 0 6px 20px rgba(47, 59, 112, 0.15);
   transform: translateY(-3px);
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   z-index: 10;
   position: relative;
-  padding: 16px;
+  padding: 20px;
 }
 
 /* Name Only View */
@@ -564,7 +566,7 @@
   border-bottom: 2px solid #e9ecef;
   gap: 12px;
   flex-shrink: 0;
-  min-height: 60px;
+  min-height: 70px;     /* extra headroom for wrapped names */
 }
 
 .worker-name-and-status {
@@ -603,6 +605,12 @@
   background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
   color: #0c5460;
   border: 1px solid #17a2b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  line-height: 1;           /* keep text vertically inside pill */
+  box-sizing: border-box;   /* include border in size */
 }
 
 .status-limited {
