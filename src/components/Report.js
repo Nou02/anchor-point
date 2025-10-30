@@ -541,14 +541,9 @@ const Report = () => {
             <h1 style={{
               fontSize: '2rem',
               fontWeight: '800',
-              background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
+              color: '#1e2a5e',
               margin: '0 0 8px 0',
-              letterSpacing: '0.5px',
-              textShadow: '0 4px 8px rgba(30, 58, 138, 0.2)',
-              filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
+              letterSpacing: '0.5px'
             }}>
               Anchor Point Past History Reports
             </h1>
