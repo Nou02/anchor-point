@@ -47,6 +47,20 @@
   margin-bottom: 8px;
 }
 
+/* Gentle continuous wave animation for the sidebar anchor logo */
+.sidebar-anchor-svg svg {
+  animation: anchorWave 3.5s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+
+@keyframes anchorWave {
+  0% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(2deg) translateY(-2px); }
+  50% { transform: rotate(0deg) translateY(0); }
+  75% { transform: rotate(-2deg) translateY(-2px); }
+  100% { transform: rotate(0deg) translateY(0); }
+}
+
 .sidebar-title {
   font-size: 2rem;
   font-weight: bold;
