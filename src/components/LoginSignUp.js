@@ -95,7 +95,7 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
             <div className="logo-section">
               <img src={require('../assets/anchorpoint.png')} alt="AnchorPoint Logo" className="hero-logo" />
               <h1 className="hero-title">
-                <span className="leo-text">Leo</span> <span className="marines-text">Marines</span>
+                <span className="leo-text">L.E.O.</span> <span className="marines-text">MARINES</span>
               </h1>
               <p className="hero-quote">"Navigating Excellence Through Innovation"</p>
             </div>
@@ -151,18 +151,8 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="input-field"
+                  className="input-field select-field"
                   required
-                  style={{
-                    background: 'white',
-                    border: '1px solid #ddd',
-                    borderRadius: '8px',
-                    padding: '12px 16px',
-                    fontSize: '1rem',
-                    color: '#333',
-                    width: '100%',
-                    marginBottom: '16px'
-                  }}
                 >
                   <option value="">Select Role</option>
                   <option value="Manager">Manager</option>
@@ -254,6 +244,16 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
 
         {/* Right Panel - Hero Content */}
         <div className="login-right-panel">
+          <video
+            className="login-bg-video"
+            autoPlay
+            loop
+            muted
+            playsInline
+          >
+            <source src={require('../assets/lnding.mp4')} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
         </div>
       </div>
 
