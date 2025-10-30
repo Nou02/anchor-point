@@ -5,9 +5,8 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -101,10 +100,8 @@
 }
 
 .click-hint {
-  position: absolute;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
+  margin-top: 2rem;
+  text-align: center;
   opacity: 0.6;
   font-size: 0.9rem;
   animation: pulse 2s ease-in-out infinite;
