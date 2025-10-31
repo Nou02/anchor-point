@@ -7,6 +7,7 @@ import Sidebar from './Sidebar';
 import InfoContent from './InfoContent';
 import NotificationContent from './NotificationContent';
 import Analytics from './Analytics';
+import Storage from './Storage';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -545,6 +546,7 @@ const Homepage = () => {
     }
 
     const displayName = userProfile.fullName || '';
+    const userRole = userProfile.role || '';
     const isCarla = displayName === 'Carla Dela Peña' || 
                    displayName === 'Carla' ||
                    (displayName && displayName.toLowerCase().includes('carla'));
@@ -552,6 +554,8 @@ const Homepage = () => {
                    displayName === 'Alice' ||
                    (displayName && displayName.toLowerCase().includes('alice'));
     const isWorker = !isCarla && !isAlice;
+    const isSeniorSupervisor = userRole.toLowerCase() === 'senior supervisor' || 
+                              (isAlice && (userRole.toLowerCase().includes('senior') || userRole.toLowerCase().includes('supervisor')));
 
     if (isCarla) {
       // Carla: Only Home and Payroll (no Scheduling, no Reports, no Analytics)
@@ -565,8 +569,18 @@ const Homepage = () => {
         { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
         { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
       ];
+    } else if (isSeniorSupervisor) {
+      // Senior Supervisor: Full access + Storage
+      return [
+        ...baseMenu,
+        { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
+        { id: 'reports', label: 'Reports', icon: 'description' },
+        { id: 'analytics', label: 'Analytics', icon: 'analytics' },
+        { id: 'storage', label: 'Storage', icon: 'inventory_2' },
+        { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
+      ];
     } else {
-      // Alice and other users: Full access to all sections
+      // Alice and other users: Full access to all sections (without Storage)
       return [
         ...baseMenu,
         { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
@@ -616,6 +630,8 @@ const Homepage = () => {
         return <Report />;
       case 'analytics':
         return <Analytics />;
+      case 'storage':
+        return <Storage />;
       case 'payroll':
         return <Payroll />;
       case 'home':
