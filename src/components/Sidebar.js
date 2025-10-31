@@ -48,9 +48,8 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
         display: 'flex',
         flexDirection: 'column',
         gap: '6px',
-        margin: '0 auto 12px auto',
-        width: 'calc(100% - 40px)',
-        padding: '0 20px'
+        margin: '0 20px 12px 20px',
+        width: 'calc(100% - 40px)'
       }}>
         {/* Notification Button */}
         {showNotificationButton && (
@@ -63,7 +62,7 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
               background: '#232b45',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               borderRadius: '12px',
-              padding: '6px 10px',
+              padding: '10px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -136,7 +135,7 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
               background: '#232b45',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               borderRadius: '12px',
-              padding: '6px 10px',
+              padding: '10px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -183,7 +182,7 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
     {/* User Profile Section */}
     {userProfile && (
       <div className="user-profile-section" style={{
-        margin: '0 auto 8px auto',
+        margin: '0 20px 8px 20px',
         padding: '10px',
         background: '#232b45',
         borderRadius: '12px',
