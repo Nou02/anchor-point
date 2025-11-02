@@ -87,6 +87,7 @@ const Report = () => {
             'Control Number': vessel.controlId || '',
             'Vessel Type': vessel.vesselType || 'Local',
             'Time': vessel.time || '',
+            'Time Finished': vessel.timeFinished || '',
             'SheetName': sheetName
           };
         });
@@ -262,6 +263,7 @@ const Report = () => {
             id: `excel_${index}`,
             date: parsedDate,
             time: vessel['Time'] || '',
+            timeFinished: vessel['Time Finished'] || '',
             vesselName: vessel['Vessel'] || 'N/A',
             voyageNo: vessel['Voyage Number'] || 'N/A',
             purposeOfCall: vessel['Service'] || 'N/A',
@@ -309,6 +311,7 @@ const Report = () => {
           id: doc.id,
           date: data.date,
           time: data.time || '',
+          timeFinished: data.timeFinished || '',
         vesselName: data.vesselName || 'N/A',
         voyageNo: data.voyageNo || 'N/A',
         purposeOfCall: data.purposeOfCall || 'N/A',
@@ -338,6 +341,7 @@ const Report = () => {
       id: `excel_${index}`,
       date: vessel['Date'] || new Date().toISOString(),
       time: vessel['Time'] || '',
+      timeFinished: vessel['Time Finished'] || '',
       vesselName: vessel['Vessel'] || 'N/A',
       voyageNo: vessel['Voyage Number'] || 'N/A',
       purposeOfCall: vessel['Service'] || 'N/A',
@@ -1067,7 +1071,15 @@ const Report = () => {
                           padding: '16px 12px',
                           textAlign: 'center',
                           borderRight: '1px solid rgba(255, 255, 255, 0.2)',
-                          width: '20%'
+                          width: '12%'
+                        }}>
+                          TIME FINISHED
+                        </th>
+                        <th style={{ 
+                          padding: '16px 12px',
+                          textAlign: 'center',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                          width: '18%'
                         }}>
                           VESSEL
                         </th>
@@ -1083,14 +1095,14 @@ const Report = () => {
                           padding: '16px 12px',
                           textAlign: 'center',
                           borderRight: '1px solid rgba(255, 255, 255, 0.2)',
-                          width: '25%'
+                          width: '23%'
                         }}>
                           PURPOSE
                         </th>
                         <th style={{ 
                           padding: '16px 12px',
                           textAlign: 'center',
-                          width: '16%'
+                          width: '14%'
                         }}>
                           CONTROL ID
                         </th>
@@ -1180,6 +1192,47 @@ const Report = () => {
                                   return timeStr;
                                 } catch (e) {
                                   return transaction.time;
+                                }
+                              })()}
+                            </td>
+                            <td style={{ 
+                              padding: '12px',
+                              color: '#1f2937',
+                              fontWeight: '500',
+                              textAlign: 'center',
+                              borderRight: '1px solid #e5e7eb'
+                            }}>
+                              {(() => {
+                                if (!transaction.timeFinished || transaction.timeFinished === 'N/A' || transaction.timeFinished === '') {
+                                  return '-';
+                                }
+                                
+                                try {
+                                  let timeStr = transaction.timeFinished.trim();
+                                  
+                                  if (timeStr.includes('AM') || timeStr.includes('PM')) {
+                                    return timeStr;
+                                  }
+                                  
+                                  if (timeStr.includes(':')) {
+                                    const [hours, minutes] = timeStr.split(':');
+                                    const hour24 = parseInt(hours, 10);
+                                    const mins = minutes || '00';
+                                    
+                                    if (hour24 === 0) {
+                                      return `12:${mins} AM`;
+                                    } else if (hour24 < 12) {
+                                      return `${hour24}:${mins} AM`;
+                                    } else if (hour24 === 12) {
+                                      return `12:${mins} PM`;
+                                    } else {
+                                      return `${hour24 - 12}:${mins} PM`;
+                                    }
+                                  }
+                                  
+                                  return timeStr;
+                                } catch (e) {
+                                  return transaction.timeFinished;
                                 }
                               })()}
                             </td>

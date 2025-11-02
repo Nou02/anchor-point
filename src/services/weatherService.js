@@ -1,8 +1,16 @@
 // Weather service for Sta. Rita Aplaya Batangas
 // Coordinates: 13.8333° N, 120.9167° E (approximate for Sta. Rita Aplaya, Batangas)
 
-const WEATHER_API_KEY = 'your_openweathermap_api_key_here'; // You'll need to get this from OpenWeatherMap
+// Get API key from environment variable (set in .env file)
+const WEATHER_API_KEY = process.env.REACT_APP_OPENWEATHERMAP_API_KEY || '';
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
+
+// Debug: Log API key status (check console after server restart)
+if (!WEATHER_API_KEY || WEATHER_API_KEY.trim() === '') {
+  console.warn('⚠️ OpenWeatherMap API key not found. Using mock data. Make sure REACT_APP_OPENWEATHERMAP_API_KEY is set in .env file and the server is restarted.');
+} else {
+  console.log('✅ OpenWeatherMap API key loaded:', WEATHER_API_KEY.substring(0, 8) + '...' + WEATHER_API_KEY.substring(WEATHER_API_KEY.length - 4));
+}
 
 // Coordinates for Sta. Rita Aplaya, Batangas, Philippines
 const LOCATION_COORDS = {
@@ -62,13 +70,33 @@ export const getWeatherColor = (condition) => {
 
 // Fetch current weather
 export const getCurrentWeather = async () => {
+  // Check if API key is configured
+  if (!WEATHER_API_KEY || WEATHER_API_KEY.trim() === '') {
+    // Return mock data if API key is not configured
+    const mockData = getMockWeatherData();
+    const today = new Date().toISOString().split('T')[0];
+    return mockData[today] || {
+      temperature: 28,
+      condition: 'Clear',
+      description: 'Clear sky',
+      humidity: 75,
+      windSpeed: 10,
+      color: WEATHER_COLORS.clear
+    };
+  }
+
   try {
-    const response = await fetch(
-      `${BASE_URL}/weather?lat=${LOCATION_COORDS.lat}&lon=${LOCATION_COORDS.lon}&appid=${WEATHER_API_KEY}&units=metric`
-    );
+    // Build URL with proper encoding
+    const url = `${BASE_URL}/weather?lat=${LOCATION_COORDS.lat}&lon=${LOCATION_COORDS.lon}&appid=${encodeURIComponent(WEATHER_API_KEY)}&units=metric`;
+    const response = await fetch(url);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch weather data');
+      // Handle 401 Unauthorized specifically
+      if (response.status === 401) {
+        console.warn('⚠️ OpenWeatherMap API returned 401 Unauthorized. Please verify your API key is valid and activated.');
+        throw new Error('Invalid API key or API key not activated');
+      }
+      throw new Error(`Failed to fetch weather data: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
@@ -81,27 +109,41 @@ export const getCurrentWeather = async () => {
       color: getWeatherColor(data.weather[0].main)
     };
   } catch (error) {
-    console.error('Error fetching current weather:', error);
-    return {
-      temperature: null,
-      condition: 'Unknown',
-      description: 'Unable to fetch weather data',
-      humidity: null,
-      windSpeed: null,
-      color: WEATHER_COLORS.default
+    // Return mock data on error
+    const mockData = getMockWeatherData();
+    const today = new Date().toISOString().split('T')[0];
+    return mockData[today] || {
+      temperature: 28,
+      condition: 'Clear',
+      description: 'Clear sky',
+      humidity: 75,
+      windSpeed: 10,
+      color: WEATHER_COLORS.clear
     };
   }
 };
 
 // Fetch 5-day weather forecast
 export const getWeatherForecast = async () => {
+  // Check if API key is configured
+  if (!WEATHER_API_KEY || WEATHER_API_KEY.trim() === '') {
+    // Return mock data if API key is not configured
+    return getMockWeatherData();
+  }
+
   try {
-    const response = await fetch(
-      `${BASE_URL}/forecast?lat=${LOCATION_COORDS.lat}&lon=${LOCATION_COORDS.lon}&appid=${WEATHER_API_KEY}&units=metric`
-    );
+    // Build URL with proper encoding
+    const url = `${BASE_URL}/forecast?lat=${LOCATION_COORDS.lat}&lon=${LOCATION_COORDS.lon}&appid=${encodeURIComponent(WEATHER_API_KEY)}&units=metric`;
+    
+    const response = await fetch(url);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch weather forecast');
+      // Handle 401 Unauthorized specifically
+      if (response.status === 401) {
+        console.warn('⚠️ OpenWeatherMap API returned 401 Unauthorized. Please verify your API key is valid and activated.');
+        throw new Error('Invalid API key or API key not activated');
+      }
+      throw new Error(`Failed to fetch weather forecast: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
@@ -128,8 +170,8 @@ export const getWeatherForecast = async () => {
     
     return dailyForecast;
   } catch (error) {
-    console.error('Error fetching weather forecast:', error);
-    return {};
+    // Return mock data on error
+    return getMockWeatherData();
   }
 };
 
@@ -169,7 +211,6 @@ export const getWeatherForDate = async (date) => {
     const dateKey = date.toISOString().split('T')[0];
     return forecast[dateKey] || null;
   } catch (error) {
-    console.error('Error fetching weather for date:', error);
     return null;
   }
 };

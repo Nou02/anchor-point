@@ -214,6 +214,47 @@ EXCEL_FILENAME = 'Vessels Log.xlsx'
 # Use only the public folder for Excel file access
 EXCEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'public', EXCEL_FILENAME)
 
+def format_time_with_am_pm(time_str):
+    """Convert 24-hour time format (HH:MM) to 12-hour format with AM/PM.
+    
+    Args:
+        time_str: Time string in format 'HH:MM' or empty string
+        
+    Returns:
+        Formatted time string in 'H:MM AM/PM' format, or empty string if input is empty
+    """
+    if not time_str or time_str.strip() == '':
+        return ''
+    
+    # If already has AM/PM, return as is
+    time_str = time_str.strip()
+    if 'AM' in time_str.upper() or 'PM' in time_str.upper():
+        return time_str
+    
+    try:
+        # Parse HH:MM format
+        if ':' in time_str:
+            parts = time_str.split(':')
+            if len(parts) == 2:
+                hour24 = int(parts[0])
+                minute = parts[1].strip() or '00'
+                
+                # Convert to 12-hour format
+                if hour24 == 0:
+                    return f'12:{minute} AM'
+                elif hour24 < 12:
+                    return f'{hour24}:{minute} AM'
+                elif hour24 == 12:
+                    return f'12:{minute} PM'
+                else:
+                    return f'{hour24 - 12}:{minute} PM'
+        
+        # If format doesn't match, return original
+        return time_str
+    except (ValueError, IndexError):
+        # If parsing fails, return original string
+        return time_str
+
 def _load_workbook_or_404(path):
     print(f"Checking Excel file at: {path}")
     print(f"File exists: {os.path.exists(path)}")
@@ -316,11 +357,17 @@ def append_excel_row():
             if not headers:
                 print("No headers found, creating default headers")
                 # Create default headers if none exist
-                headers = ['Vessel', 'Voyage Number', 'Control Number', 'Service', 'Date', 'Time', 'Vessel Type']
+                headers = ['Vessel', 'Voyage Number', 'Control Number', 'Service', 'Date', 'Time', 'Time Finished', 'Vessel Type']
                 # Add headers to first row if worksheet is empty
                 if ws.max_row == 0:
                     ws.append(headers)
                     print(f"Added default headers: {headers}")
+            
+            # Format time fields if they exist
+            if 'Time' in payload['object']:
+                payload['object']['Time'] = format_time_with_am_pm(payload['object']['Time'])
+            if 'Time Finished' in payload['object']:
+                payload['object']['Time Finished'] = format_time_with_am_pm(payload['object']['Time Finished'])
             
             values = [payload['object'].get(h, None) for h in headers]
             print(f"Using object format with headers {headers}: {values}")
@@ -435,6 +482,12 @@ def update_excel_entry():
                     # Update the row with new data
                     headers = [str(c.value).strip() if c.value is not None else '' for c in ws[1]]
                     
+                    # Format time fields if they exist
+                    if 'Time' in new_data:
+                        new_data['Time'] = format_time_with_am_pm(new_data['Time'])
+                    if 'Time Finished' in new_data:
+                        new_data['Time Finished'] = format_time_with_am_pm(new_data['Time Finished'])
+                    
                     for col_idx, header in enumerate(headers, 1):
                         if header in new_data:
                             ws.cell(row=row_idx, column=col_idx).value = new_data[header]
@@ -493,7 +546,8 @@ def save_report_to_excel():
         purpose_of_call = payload.get('purposeOfCall', '')
         control_id = payload.get('controlId', '')
         vessel_type = payload.get('vesselType', 'Local')
-        time = payload.get('time', '')
+        time = format_time_with_am_pm(payload.get('time', ''))
+        time_finished = format_time_with_am_pm(payload.get('timeFinished', ''))
 
         if not date_str:
             return jsonify({"success": False, "error": "Date is required"}), 400
@@ -514,11 +568,11 @@ def save_report_to_excel():
             ws = wb.create_sheet(sheet_name)
             # Add headers based on year
             if year == 2023:
-                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date', 'Time', 'Vessel Type']
+                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date', 'Time', 'Time Finished', 'Vessel Type']
             elif year == 2024:
-                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date', 'Time', 'Vessel Type']
+                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date', 'Time', 'Time Finished', 'Vessel Type']
             else:  # 2025 and future years
-                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date', 'Time', 'Vessel Type']
+                headers = ['No.', 'Vessel', 'Service', 'Control Number', 'Voyage Number', 'Date', 'Time', 'Time Finished', 'Vessel Type']
             
             ws.append(headers)
         else:
@@ -530,7 +584,7 @@ def save_report_to_excel():
 
         # Prepare the row data based on year structure
         if year == 2023:
-            # 2023 structure: No., Vessel, Service (control numbers), ID, Date, Time, Vessel Type
+            # 2023 structure: No., Vessel, Service (control numbers), ID, Date, Time, Time Finished, Vessel Type
             row_data = [
                 row_number,
                 vessel_name,
@@ -539,10 +593,11 @@ def save_report_to_excel():
                 voyage_no,        # Voyage Number column
                 date_str,         # Date column
                 time,             # Time column
+                time_finished,    # Time Finished column
                 vessel_type       # Vessel Type column
             ]
         elif year == 2024:
-            # 2024 structure: No., Vessel, Service, Control Number, Voyage Number, Date, Time, Vessel Type
+            # 2024 structure: No., Vessel, Service, Control Number, Voyage Number, Date, Time, Time Finished, Vessel Type
             row_data = [
                 row_number,
                 vessel_name,
@@ -551,10 +606,11 @@ def save_report_to_excel():
                 voyage_no,        # Voyage Number column
                 date_str,         # Date column
                 time,             # Time column
+                time_finished,    # Time Finished column
                 vessel_type       # Vessel Type column
             ]
         else:
-            # 2025+ structure: No., Vessel, Service, Control Number, Voyage Number, Date, Time, Vessel Type
+            # 2025+ structure: No., Vessel, Service, Control Number, Voyage Number, Date, Time, Time Finished, Vessel Type
             row_data = [
                 row_number,
                 vessel_name,
@@ -563,6 +619,7 @@ def save_report_to_excel():
                 voyage_no,        # Voyage Number column
                 date_str,         # Date column
                 time,             # Time column
+                time_finished,    # Time Finished column
                 vessel_type       # Vessel Type column
             ]
 
@@ -764,6 +821,7 @@ def get_vessels_log_data():
                             'controlId': row_data.get('Control Number', ''),
                             'vesselType': row_data.get('Vessel Type', 'Local'),  # Add vessel type
                             'time': row_data.get('Time', ''),  # Add time field
+                            'timeFinished': row_data.get('Time Finished', ''),  # Add time finished field
                             'updatedBy': 'system@anchorpoint.com'  # Default since Excel doesn't track this
                         }
                         

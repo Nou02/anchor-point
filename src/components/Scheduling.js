@@ -20,13 +20,16 @@ const Scheduling = () => {
   const [clickedDate, setClickedDate] = useState(null);
   const [isEditingVessel, setIsEditingVessel] = useState(false);
   const [editingVesselId, setEditingVesselId] = useState(null);
+  const [originalVesselName, setOriginalVesselName] = useState(null);
+  const [originalVesselData, setOriginalVesselData] = useState(null);
   const [vesselFormData, setVesselFormData] = useState({
     vesselName: '',
     voyageId: '',
     controlId: '',
     vesselType: 'Local',
     purpose: [],
-    time: ''
+    time: '',
+    timeFinished: ''
   });
   
   // State for recent finished vessels
@@ -196,13 +199,16 @@ const Scheduling = () => {
     setClickedDate(clickedDate);
     setIsEditingVessel(false);
     setEditingVesselId(null);
+    setOriginalVesselName(null);
+    setOriginalVesselData(null);
     setVesselFormData({
       vesselName: '',
       voyageId: '',
       controlId: '',
       vesselType: 'Local',
       purpose: [],
-      time: ''
+      time: '',
+      timeFinished: ''
     });
     setShowVesselModal(true);
   };
@@ -239,7 +245,6 @@ const Scheduling = () => {
     }
     
     if (!vesselFormData.vesselName || !vesselFormData.voyageId || !vesselFormData.controlId) {
-      console.log('❌ Validation failed: Missing required fields');
       alert('Please fill in all required fields');
       return;
     }
@@ -250,14 +255,52 @@ const Scheduling = () => {
     }
     
     
-    const dateKey = `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, '0')}-${String(clickedDate.getDate()).padStart(2, '0')}`;
+    let dateKey = `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, '0')}-${String(clickedDate.getDate()).padStart(2, '0')}`;
     
     try {
       if (isEditingVessel) {
-        // Find the original vessel data for Excel update
-        const originalVessel = vesselEntries[dateKey]?.find(v => v.id === editingVesselId);
+        // Use stored original vessel data if available (more reliable)
+        let originalVessel = originalVesselData;
+        let actualDateKey = dateKey;
+        
+        // If originalVesselData not available, try to find in state
         if (!originalVessel) {
-          alert('Error: Could not find original vessel entry');
+          // Try to find by ID first using the clicked date
+          originalVessel = vesselEntries[dateKey]?.find(v => v.id === editingVesselId);
+          
+          // If not found, try to find across all dates (in case date changed or vessel was moved)
+          if (!originalVessel) {
+            for (const key in vesselEntries) {
+              originalVessel = vesselEntries[key]?.find(v => v.id === editingVesselId);
+              if (originalVessel) {
+                // Found it in a different date - use that date for Excel lookup
+                actualDateKey = key;
+                break;
+              }
+            }
+          }
+        } else {
+          // If we have originalVesselData, use its date
+          if (originalVesselData.date) {
+            const originalDate = new Date(originalVesselData.date);
+            actualDateKey = `${originalDate.getFullYear()}-${String(originalDate.getMonth() + 1).padStart(2, '0')}-${String(originalDate.getDate()).padStart(2, '0')}`;
+          }
+        }
+        
+        if (!originalVessel) {
+          alert('Error: Could not find original vessel entry. Please try refreshing the page.');
+          return;
+        }
+        
+        // Use the actual dateKey where the vessel was found
+        dateKey = actualDateKey;
+
+        // Use the stored original vessel name for Excel lookup
+        // This ensures we can find the entry even if the vessel name was changed in previous edits
+        const vesselNameForExcel = originalVesselName || originalVessel.vesselName;
+        
+        if (!vesselNameForExcel) {
+          alert('Error: Could not find vessel name for update');
           return;
         }
 
@@ -267,14 +310,30 @@ const Scheduling = () => {
           "Voyage Number": vesselFormData.voyageId,
           "Control Number": vesselFormData.controlId,
           "Service": vesselFormData.purpose.join(', '),
+          "Time": vesselFormData.time,
+          "Time Finished": vesselFormData.timeFinished,
           "Vessel Type": vesselFormData.vesselType
         };
 
-        await excelAPI.updateVesselEntry(
-          dateKey,
-          originalVessel.vesselName,
-          excelUpdateData
-        );
+        try {
+          await excelAPI.updateVesselEntry(
+            dateKey,
+            vesselNameForExcel,
+            excelUpdateData
+          );
+        } catch (excelError) {
+          // If update fails, try with current vessel name as fallback
+          if (vesselNameForExcel !== originalVessel.vesselName) {
+            console.warn('First update attempt failed, trying with current vessel name');
+            await excelAPI.updateVesselEntry(
+              dateKey,
+              originalVessel.vesselName,
+              excelUpdateData
+            );
+          } else {
+            throw excelError;
+          }
+        }
 
         // Update local state
         setVesselEntries(prev => {
@@ -288,7 +347,9 @@ const Scheduling = () => {
                     voyageId: vesselFormData.voyageId,
                     controlId: vesselFormData.controlId,
                     vesselType: vesselFormData.vesselType,
-                    purpose: vesselFormData.purpose
+                    purpose: vesselFormData.purpose,
+                    time: vesselFormData.time,
+                    timeFinished: vesselFormData.timeFinished
                   }
                 : vessel
             ) || []
@@ -298,7 +359,10 @@ const Scheduling = () => {
           return updatedEntries;
         });
         
-        console.log('Vessel entry updated in Excel and local state:', { id: editingVesselId, ...vesselFormData });
+        // Keep the originalVesselName as-is (don't update it)
+        // We always want to use the original vessel name from when we first started editing
+        // This ensures we can find the entry in Excel even after multiple edits
+        
         alert('Vessel entry updated successfully!');
       } else {
         // Create new vessel entry for Excel
@@ -309,7 +373,8 @@ const Scheduling = () => {
           purposeOfCall: vesselFormData.purpose.join(', '),
           controlId: vesselFormData.controlId,
           vesselType: vesselFormData.vesselType,
-          time: vesselFormData.time
+          time: vesselFormData.time,
+          timeFinished: vesselFormData.timeFinished
         };
 
         // Create local vessel entry first
@@ -321,6 +386,7 @@ const Scheduling = () => {
           vesselType: vesselFormData.vesselType,
           purpose: vesselFormData.purpose,
           time: vesselFormData.time,
+          timeFinished: vesselFormData.timeFinished,
           date: clickedDate
         };
         
@@ -337,14 +403,12 @@ const Scheduling = () => {
         try {
           await excelAPI.addVesselEntry(excelData);
         } catch (excelError) {
-          console.error('Excel save failed, but vessel added locally:', excelError);
           // Don't throw - vessel is already added locally
         }
         
         alert('Vessel entry added successfully!');
       }
     } catch (error) {
-      console.error('Error saving vessel entry:', error);
       alert('Error saving vessel entry. Please try again.');
       return;
     }
@@ -353,13 +417,15 @@ const Scheduling = () => {
     setShowVesselModal(false);
     setIsEditingVessel(false);
     setEditingVesselId(null);
+    setOriginalVesselName(null);
     setVesselFormData({
       vesselName: '',
       voyageId: '',
       controlId: '',
       vesselType: 'Local',
       purpose: [],
-      time: ''
+      time: '',
+      timeFinished: ''
     });
     setClickedDate(null);
     
@@ -372,13 +438,15 @@ const Scheduling = () => {
     setShowVesselModal(false);
     setIsEditingVessel(false);
     setEditingVesselId(null);
+    setOriginalVesselName(null);
     setVesselFormData({
       vesselName: '',
       voyageId: '',
       controlId: '',
       vesselType: 'Local',
       purpose: [],
-      time: ''
+      time: '',
+      timeFinished: ''
     });
     setClickedDate(null);
   };
@@ -426,7 +494,7 @@ const Scheduling = () => {
         setRecentFinishedVessels(finishedVessels);
       }
     } catch (error) {
-      console.error('Error loading recent finished vessels:', error);
+      // Error loading recent finished vessels
     }
   };
 
@@ -460,7 +528,7 @@ const Scheduling = () => {
         setUpcomingScheduledVessels(upcomingVessels);
       }
     } catch (error) {
-      console.error('Error loading upcoming scheduled vessels:', error);
+      // Error loading upcoming scheduled vessels
     }
   };
 
@@ -492,6 +560,7 @@ const Scheduling = () => {
             vesselType: vessel.vesselType || 'Local',
             purpose: vessel.purpose ? vessel.purpose.split(', ').filter(p => p.trim()) : [],
             time: vessel.time || '',
+            timeFinished: vessel.timeFinished || '',
             date: new Date(dateKey)
           };
           
@@ -506,7 +575,6 @@ const Scheduling = () => {
         loadVesselEntriesFromLocalStorage();
       }
     } catch (error) {
-      console.error('Error loading vessel entries from Excel:', error);
       // Try to load from local storage as fallback
       loadVesselEntriesFromLocalStorage();
     }
@@ -530,7 +598,7 @@ const Scheduling = () => {
         setVesselEntries(entries);
       }
     } catch (error) {
-      console.error('Error loading vessel entries from local storage:', error);
+      // Error loading vessel entries from local storage
     }
   };
 
@@ -539,7 +607,51 @@ const Scheduling = () => {
     try {
       localStorage.setItem('vesselEntries', JSON.stringify(entries));
     } catch (error) {
-      console.error('Error saving vessel entries to local storage:', error);
+      // Error saving vessel entries to local storage
+    }
+  };
+
+  // Convert AM/PM time format to HH:MM format for time input
+  const convertToTimeInputFormat = (timeStr) => {
+    if (!timeStr || timeStr.trim() === '') return '';
+    
+    try {
+      const timeStrTrimmed = timeStr.trim();
+      
+      // If already in HH:MM format, return as is
+      if (/^\d{1,2}:\d{2}$/.test(timeStrTrimmed)) {
+        return timeStrTrimmed;
+      }
+      
+      // Try to parse AM/PM format (e.g., "2:30 PM", "10:15 AM")
+      if (timeStrTrimmed.includes('AM') || timeStrTrimmed.includes('PM')) {
+        const isPM = timeStrTrimmed.toUpperCase().includes('PM');
+        const timeWithoutAmPm = timeStrTrimmed.replace(/AM|PM/gi, '').trim();
+        const [hours, minutes = '00'] = timeWithoutAmPm.split(':').map(s => s.trim());
+        
+        let hour24 = parseInt(hours, 10);
+        
+        if (isPM && hour24 !== 12) {
+          hour24 += 12;
+        } else if (!isPM && hour24 === 12) {
+          hour24 = 0;
+        }
+        
+        return `${String(hour24).padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+      }
+      
+      // If format doesn't match, try to parse as HH:MM directly
+      if (timeStrTrimmed.includes(':')) {
+        const [hours, minutes = '00'] = timeStrTrimmed.split(':').map(s => s.trim());
+        const hour24 = parseInt(hours, 10);
+        if (!isNaN(hour24) && hour24 >= 0 && hour24 <= 23) {
+          return `${String(hour24).padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+        }
+      }
+      
+      return '';
+    } catch (e) {
+      return '';
     }
   };
 
@@ -556,13 +668,17 @@ const Scheduling = () => {
     setClickedDate(date);
     setIsEditingVessel(true);
     setEditingVesselId(vessel.id);
+    // Store the original vessel data for Excel lookup (important if vessel name was changed in previous edits)
+    setOriginalVesselName(vessel.vesselName);
+    setOriginalVesselData({ ...vessel }); // Store a copy of the entire vessel object
     setVesselFormData({
       vesselName: vessel.vesselName,
       voyageId: vessel.voyageId,
       controlId: vessel.controlId,
       vesselType: vessel.vesselType,
       purpose: [...vessel.purpose],
-      time: vessel.time || ''
+      time: convertToTimeInputFormat(vessel.time || ''),
+      timeFinished: convertToTimeInputFormat(vessel.timeFinished || '')
     });
     setShowVesselModal(true);
   };
@@ -581,19 +697,13 @@ const Scheduling = () => {
     const date = new Date(currentYear, currentMonth, day);
     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     
-    console.log(`🗑️ Deleting vessel with ID: ${vesselId} for date: ${dateKey}`);
-    console.log(`📋 Current vessels for this date:`, vesselEntries[dateKey]);
-    
     try {
       // Find the vessel to get its name for Excel deletion
       const vesselToDelete = vesselEntries[dateKey]?.find(vessel => vessel.id === vesselId);
       if (!vesselToDelete) {
-        console.error(`❌ Vessel with ID ${vesselId} not found in entries:`, vesselEntries[dateKey]);
         alert('Error: Could not find vessel entry to delete');
         return;
       }
-
-      console.log(`✅ Found vessel to delete:`, vesselToDelete);
 
       // Delete from Excel
       await excelAPI.deleteVesselEntry(dateKey, vesselToDelete.vesselName);
@@ -603,26 +713,16 @@ const Scheduling = () => {
         const beforeCount = prev[dateKey]?.length || 0;
         const updatedEntries = {
           ...prev,
-          [dateKey]: prev[dateKey]?.filter(vessel => {
-            const shouldKeep = vessel.id !== vesselId;
-            if (!shouldKeep) {
-              console.log(`🗑️ Removing vessel:`, vessel);
-            }
-            return shouldKeep;
-          }) || []
+          [dateKey]: prev[dateKey]?.filter(vessel => vessel.id !== vesselId) || []
         };
-        const afterCount = updatedEntries[dateKey]?.length || 0;
-        console.log(`📊 Vessel count for ${dateKey}: ${beforeCount} → ${afterCount}`);
         
         // Save to local storage
         saveVesselEntriesToLocalStorage(updatedEntries);
         return updatedEntries;
       });
       
-      console.log('✅ Vessel entry deleted from Excel and local state:', vesselToDelete);
       alert('Vessel entry deleted successfully!');
     } catch (error) {
-      console.error('❌ Error deleting vessel entry:', error);
       alert('Error deleting vessel entry. Please try again.');
     }
   };
@@ -721,29 +821,10 @@ const Scheduling = () => {
   // Excel export functions
   const saveToExcel = async (entryData, isUpdate = false, originalDate = null) => {
     try {
-      console.log('=== saveToExcel called ===');
-      console.log('isUpdate:', isUpdate);
-      console.log('originalDate:', originalDate);
-      console.log('entryData:', entryData);
-      
-      console.log('saveToExcel - entryData.date:', {
-        date: entryData.date,
-        dateISO: entryData.date.toISOString(),
-        dateLocal: entryData.date.toLocaleDateString(),
-        currentDate: new Date().toISOString()
-      });
-      
       const year = entryData.date.getFullYear();
       const month = String(entryData.date.getMonth() + 1).padStart(2, '0');
       const day = String(entryData.date.getDate()).padStart(2, '0');
       const dateString = `${year}-${month}-${day}`;
-      
-      console.log('saveToExcel - processed date:', {
-        year,
-        month,
-        day,
-        dateString
-      });
       
       const newRow = {
         'Vessel': entryData.vesselName,
@@ -755,15 +836,10 @@ const Scheduling = () => {
         'Vessel Type': entryData.vesselType
       };
 
-      console.log('Saving new/updated row with date:', newRow.Date);
-      console.log('Full new row:', newRow);
-
       let response;
       
       if (isUpdate && originalDate) {
         // This is an update - use the update endpoint
-        console.log('This is an update - using update endpoint');
-        
         // Get the original vessel name from the vessel entries
         const originalYear = originalDate.getFullYear();
         const originalMonth = String(originalDate.getMonth() + 1).padStart(2, '0');
@@ -772,65 +848,43 @@ const Scheduling = () => {
         const originalEntry = vesselEntries[originalDateKey];
         
         if (originalEntry && originalEntry.vesselName) {
-          console.log('Updating existing entry for vessel:', originalEntry.vesselName);
-          
           response = await api.put('/excel/update-entry', {
             date: dateString,
             vesselName: originalEntry.vesselName,
             newData: newRow
           });
           
-          if (response.data.success) {
-            console.log('Entry updated successfully:', response.data);
-          } else {
-            console.warn('Update failed, falling back to append:', response.data.message);
+          if (!response.data.success) {
             // Fallback to append if update fails
             response = await api.post('/excel/append', {
-          object: newRow
-        });
+              object: newRow
+            });
           }
         } else {
-          console.warn('No original entry found, falling back to append');
           response = await api.post('/excel/append', {
             object: newRow
           });
         }
       } else {
         // This is a new entry - use the append endpoint
-        console.log('This is a new entry - using append endpoint');
         response = await api.post('/excel/append', {
           object: newRow
         });
       }
 
-        if (response.data.success) {
-          console.log('Vessel entry saved to Vessels Log.xlsx:', response.data);
-        if (isUpdate) {
-          console.log('Update completed successfully');
-        } else {
-          console.log('New entry created successfully');
-        }
-      } else {
-          throw new Error(response.data.error || 'Failed to save to Excel');
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Failed to save to Excel');
       }
     } catch (error) {
-      console.error('Error saving to Excel:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
-      // Don't use alert to prevent page refresh
-      console.warn('Excel save failed - check console for details');
+      // Error saving to Excel
     }
   };
 
   const removeFromExcel = async (entryData) => {
     try {
-      console.log('Entry cleared from calendar (Excel entry remains):', entryData);
+      // Entry cleared from calendar (Excel entry remains)
     } catch (error) {
-      console.error('Error processing clear request:', error);
+      // Error processing clear request
     }
   };
 
@@ -850,7 +904,6 @@ const Scheduling = () => {
         }
         setIsInitialLoad(false);
       } catch (error) {
-        console.error('Error loading saved dates:', error);
         setIsInitialLoad(false);
       }
     };
@@ -867,7 +920,7 @@ const Scheduling = () => {
       try {
         localStorage.setItem('schedulingSelectedDates', JSON.stringify(selectedDates));
       } catch (error) {
-        console.error('Error saving dates:', error);
+        // Error saving dates
       }
   }, [selectedDates, isInitialLoad]);
 
@@ -918,7 +971,6 @@ const Scheduling = () => {
           setWeatherData(mockData);
         }
       } catch (error) {
-        console.error('Error fetching weather data:', error);
         const mockData = getMockWeatherData();
         setWeatherData(mockData);
       } finally {
@@ -936,13 +988,6 @@ const Scheduling = () => {
     loadUpcomingScheduledVessels();
   }, []);
 
-  // Debug vessel entries changes (only log when entries are added/removed)
-  useEffect(() => {
-    const totalEntries = Object.values(vesselEntries).flat().length;
-    if (totalEntries > 0) {
-      console.log(`Vessel entries updated: ${totalEntries} total entries across ${Object.keys(vesselEntries).length} dates`);
-    }
-  }, [vesselEntries]);
 
 
 
@@ -1344,8 +1389,10 @@ return (
                     onMouseEnter={(e) => handleDateHover(dayData.day, dayData.isCurrentMonth, e)}
                     onMouseLeave={handleDateHoverEnd}
                     title={titleText}
-                  >
-                      <div className="day-number-modern">{dayData.day}</div>
+                    >
+                      <div className="day-number-modern">
+                        {dayData.day !== undefined && dayData.day !== null && dayData.day !== '' ? dayData.day : ''}
+                      </div>
                     {weatherInfo && (
                         <div className="weather-indicator-modern">
                         {weatherInfo.temperature}°C
@@ -1362,12 +1409,6 @@ return (
                         }
                         
                         return vessels.map((vessel, index) => {
-                        console.log(`🎨 Rendering vessel bar ${index + 1}:`, {
-                          id: vessel.id,
-                          vesselName: vessel.vesselName,
-                          day: dayData.day
-                        });
-                        
                         return (
                           <div 
                             key={vessel.id} 
@@ -1388,11 +1429,6 @@ return (
                                   className="vessel-delete-btn"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    console.log(`🔘 Delete button clicked for vessel:`, {
-                                      id: vessel.id,
-                                      vesselName: vessel.vesselName,
-                                      day: dayData.day
-                                    });
                                     handleVesselDelete(vessel.id, dayData.day, dayData.isCurrentMonth);
                                   }}
                                   title="Delete vessel entry"
@@ -1593,6 +1629,17 @@ return (
                 </div>
 
                   <div className="form-group-modern">
+                  <label>Time Finished:</label>
+                  <input
+                    type="time"
+                      value={vesselFormData.timeFinished}
+                      onChange={(e) => handleVesselInputChange('timeFinished', e.target.value)}
+                      className="form-input-modern"
+                    placeholder="Select time finished"
+                  />
+                </div>
+
+                  <div className="form-group-modern">
                   <label>Vessel Type:</label>
                   <select
                       value={vesselFormData.vesselType}
@@ -1638,9 +1685,6 @@ return (
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('🔘 SUBMIT BUTTON CLICKED');
-                        console.log('🔘 Form data at click:', vesselFormData);
-                        console.log('🔘 Clicked date at click:', clickedDate);
                         handleVesselSubmit(e);
                       }}
                     >
