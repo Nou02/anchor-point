@@ -418,27 +418,27 @@ html, body {
 }
 
 .weather-indicator.sunny {
-  background: #fbbf24;
+  background: #ffd700;
 }
 
 .weather-indicator.cloudy {
-  background: #94a3b8;
+  background: #d3d3d3;
 }
 
 .weather-indicator.light-rain {
-  background: #60a5fa;
+  background: #ffb6c1;
 }
 
 .weather-indicator.rain {
-  background: #3b82f6;
+  background: #ff6b6b;
 }
 
 .weather-indicator.heavy-rain {
-  background: #1d4ed8;
+  background: #dc143c;
 }
 
 .weather-indicator.storm {
-  background: #7c3aed;
+  background: #8b0000;
 }
 
 /* Weather Tooltip */
