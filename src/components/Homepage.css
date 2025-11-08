@@ -665,6 +665,16 @@ body, html {
   z-index: 204;
 }
 
+.yearly-growth-note {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: #2F3B70;
+  background: rgba(47, 59, 112, 0.08);
+  border-radius: 8px;
+  padding: 10px 14px;
+  line-height: 1.35;
+}
+
 /* Ensure all chart containers have visible overflow */
 .chart-container * {
   overflow: visible !important;
