@@ -429,6 +429,51 @@ const Homepage = () => {
     };
   }, [vesselData]);
 
+  const yearlyGrowthNote = useMemo(() => {
+    const data = analyticsData?.byYear || [];
+    if (data.length === 0) return '';
+    if (data.length === 1) {
+      return `${data[0].year} recorded ${data[0].count} operations.`;
+    }
+
+    const first = data[0];
+    const last = data[data.length - 1];
+    const maxEntry = data.reduce((best, current) => current.count > best.count ? current : best, data[0]);
+    const minEntry = data.reduce((best, current) => current.count < best.count ? current : best, data[0]);
+    const total = data.reduce((sum, entry) => sum + entry.count, 0);
+    const average = Math.round(total / data.length);
+    const range = maxEntry.count - minEntry.count;
+
+    const isIncreasing = data.every((entry, index) => index === 0 || entry.count >= data[index - 1].count);
+    const isDecreasing = data.every((entry, index) => index === 0 || entry.count <= data[index - 1].count);
+
+    if (isIncreasing && last.count > first.count) {
+      return `Operations climbed from ${first.year} to ${last.year}.`;
+    }
+
+    if (isDecreasing && last.count < first.count) {
+      return `Operations cooled from ${first.year} to ${last.year}.`;
+    }
+
+    if (range <= Math.max(3, Math.round(average * 0.1))) {
+      return `Operations held near ${average} per year.`;
+    }
+
+    if (maxEntry.year === last.year && last.count >= first.count) {
+      return `Operations hit a high in ${last.year}.`;
+    }
+
+    if (maxEntry.year === first.year && last.count < first.count) {
+      return `Operations have eased since ${first.year}.`;
+    }
+
+    if (maxEntry.year === last.year) {
+      return `Operations finished strong in ${last.year}.`;
+    }
+
+    return `Operations peaked in ${maxEntry.year} and eased in ${last.year}.`;
+  }, [analyticsData?.byYear]);
+
   // Fetch upcoming events from appointments
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
@@ -732,6 +777,11 @@ const Homepage = () => {
                             />
                           </LineChart>
                         </div>
+                        {yearlyGrowthNote && (
+                          <div className="yearly-growth-note">
+                            {yearlyGrowthNote}
+                          </div>
+                        )}
                       </div>
 
                       {/* Top Vessels List */}
