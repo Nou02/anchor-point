@@ -3,7 +3,7 @@ import './Scheduling.css';
 import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import '../firebase/config';
-import { getWeatherForecast, getMockWeatherData } from '../services/weatherService';
+import { getWeatherForecast } from '../services/weatherService';
 import CrewAvailabilityTable from './CrewAvailabilityTable';
 import * as XLSX from 'xlsx';
 import api, { excelAPI } from '../services/api';
@@ -55,6 +55,7 @@ const Scheduling = () => {
   const [currentDateIndex, setCurrentDateIndex] = useState(0);
   const [weatherData, setWeatherData] = useState({});
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherError, setWeatherError] = useState(null);
   const [selectedDateForAI, setSelectedDateForAI] = useState(null);
   const [hoveredDate, setHoveredDate] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -1016,15 +1017,17 @@ const Scheduling = () => {
       setWeatherLoading(true);
       try {
         const forecast = await getWeatherForecast();
-        if (Object.keys(forecast).length > 0) {
+        if (forecast && Object.keys(forecast).length > 0) {
           setWeatherData(forecast);
+          setWeatherError(null);
         } else {
-          const mockData = getMockWeatherData();
-          setWeatherData(mockData);
+          setWeatherData({});
+          setWeatherError('No weather data available for the selected range.');
         }
       } catch (error) {
-        const mockData = getMockWeatherData();
-        setWeatherData(mockData);
+        console.error('Failed to load weather forecast:', error);
+        setWeatherData({});
+        setWeatherError(error.message || 'Failed to load weather information.');
       } finally {
         setWeatherLoading(false);
       }
@@ -1612,6 +1615,11 @@ return (
               </div>
             </div>
           </div>
+            {weatherError && (
+              <div className="weather-error-banner">
+                ⚠️ {weatherError}
+              </div>
+            )}
             </div>
           </div>
         </div>

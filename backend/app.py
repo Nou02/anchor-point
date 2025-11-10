@@ -211,8 +211,8 @@ def get_crew():
 # Excel utilities & routes
 # ========================
 EXCEL_FILENAME = 'Vessels Log.xlsx'
-# Use only the public folder for Excel file access
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'public', EXCEL_FILENAME)
+# Use the relocated public folder inside backend for Excel file access
+EXCEL_PATH = os.path.join(os.path.dirname(__file__), 'public', EXCEL_FILENAME)
 
 def format_time_with_am_pm(time_str):
     """Convert 24-hour time format (HH:MM) to 12-hour format with AM/PM.

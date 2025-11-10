@@ -721,6 +721,16 @@ html, body {
   flex-wrap: wrap;
 }
 
+.weather-error-banner {
+  margin: 8px 20px 0 20px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .weather-item-modern {
   display: flex;
   align-items: center;

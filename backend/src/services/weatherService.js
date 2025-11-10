@@ -7,7 +7,7 @@ const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 // Debug: Log API key status (check console after server restart)
 if (!WEATHER_API_KEY || WEATHER_API_KEY.trim() === '') {
-  console.warn('⚠️ OpenWeatherMap API key not found. Using mock data. Make sure REACT_APP_OPENWEATHERMAP_API_KEY is set in .env file and the server is restarted.');
+  console.warn('⚠️ OpenWeatherMap API key not found. Weather data will be unavailable until REACT_APP_OPENWEATHERMAP_API_KEY is set and the app is rebuilt.');
 } else {
   console.log('✅ OpenWeatherMap API key loaded:', WEATHER_API_KEY.substring(0, 8) + '...' + WEATHER_API_KEY.substring(WEATHER_API_KEY.length - 4));
 }
@@ -72,17 +72,7 @@ export const getWeatherColor = (condition) => {
 export const getCurrentWeather = async () => {
   // Check if API key is configured
   if (!WEATHER_API_KEY || WEATHER_API_KEY.trim() === '') {
-    // Return mock data if API key is not configured
-    const mockData = getMockWeatherData();
-    const today = new Date().toISOString().split('T')[0];
-    return mockData[today] || {
-      temperature: 28,
-      condition: 'Clear',
-      description: 'Clear sky',
-      humidity: 75,
-      windSpeed: 10,
-      color: WEATHER_COLORS.clear
-    };
+    throw new Error('OpenWeatherMap API key is not configured.');
   }
 
   try {
@@ -109,17 +99,8 @@ export const getCurrentWeather = async () => {
       color: getWeatherColor(data.weather[0].main)
     };
   } catch (error) {
-    // Return mock data on error
-    const mockData = getMockWeatherData();
-    const today = new Date().toISOString().split('T')[0];
-    return mockData[today] || {
-      temperature: 28,
-      condition: 'Clear',
-      description: 'Clear sky',
-      humidity: 75,
-      windSpeed: 10,
-      color: WEATHER_COLORS.clear
-    };
+    console.error('Failed to fetch current weather:', error);
+    throw error;
   }
 };
 
@@ -127,8 +108,7 @@ export const getCurrentWeather = async () => {
 export const getWeatherForecast = async () => {
   // Check if API key is configured
   if (!WEATHER_API_KEY || WEATHER_API_KEY.trim() === '') {
-    // Return mock data if API key is not configured
-    return getMockWeatherData();
+    throw new Error('OpenWeatherMap API key is not configured.');
   }
 
   try {
@@ -170,8 +150,8 @@ export const getWeatherForecast = async () => {
     
     return dailyForecast;
   } catch (error) {
-    // Return mock data on error
-    return getMockWeatherData();
+    console.error('Failed to fetch weather forecast:', error);
+    throw error;
   }
 };
 
