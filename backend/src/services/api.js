@@ -7,6 +7,7 @@ const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+  baseURL: '/api', //
   },
 });
 
@@ -96,7 +97,7 @@ export const healthAPI = {
 
 // Excel API calls
 export const excelAPI = {
-  // Add vessel entry to Excel
+  baseURL: '/api/excel',
   addVesselEntry: async (vesselData) => {
     const response = await api.post('/excel/save-report', vesselData);
     return response.data;
