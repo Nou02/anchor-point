@@ -336,6 +336,325 @@ html, body {
   font-weight: 500;
 }
 
+.vessel-container-modern {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 4px;
+  max-height: calc(100% - 20px);
+  overflow: hidden;
+  position: relative;
+}
+
+.vessel-bar-modern {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-radius: 6px;
+  margin: 0 0 2px 0;
+  padding: 8px 10px;
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  min-height: 24px;
+  max-height: 32px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  flex-shrink: 0;
+  backdrop-filter: blur(5px);
+}
+
+.vessel-bar-modern:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.vessel-bar-modern .vessel-bar-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 6px;
+}
+
+.vessel-bar-modern .vessel-main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  justify-content: center;
+}
+
+.vessel-bar-modern .vessel-name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  max-width: 100%;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.vessel-bar-modern .vessel-time {
+  font-size: 0.6rem;
+  opacity: 0.95;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.vessel-bar-modern .vessel-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.vessel-bar-modern .vessel-type {
+  font-size: 0.55rem;
+  opacity: 0.95;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vessel-bar-modern .vessel-delete-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  backdrop-filter: blur(5px);
+}
+
+.vessel-bar-modern .vessel-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.9);
+  border-color: rgba(239, 68, 68, 1);
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.schedule-overflow-indicator {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #1d4ed8;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  z-index: 5;
+}
+
+.schedule-overflow-popover {
+  position: absolute;
+  top: 115%;
+  right: 0;
+  background: #ffffff;
+  color: #1f2937;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.25);
+  padding: 12px 14px;
+  width: 220px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  z-index: 10;
+}
+
+.overflow-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.schedule-overflow-popover::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 16px;
+  border-width: 0 6px 6px 6px;
+  border-style: solid;
+  border-color: transparent transparent rgba(255, 255, 255, 1) transparent;
+  filter: drop-shadow(0 -2px 4px rgba(15, 23, 42, 0.2));
+}
+
+.overflow-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.overflow-close-button {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #1e3a8a;
+  border-radius: 999px;
+  width: 20px;
+  height: 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+  padding: 0;
+}
+
+.overflow-close-button:hover {
+  background: rgba(59, 130, 246, 0.2);
+  transform: scale(1.05);
+}
+
+.overflow-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.overflow-item {
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(249, 250, 251, 0.85);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.overflow-item:hover {
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+  transform: translateY(-2px);
+}
+
+.overflow-item-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.overflow-item-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #1f2937;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overflow-item-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.overflow-chip {
+  font-size: 0.58rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+}
+
+.overflow-chip.type {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.overflow-delete-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #b91c1c;
+  border-radius: 999px;
+  width: 18px;
+  height: 18px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.overflow-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  transform: scale(1.05);
+}
+
+.overflow-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.6rem;
+  color: #4b5563;
+}
+
+.overflow-meta {
+  background: rgba(59, 130, 246, 0.1);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.overflow-item-purpose {
+  font-size: 0.6rem;
+  color: #1f2937;
+  line-height: 1.3;
+}
+
 .vessel-entry-modern {
   background: rgba(102, 126, 234, 0.1);
   border: 1px solid rgba(102, 126, 234, 0.2);
@@ -418,27 +737,27 @@ html, body {
 }
 
 .weather-indicator.sunny {
-  background: #ffd700;
+  background: #facc15;
 }
 
 .weather-indicator.cloudy {
-  background: #d3d3d3;
+  background: #9ca3af;
 }
 
 .weather-indicator.light-rain {
-  background: #ffb6c1;
+  background: #60a5fa;
 }
 
 .weather-indicator.rain {
-  background: #ff6b6b;
+  background: #f87171;
 }
 
 .weather-indicator.heavy-rain {
-  background: #dc143c;
+  background: #ef4444;
 }
 
 .weather-indicator.storm {
-  background: #8b0000;
+  background: #7f1d1d;
 }
 
 /* Weather Tooltip */
@@ -615,6 +934,97 @@ html, body {
   display: flex;
   flex-direction: column;
   max-height: 100%;
+}
+
+.weather-warning-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  width: 95%;
+  max-width: 460px;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 6px solid #f59e0b;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.weather-warning-modal.warning {
+  border-top-color: #f59e0b;
+}
+
+.weather-warning-modal.danger {
+  border-top-color: #ef4444;
+}
+
+.weather-warning-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weather-warning-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.weather-warning-message {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.weather-warning-question {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.weather-warning-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.weather-warning-cancel,
+.weather-warning-proceed {
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.weather-warning-cancel {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.weather-warning-cancel:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(107, 114, 128, 0.2);
+}
+
+.weather-warning-proceed {
+  background: #f97316;
+  color: #ffffff;
+  box-shadow: 0 10px 20px rgba(249, 115, 22, 0.25);
+}
+
+.weather-warning-modal.danger .weather-warning-proceed {
+  background: #ef4444;
+  box-shadow: 0 10px 20px rgba(239, 68, 68, 0.35);
+}
+
+.weather-warning-proceed:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(239, 68, 68, 0.35);
 }
 
 .modal-header-modern {

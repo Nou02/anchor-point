@@ -69,6 +69,14 @@ const Scheduling = () => {
     vesselType: 'Local',
     selectedWorkers: []
   });
+  const [openOverflowDateKey, setOpenOverflowDateKey] = useState(null);
+  const [weatherWarningModal, setWeatherWarningModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'warning',
+    date: null
+  });
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();
@@ -175,6 +183,24 @@ const Scheduling = () => {
   };
 
     
+  const openVesselModalForDate = (date) => {
+    setClickedDate(date);
+    setIsEditingVessel(false);
+    setEditingVesselId(null);
+    setOriginalVesselName(null);
+    setOriginalVesselData(null);
+    setVesselFormData({
+      vesselName: '',
+      voyageId: '',
+      controlId: '',
+      vesselType: 'Local',
+      purpose: [],
+      time: '',
+      timeFinished: ''
+    });
+    setShowVesselModal(true);
+  };
+
   // Handle date click to show vessel entry modal
   const handleDateClick = (day, isCurrentMonth) => {
     
@@ -195,22 +221,24 @@ const Scheduling = () => {
       alert('Cannot add vessels to dates that have already passed');
         return;
       }
+
+    const dateKey = `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, '0')}-${String(clickedDate.getDate()).padStart(2, '0')}`;
+    const weatherInfoForDate = weatherData[dateKey];
+    if (weatherInfoForDate) {
+      const weatherRecommendation = generateAIRecommendation(weatherInfoForDate, clickedDate);
+      if (weatherRecommendation && (weatherRecommendation.type === 'warning' || weatherRecommendation.type === 'danger')) {
+        setWeatherWarningModal({
+          isOpen: true,
+          title: weatherRecommendation.title,
+          message: weatherRecommendation.message,
+          type: weatherRecommendation.type,
+          date: clickedDate
+        });
+        return;
+      }
+    }
       
-    setClickedDate(clickedDate);
-    setIsEditingVessel(false);
-    setEditingVesselId(null);
-    setOriginalVesselName(null);
-    setOriginalVesselData(null);
-    setVesselFormData({
-      vesselName: '',
-      voyageId: '',
-      controlId: '',
-      vesselType: 'Local',
-      purpose: [],
-      time: '',
-      timeFinished: ''
-    });
-    setShowVesselModal(true);
+    openVesselModalForDate(clickedDate);
   };
 
   // Handle vessel form input changes
@@ -229,6 +257,29 @@ const Scheduling = () => {
         ? [...prev.purpose, purpose]
         : prev.purpose.filter(p => p !== purpose)
     }));
+  };
+
+  const handleWeatherWarningProceed = () => {
+    if (weatherWarningModal.date) {
+      openVesselModalForDate(weatherWarningModal.date);
+    }
+    setWeatherWarningModal({
+      isOpen: false,
+      title: '',
+      message: '',
+      type: 'warning',
+      date: null
+    });
+  };
+
+  const handleWeatherWarningCancel = () => {
+    setWeatherWarningModal({
+      isOpen: false,
+      title: '',
+      message: '',
+      type: 'warning',
+      date: null
+    });
   };
 
   // Handle vessel form submission
@@ -776,6 +827,7 @@ const Scheduling = () => {
       setHoverTimeout(null);
     }
     setHoveredDate(null);
+    setOpenOverflowDateKey(null);
   };
 
   // Handle form input change
@@ -1365,7 +1417,15 @@ return (
                 } else if (isPast) {
                   titleText = 'This date has already passed';
                 }
-                
+
+                const dateKey = dayData.isCurrentMonth && dayData.day
+                  ? `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayData.day).padStart(2, '0')}`
+                  : null;
+                const vesselsForDay = getVesselEntriesForDate(dayData.day, dayData.isCurrentMonth);
+                const visibleVessels = vesselsForDay.slice(0, 2);
+                const overflowCount = vesselsForDay.length > 2 ? vesselsForDay.length - 2 : 0;
+                const overflowSchedules = overflowCount > 0 ? vesselsForDay.slice(2) : [];
+
                 return (
                   <div
                     key={index}
@@ -1401,14 +1461,7 @@ return (
                     
                     {/* Vessel entry bars */}
                     <div className="vessel-container-modern">
-                      {(() => {
-                        const vessels = getVesselEntriesForDate(dayData.day, dayData.isCurrentMonth);
-                        
-                        if (vessels.length === 0) {
-                          return null;
-                        }
-                        
-                        return vessels.map((vessel, index) => {
+                      {visibleVessels.length === 0 ? null : visibleVessels.map((vessel) => {
                         return (
                           <div 
                             key={vessel.id} 
@@ -1439,9 +1492,90 @@ return (
                             </div>
                           </div>
                         );
-                      });
-                    })()}
+                      })}
                     </div>
+                    {overflowCount > 0 && (
+                      <div 
+                        className="schedule-overflow-indicator"
+                        title={`${vesselsForDay.length} schedules total`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenOverflowDateKey(prev => (prev === dateKey ? null : dateKey));
+                        }}
+                      >
+                        +{overflowCount}
+                        {openOverflowDateKey === dateKey && (
+                          <div 
+                            className="schedule-overflow-popover"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="overflow-popover-header">
+                              <div className="overflow-title">Other schedules</div>
+                              <button
+                                className="overflow-close-button"
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenOverflowDateKey(null);
+                                }}
+                                aria-label="Close overflow schedules"
+                              >
+                                ×
+                              </button>
+                            </div>
+                            <ul className="overflow-list">
+                              {overflowSchedules.map((schedule) => (
+                                <li 
+                                  key={schedule.id} 
+                                  className="overflow-item"
+                                  onClick={(e) => {
+                                    handleVesselBarClick(schedule, dayData.day, dayData.isCurrentMonth, e);
+                                    setOpenOverflowDateKey(null);
+                                  }}
+                                >
+                                  <div className="overflow-item-header">
+                                    <span className="overflow-item-name">{schedule.vesselName}</span>
+                                    <div className="overflow-item-chips">
+                                      {schedule.time && (
+                                        <span className="overflow-chip">{schedule.time}</span>
+                                      )}
+                                      {schedule.vesselType && (
+                                        <span className="overflow-chip type">{schedule.vesselType}</span>
+                                      )}
+                                      <button
+                                        className="overflow-delete-btn"
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleVesselDelete(schedule.id, dayData.day, dayData.isCurrentMonth);
+                                        }}
+                                        title="Delete vessel entry"
+                                        aria-label={`Delete ${schedule.vesselName}`}
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="overflow-item-meta">
+                                    {schedule.voyageId && (
+                                      <span className="overflow-meta">Voyage: {schedule.voyageId}</span>
+                                    )}
+                                    {schedule.controlId && (
+                                      <span className="overflow-meta">Control: {schedule.controlId}</span>
+                                    )}
+                                  </div>
+                                  {schedule.purpose && schedule.purpose.length > 0 && (
+                                    <div className="overflow-item-purpose">
+                                      {schedule.purpose.join(', ')}
+                                    </div>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
                   );
               })}
@@ -1550,6 +1684,39 @@ return (
             </div>
               );
             })()}
+        </div>
+      </div>
+    )}
+
+    {weatherWarningModal.isOpen && (
+      <div className="modal-overlay-modern" onClick={handleWeatherWarningCancel}>
+        <div 
+          className={`weather-warning-modal ${weatherWarningModal.type}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="weather-warning-header">
+            <div className="weather-warning-title">{weatherWarningModal.title}</div>
+          </div>
+          <p className="weather-warning-message">{weatherWarningModal.message}</p>
+          <p className="weather-warning-question">
+            Do you still want to add a vessel schedule for this date?
+          </p>
+          <div className="weather-warning-actions">
+            <button 
+              type="button" 
+              className="weather-warning-cancel" 
+              onClick={handleWeatherWarningCancel}
+            >
+              Cancel
+            </button>
+            <button 
+              type="button" 
+              className="weather-warning-proceed" 
+              onClick={handleWeatherWarningProceed}
+            >
+              Continue
+            </button>
+          </div>
         </div>
       </div>
     )}

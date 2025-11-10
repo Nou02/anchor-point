@@ -101,19 +101,16 @@ const Report = () => {
         // Filter out empty rows and invalid data - be more lenient
         const validRows = mappedRows.filter(row => {
           const vesselName = row['Vessel'];
-          const isValid = vesselName && 
-                         vesselName.trim() !== '' && 
-                         vesselName !== 'N/A' && 
-                         vesselName.length > 1; // Reduced from 2 to 1
+          const trimmedName = vesselName ? vesselName.trim() : '';
+          const isValid = trimmedName !== '' &&
+                          trimmedName !== 'N/A';
           
           if (!isValid) {
             console.log('❌ Filtering out invalid row:', {
-              vessel: vesselName,
+              vessel: trimmedName,
               date: row['Date'],
-              reason: !vesselName ? 'No vessel name' :
-                      vesselName.trim() === '' ? 'Empty vessel name' :
-                      vesselName === 'N/A' ? 'N/A vessel name' :
-                      vesselName.length <= 1 ? 'Vessel name too short' : 'Unknown'
+              reason: !trimmedName ? 'Empty vessel name' :
+                      trimmedName === 'N/A' ? 'N/A vessel name' : 'Unknown'
             });
           }
           
