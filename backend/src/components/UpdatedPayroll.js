@@ -611,37 +611,48 @@ const UpdatedPayroll = () => {
         };
       });
       
+      // Check if payroll already exists to determine if this is an update
+      const payrollRef = doc(db, 'payrolls', payrollId);
+      const payrollDoc = await getDoc(payrollRef);
+      const isUpdate = payrollDoc.exists();
+      
       // Save main payroll document
-      await setDoc(doc(db, 'payrolls', payrollId), {
+      await setDoc(payrollRef, {
         workers: workersData,
         totals: calculateTotals,
         status: 'pending',
         createdBy: user.email,
         createdByName: user.displayName || user.email,
-        createdAt: new Date().toISOString(),
+        createdAt: payrollDoc.exists() ? payrollDoc.data().createdAt : new Date().toISOString(),
         lastModified: new Date().toISOString()
-      });
+      }, { merge: false }); // Use merge: false to overwrite, ensuring status is set to pending
       
       // Save workers payroll document
-      await setDoc(doc(db, 'workerPayrolls', workersPayrollId), {
+      const workersPayrollRef = doc(db, 'workerPayrolls', workersPayrollId);
+      const workersPayrollDoc = await getDoc(workersPayrollRef);
+      await setDoc(workersPayrollRef, {
         workers: workersData,
         totals: calculateTotals,
         status: 'pending',
         createdBy: user.email,
         createdByName: user.displayName || user.email,
-        createdAt: new Date().toISOString(),
+        createdAt: workersPayrollDoc.exists() ? workersPayrollDoc.data().createdAt : new Date().toISOString(),
         lastModified: new Date().toISOString()
-      });
+      }, { merge: false }); // Use merge: false to overwrite, ensuring status is set to pending
       
       // Create notification for admin (Alice) that payroll needs approval
+      // Always notify Alice, even if it's the same day - this ensures real-time notifications
       const payrollDateStr = new Date(year, month - 1, day).toLocaleDateString('en-US', { 
         month: 'long', 
         day: 'numeric', 
         year: 'numeric' 
       });
-      notificationService.createPayrollApprovalNotification(
+      
+      // Create or update notification - await to ensure it's saved to Firestore
+      await notificationService.createPayrollApprovalNotification(
         user.displayName || user.email,
-        payrollDateStr
+        payrollDateStr,
+        isUpdate // Pass isUpdate flag to handle updates properly
       );
       
       setSaveMessage('Payroll data saved successfully!');
@@ -722,8 +733,8 @@ const UpdatedPayroll = () => {
         // Create notifications for scheduler (Carla) and workers
         const approvedByName = user.displayName || user.email;
         
-        // Notify scheduler (Carla) that payroll was approved
-        notificationService.createPayrollApprovedNotification(approvedByName, payrollDateStr);
+        // Notify scheduler (Carla) that payroll was approved - await to ensure real-time delivery
+        await notificationService.createPayrollApprovedNotification(approvedByName, payrollDateStr);
         
         // Notify each worker that their payroll is available
         if (workersPayrollDoc.exists()) {
