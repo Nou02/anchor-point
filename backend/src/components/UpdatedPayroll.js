@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from '
 import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import '../components/UpdatedPayroll.css';
+import notificationService from '../services/notificationService';
 
 // Ultra Simple Input Component for better UX
 const UltraSimpleInput = ({ initialValue, onValueChange, onBlur, className, placeholder }) => {
@@ -250,69 +251,76 @@ const UpdatedPayroll = () => {
   }, []);
 
   // Load payroll data from Carla (for Alice)
-  useEffect(() => {
-    const loadPayrollData = async () => {
-      if (!user) return;
+  const loadPayrollData = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const db = getFirestore();
+      const q = query(collection(db, 'payrolls'));
+      const querySnapshot = await getDocs(q);
       
-      try {
-        const db = getFirestore();
-        const q = query(collection(db, 'payrolls'));
-        const querySnapshot = await getDocs(q);
-        
-        const pendingPayrolls = [];
-        const approvedPayrolls = [];
-        
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.createdByName && 
-              (data.createdByName.toLowerCase().includes('carla') || 
-               data.createdByName.toLowerCase().includes('carla dela peña'))) {
+      const pendingPayrolls = [];
+      const approvedPayrolls = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.createdByName && 
+            (data.createdByName.toLowerCase().includes('carla') || 
+             data.createdByName.toLowerCase().includes('carla dela peña'))) {
+          
+          // Extract date from document ID
+          const match = doc.id.match(/payroll\((\d+),(\d+),(\d+)\)/);
+          if (match) {
+            const month = parseInt(match[1]);
+            const day = parseInt(match[2]);
+            const year = parseInt(match[3]);
+            const payrollDate = new Date(year, month - 1, day);
             
-            // Extract date from document ID
-            const match = doc.id.match(/payroll\((\d+),(\d+),(\d+)\)/);
-            if (match) {
-              const month = parseInt(match[1]);
-              const day = parseInt(match[2]);
-              const year = parseInt(match[3]);
-              const payrollDate = new Date(year, month - 1, day);
-              
-              const payrollItem = {
-                id: doc.id,
-                date: payrollDate,
-                dateString: payrollDate.toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                }),
-                data: data,
-                createdBy: data.createdByName,
-                lastModified: data.lastModified || data.createdAt
-              };
-              
-              if (data.status === 'pending') {
-                pendingPayrolls.push(payrollItem);
-              } else if (data.status === 'approved') {
-                approvedPayrolls.push(payrollItem);
-              }
+            const payrollItem = {
+              id: doc.id,
+              date: payrollDate,
+              dateString: payrollDate.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              }),
+              data: data,
+              createdBy: data.createdByName,
+              lastModified: data.lastModified || data.createdAt
+            };
+            
+            if (data.status === 'pending') {
+              pendingPayrolls.push(payrollItem);
+            } else if (data.status === 'approved') {
+              approvedPayrolls.push(payrollItem);
             }
           }
-        });
-        
-        // Sort by date (newest first)
-        pendingPayrolls.sort((a, b) => new Date(b.date) - new Date(a.date));
-        approvedPayrolls.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        setPayrollData(pendingPayrolls);
-        setApprovedPayrolls(approvedPayrolls);
-      } catch (error) {
-        console.error('Error loading payroll data:', error);
-      }
-    };
-
-    if (user && isAliceUser(user)) {
-      loadPayrollData();
+        }
+      });
+      
+      // Sort by date (newest first)
+      pendingPayrolls.sort((a, b) => new Date(b.date) - new Date(a.date));
+      approvedPayrolls.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      setPayrollData(pendingPayrolls);
+      setApprovedPayrolls(approvedPayrolls);
+    } catch (error) {
+      console.error('Error loading payroll data:', error);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && isAliceUser(user)) {
+      loadPayrollData();
+      
+      // Set up interval to refresh payroll data every 30 seconds
+      const refreshInterval = setInterval(() => {
+        loadPayrollData();
+      }, 30000);
+      
+      return () => clearInterval(refreshInterval);
+    }
+  }, [user, loadPayrollData]);
 
   // Load worker's payroll data (for workers)
   useEffect(() => {
@@ -328,7 +336,23 @@ const UpdatedPayroll = () => {
           setUserInfo(userDoc.data());
         }
 
-        // Get approved payrolls for this worker
+        // Get user's display name and email for matching
+        const userDisplayName = user.displayName || '';
+        const userEmail = user.email || '';
+        const userInfoData = userDoc.exists() ? userDoc.data() : {};
+        const userFullName = userInfoData.fullName || userInfoData.name || userDisplayName;
+        
+        // Create multiple name variations for matching
+        const nameVariations = [
+          userFullName.trim().toLowerCase(),
+          userDisplayName.trim().toLowerCase(),
+          userInfoData.fullName?.trim().toLowerCase(),
+          userInfoData.name?.trim().toLowerCase(),
+          userInfoData.username?.trim().toLowerCase(),
+          userEmail.split('@')[0]?.trim().toLowerCase()
+        ].filter(Boolean);
+
+        // Get approved payrolls for this worker, ordered by approval date
         const q = query(
           collection(db, 'workerPayrolls'),
           where('status', '==', 'approved')
@@ -336,23 +360,80 @@ const UpdatedPayroll = () => {
         const querySnapshot = await getDocs(q);
         
         let workerData = null;
-        let mostRecentApproval = null;
+        let mostRecentDate = null;
         
+        // Convert to array and sort by approval date (most recent first)
+        const payrollDocs = [];
         querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.workers && data.workers[user.uid]) {
-            const approvalDate = new Date(data.approvedAt || data.createdAt);
-            if (!mostRecentApproval || approvalDate > new Date(mostRecentApproval.approvedAt)) {
+          payrollDocs.push({ id: doc.id, ...doc.data() });
+        });
+        
+        payrollDocs.sort((a, b) => {
+          const dateA = new Date(a.approvedAt || a.createdAt || 0);
+          const dateB = new Date(b.approvedAt || b.createdAt || 0);
+          return dateB - dateA; // Most recent first
+        });
+        
+        // Find the most recent matching worker
+        for (const payrollDoc of payrollDocs) {
+          const data = payrollDoc;
+          
+          // Workers data is stored as an array, not an object
+          if (data.workers && Array.isArray(data.workers)) {
+            // Find worker in the array by matching name
+            const matchingWorker = data.workers.find(worker => {
+              const workerName = (worker.workerName || '').trim().toLowerCase();
+              
+              // Check against all name variations
+              for (const nameVar of nameVariations) {
+                if (!nameVar) continue;
+                
+                // Exact match
+                if (workerName === nameVar) return true;
+                
+                // Remove commas and normalize spaces for better matching
+                const normalizedWorkerName = workerName.replace(/,/g, '').replace(/\s+/g, ' ').trim();
+                const normalizedNameVar = nameVar.replace(/,/g, '').replace(/\s+/g, ' ').trim();
+                
+                // Check if one contains the other (bidirectional)
+                if (normalizedWorkerName.includes(normalizedNameVar) || 
+                    normalizedNameVar.includes(normalizedWorkerName)) {
+                  return true;
+                }
+                
+                // Check if last names match (for "Last, First" format)
+                const workerParts = normalizedWorkerName.split(' ');
+                const nameVarParts = normalizedNameVar.split(' ');
+                if (workerParts.length > 0 && nameVarParts.length > 0) {
+                  const workerLastName = workerParts[0];
+                  const nameVarLastName = nameVarParts[nameVarParts.length - 1];
+                  if (workerLastName === nameVarLastName) return true;
+                }
+              }
+              
+              return false;
+            });
+            
+            if (matchingWorker) {
+              const approvalDate = new Date(data.approvedAt || data.createdAt || 0);
+              
+              // Use the first (most recent) matching payroll
               workerData = {
-                id: doc.id,
-                ...data.workers[user.uid],
+                id: data.id || payrollDoc.id,
+                ...matchingWorker,
                 approvedAt: data.approvedAt,
-                approvedBy: data.approvedBy || data.approvedByName
+                approvedBy: data.approvedBy || data.approvedByName,
+                payrollDate: data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-US', { 
+                  month: 'long', 
+                  day: 'numeric', 
+                  year: 'numeric' 
+                }) : ''
               };
-              mostRecentApproval = workerData;
+              mostRecentDate = approvalDate;
+              break; // Found the most recent match, stop searching
             }
           }
-        });
+        }
         
         setPayrollData(workerData);
       } catch (error) {
@@ -362,6 +443,13 @@ const UpdatedPayroll = () => {
 
     if (user && !isCarlaUser(user) && !isAliceUser(user)) {
       loadWorkerPayroll();
+      
+      // Set up interval to refresh payroll data every 30 seconds
+      const refreshInterval = setInterval(() => {
+        loadWorkerPayroll();
+      }, 30000);
+      
+      return () => clearInterval(refreshInterval);
     }
   }, [user]);
 
@@ -545,6 +633,17 @@ const UpdatedPayroll = () => {
         lastModified: new Date().toISOString()
       });
       
+      // Create notification for admin (Alice) that payroll needs approval
+      const payrollDateStr = new Date(year, month - 1, day).toLocaleDateString('en-US', { 
+        month: 'long', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+      notificationService.createPayrollApprovalNotification(
+        user.displayName || user.email,
+        payrollDateStr
+      );
+      
       setSaveMessage('Payroll data saved successfully!');
       setTimeout(() => setSaveMessage(''), 5000);
       
@@ -597,26 +696,57 @@ const UpdatedPayroll = () => {
       
       // Extract date from payroll ID to update workers payroll
       const match = payrollId.match(/payroll\((\d+),(\d+),(\d+)\)/);
+      let payrollDateStr = '';
       if (match) {
         const month = parseInt(match[1]);
         const day = parseInt(match[2]);
         const year = parseInt(match[3]);
         const workersPayrollId = `workerspayroll(${month},${day},${year})`;
         
+        payrollDateStr = new Date(year, month - 1, day).toLocaleDateString('en-US', { 
+          month: 'long', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        
         const workersPayrollRef = doc(db, 'workerPayrolls', workersPayrollId);
+        const workersPayrollDoc = await getDoc(workersPayrollRef);
+        
         await updateDoc(workersPayrollRef, {
           status: 'approved',
           approvedBy: user.email,
           approvedByName: user.displayName || user.email,
           approvedAt: new Date().toISOString()
         });
+        
+        // Create notifications for scheduler (Carla) and workers
+        const approvedByName = user.displayName || user.email;
+        
+        // Notify scheduler (Carla) that payroll was approved
+        notificationService.createPayrollApprovedNotification(approvedByName, payrollDateStr);
+        
+        // Notify each worker that their payroll is available
+        if (workersPayrollDoc.exists()) {
+          const workersData = workersPayrollDoc.data().workers || [];
+          // Use Promise.all to ensure all notifications are created
+          const notificationPromises = workersData
+            .filter(worker => worker.workerName)
+            .map(worker => 
+              notificationService.createPayrollAvailableNotification(payrollDateStr, worker.workerName)
+            );
+          
+          // Wait for all notifications to be created (saved to Firestore)
+          await Promise.all(notificationPromises);
+        }
       }
       
       setApprovalMessage('Payroll approved successfully!');
       setTimeout(() => setApprovalMessage(''), 5000);
       
-      // Remove approved payroll from list
-      setPayrollData(prev => prev.filter(payroll => payroll.id !== payrollId));
+      // Reload payroll data to update both pending and approved lists
+      await loadPayrollData();
+      
+      // Close the selected payroll modal
       setSelectedPayroll(null);
       
     } catch (error) {
