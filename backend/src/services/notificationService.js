@@ -119,14 +119,12 @@ class NotificationService {
         // Only one weather notification should exist
         key = 'weather';
       } else if (notification.type === 'payroll') {
-        // For payroll, use type + role + status + payrollDate
-        key = `payroll_${notification.targetRole}_${notification.status}_${notification.payrollDate || ''}`;
-        
-        // For worker notifications, also include targetUser (normalized - remove commas and extra spaces)
-        if (notification.targetUser) {
-          const normalizedUser = notification.targetUser.trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
-          key += `_${normalizedUser}`;
-        }
+        // For payroll, include ID and timestamp to allow multiple notifications for same day
+        // Don't check for duplicates - allow all payroll notifications
+        const notificationId = notification.id || Date.now() + Math.random();
+        const timestamp = notification.timestamp instanceof Date ? notification.timestamp.getTime() : new Date(notification.timestamp || 0).getTime();
+        const normalizedUser = (notification.targetUser || '').trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
+        key = `payroll_${notificationId}_${timestamp}_${notification.targetRole}_${notification.status}_${notification.payrollDate || ''}_${normalizedUser}`;
       } else {
         // For other types, use type + title + message
         key = `${notification.type}_${notification.title}_${notification.message}`;
@@ -223,9 +221,13 @@ class NotificationService {
           // Create a unique key based on notification content
           let key = '';
           if (n.type === 'payroll') {
-            // For payroll, normalize the targetUser name and use type + role + status + payrollDate + normalized targetUser
+            // For payroll notifications, include the notification ID to allow multiple notifications for same day
+            // This allows multiple payroll notifications for the same date (e.g., multiple saves or approvals)
             const normalizedUser = (n.targetUser || '').trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
-            key = `payroll_${n.targetRole || ''}_${n.status || ''}_${n.payrollDate || ''}_${normalizedUser}`;
+            const notificationId = n.id || Date.now() + Math.random();
+            const timestamp = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp || 0).getTime();
+            // Include ID and timestamp to make each notification unique - no duplicate checking for payroll
+            key = `payroll_${notificationId}_${timestamp}_${n.targetRole || ''}_${n.status || ''}_${n.payrollDate || ''}_${normalizedUser}`;
           } else if (n.type === 'weather') {
             // For weather, only one should exist
             key = 'weather';
@@ -238,22 +240,29 @@ class NotificationService {
           if (!seen.has(key)) {
             seen.set(key, n);
           } else {
-            // We found a duplicate - keep the most recent one
-            const existing = seen.get(key);
-            const existingTime = existing.timestamp instanceof Date ? existing.timestamp.getTime() : new Date(existing.timestamp).getTime();
-            const newTime = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp).getTime();
-            
-            if (newTime > existingTime) {
-              // New one is more recent - mark old one for deletion if it's from Firestore
-              if (existing.fromFirestore && typeof existing.id === 'string' && existing.id.length > 10) {
-                duplicatesToDelete.push(existing.id);
+            // We found a duplicate - keep the most recent one (only for non-payroll types)
+            // For payroll, each notification should be unique due to ID/timestamp in key
+            if (n.type !== 'payroll') {
+              const existing = seen.get(key);
+              const existingTime = existing.timestamp instanceof Date ? existing.timestamp.getTime() : new Date(existing.timestamp).getTime();
+              const newTime = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp).getTime();
+              
+              if (newTime > existingTime) {
+                // New one is more recent - mark old one for deletion if it's from Firestore
+                if (existing.fromFirestore && typeof existing.id === 'string' && existing.id.length > 10) {
+                  duplicatesToDelete.push(existing.id);
+                }
+                seen.set(key, n);
+              } else {
+                // Existing one is more recent - mark new one for deletion if it's from Firestore
+                if (n.fromFirestore && typeof n.id === 'string' && n.id.length > 10) {
+                  duplicatesToDelete.push(n.id);
+                }
               }
-              seen.set(key, n);
             } else {
-              // Existing one is more recent - mark new one for deletion if it's from Firestore
-              if (n.fromFirestore && typeof n.id === 'string' && n.id.length > 10) {
-                duplicatesToDelete.push(n.id);
-              }
+              // For payroll, if key already exists, it means it's the exact same notification (same ID)
+              // In this case, keep the existing one
+              console.log('Payroll notification with same ID already exists:', n.id);
             }
           }
         });
@@ -316,9 +325,12 @@ class NotificationService {
       merged.forEach(n => {
         let key = '';
         if (n.type === 'payroll') {
-          // Normalize the targetUser name for better matching
+          // For payroll notifications, include the notification ID to allow multiple notifications for same day
           const normalizedUser = (n.targetUser || '').trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
-          key = `payroll_${n.targetRole || ''}_${n.status || ''}_${n.payrollDate || ''}_${normalizedUser}`;
+          const notificationId = n.id || Date.now() + Math.random();
+          const timestamp = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp || 0).getTime();
+          // Include ID and timestamp to make each notification unique - no duplicate checking for payroll
+          key = `payroll_${notificationId}_${timestamp}_${n.targetRole || ''}_${n.status || ''}_${n.payrollDate || ''}_${normalizedUser}`;
         } else if (n.type === 'weather') {
           key = 'weather';
         } else {
@@ -326,20 +338,26 @@ class NotificationService {
         }
         
         // If we haven't seen this key, add it
-        // If we have seen it, replace with Firestore version if this is from Firestore
+        // For payroll, each notification should be unique due to ID/timestamp in key, so just add it
         if (!seen.has(key)) {
           seen.set(key, n);
-        } else if (n.fromFirestore && !seen.get(key).fromFirestore) {
-          // Replace local with Firestore version
-          seen.set(key, n);
-        } else if (n.fromFirestore && seen.get(key).fromFirestore) {
-          // Both are from Firestore, keep the one with the most recent timestamp
-          const existing = seen.get(key);
-          const existingTime = existing.timestamp instanceof Date ? existing.timestamp.getTime() : new Date(existing.timestamp).getTime();
-          const newTime = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp).getTime();
-          if (newTime > existingTime) {
+        } else if (n.type !== 'payroll') {
+          // Only apply duplicate logic for non-payroll types
+          if (n.fromFirestore && !seen.get(key).fromFirestore) {
+            // Replace local with Firestore version
             seen.set(key, n);
+          } else if (n.fromFirestore && seen.get(key).fromFirestore) {
+            // Both are from Firestore, keep the one with the most recent timestamp
+            const existing = seen.get(key);
+            const existingTime = existing.timestamp instanceof Date ? existing.timestamp.getTime() : new Date(existing.timestamp).getTime();
+            const newTime = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp).getTime();
+            if (newTime > existingTime) {
+              seen.set(key, n);
+            }
           }
+        } else {
+          // For payroll, if key exists, it's the exact same notification (same ID) - keep existing
+          console.log('Payroll notification with same ID already exists:', n.id);
         }
       });
       
@@ -432,51 +450,33 @@ class NotificationService {
   }
 
   // Create payroll approval notification for admin (Alice)
-  createPayrollApprovalNotification(fromUser, payrollDate) {
-    // Check if notification already exists for this payroll date
-    const existingNotification = this.notifications.find(n => 
-      n.type === 'payroll' && 
-      n.targetRole === 'admin' &&
-      n.status === 'pending' &&
-      ((n.payrollDate && n.payrollDate === payrollDate) || 
-       (n.message && n.message.includes(payrollDate)))
-    );
+  // Always creates a new notification - no duplicate checking to allow multiple notifications for same day
+  async createPayrollApprovalNotification(fromUser, payrollDate, isUpdate = false) {
+    // Always create a new notification - allow multiple notifications for the same day
+    const message = isUpdate 
+      ? `Payroll for ${payrollDate} has been updated and resubmitted by ${fromUser} and requires your approval.`
+      : `Payroll for ${payrollDate} has been submitted by ${fromUser} and requires your approval.`;
     
-    if (existingNotification) {
-      console.log('Payroll approval notification already exists for', payrollDate);
-      return existingNotification;
-    }
-    
-    return this.addNotification({
+    // Create a new notification with unique timestamp to ensure it's a separate notification
+    return await this.addNotification({
       title: "Payroll Approval Required",
-      message: `Payroll for ${payrollDate} has been submitted by ${fromUser} and requires your approval.`,
+      message: message,
       type: "payroll",
       priority: "high",
       fromUser: fromUser,
       targetRole: "admin", // For Alice/Admin
       status: "pending",
       action: "approve_payroll",
-      payrollDate: payrollDate
+      payrollDate: payrollDate,
+      createdAt: new Date().toISOString() // Ensure unique timestamp
     });
   }
 
   // Create payroll approved notification for scheduler (Carla)
-  createPayrollApprovedNotification(approvedBy, payrollDate) {
-    // Check if notification already exists for this payroll date
-    const existingNotification = this.notifications.find(n => 
-      n.type === 'payroll' && 
-      n.targetRole === 'scheduler' &&
-      n.status === 'approved' &&
-      ((n.payrollDate && n.payrollDate === payrollDate) || 
-       (n.message && n.message.includes(payrollDate)))
-    );
-    
-    if (existingNotification) {
-      console.log('Payroll approved notification already exists for', payrollDate);
-      return existingNotification;
-    }
-    
-    return this.addNotification({
+  // Always creates a new notification - no duplicate checking to allow multiple notifications for same day
+  async createPayrollApprovedNotification(approvedBy, payrollDate) {
+    // Always create a new notification - allow multiple notifications for the same day
+    return await this.addNotification({
       title: "Payroll Approved",
       message: `Payroll for ${payrollDate} has been approved by ${approvedBy}.`,
       type: "payroll",
@@ -484,7 +484,8 @@ class NotificationService {
       fromUser: approvedBy,
       targetRole: "scheduler", // For Carla/Scheduler
       status: "approved",
-      payrollDate: payrollDate
+      payrollDate: payrollDate,
+      createdAt: new Date().toISOString() // Ensure unique timestamp
     });
   }
 
