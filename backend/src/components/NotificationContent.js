@@ -1,17 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import './NotificationContent.css';
 import notificationService from '../services/notificationService';
+import { getAuth } from 'firebase/auth';
 
 const NotificationContent = () => {
   const [notifications, setNotifications] = useState([]);
+  const [userRole, setUserRole] = useState(null);
+  const [userName, setUserName] = useState(null);
 
   const [filter, setFilter] = useState('all'); // all, unread, read
   const [sortBy, setSortBy] = useState('newest'); // newest, oldest
 
-  // Load notifications from service
+  // Get user role and name
+  useEffect(() => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (user) {
+      const email = user.email || '';
+      const name = user.displayName || '';
+      
+      // Determine user role
+      let role = 'worker';
+      if (email.toLowerCase().includes('alice') || name.toLowerCase().includes('alice')) {
+        role = 'admin';
+      } else if (email.toLowerCase().includes('carla') || name.toLowerCase().includes('carla')) {
+        role = 'scheduler';
+      }
+      
+      setUserRole(role);
+      setUserName(name);
+    }
+  }, []);
+
+  // Load notifications from service filtered by user role
   useEffect(() => {
     const loadNotifications = () => {
-      setNotifications(notificationService.getNotifications());
+      if (userRole) {
+        const allNotifications = notificationService.getNotificationsForRole(userRole, null, userName);
+        setNotifications(allNotifications);
+      } else {
+        // Fallback to all notifications if role not determined yet
+        setNotifications(notificationService.getNotifications());
+      }
     };
 
     // Load initial notifications
@@ -27,7 +58,7 @@ const NotificationContent = () => {
     return () => {
       notificationService.removeListener(handleNotificationUpdate);
     };
-  }, []);
+  }, [userRole, userName]);
 
   // Mark notification as read
   const markAsRead = (id) => {
@@ -96,6 +127,12 @@ const NotificationContent = () => {
             <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
           </svg>
         );
+      case 'update':
+        return (
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M21,10.12H14.22L16.96,7.3C14.23,4.6 9.81,4.5 7.08,7.2C4.35,9.91 4.35,14.28 7.08,17C9.81,19.7 14.23,19.7 16.96,17C18.32,15.65 19,14.08 19,12.1H21C21,14.08 20.12,16.65 18.36,18.39C14.85,21.9 9.15,21.9 5.64,18.39C2.13,14.88 2.13,9.18 5.64,5.67C9.15,2.16 14.85,2.16 18.36,5.67L21,3V10.12M12.5,8V12.25L16,14.33L15.28,15.54L11,13V8H12.5Z"/>
+          </svg>
+        );
       case 'safety':
         return (
           <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
@@ -124,6 +161,8 @@ const NotificationContent = () => {
         return '#9C27B0';
       case 'payroll':
         return '#F44336';
+      case 'update':
+        return '#00BCD4';
       case 'safety':
         return '#FF5722';
       default:
