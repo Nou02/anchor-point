@@ -1,9 +1,91 @@
 // Notification Service for managing notifications across the application
+import { getFirestore, collection, addDoc, query, where, getDocs, doc, updateDoc, deleteDoc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { db } from '../firebase/config';
+
 class NotificationService {
   constructor() {
     this.notifications = [];
     this.listeners = [];
+    this.firestoreUnsubscribe = null;
     this.loadNotifications();
+    this.setupFirestoreListener();
+    // Load existing Firestore notifications after a short delay to ensure listener is set up
+    setTimeout(() => {
+      this.loadFirestoreNotifications();
+      // Clean up all duplicates aggressively
+      this.cleanupAllDuplicates();
+    }, 2000);
+  }
+
+  // Aggressively clean up all duplicate notifications from Firestore
+  async cleanupAllDuplicates() {
+    try {
+      console.log('Starting aggressive duplicate cleanup...');
+      const q = query(
+        collection(db, 'notifications'),
+        where('type', '==', 'payroll'),
+        where('targetRole', '==', 'worker'),
+        where('status', '==', 'available')
+      );
+      const snapshot = await getDocs(q);
+      
+      // Group notifications by worker and payroll date
+      const grouped = new Map();
+      
+      snapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        const payrollDate = data.payrollDate || '';
+        const targetUser = data.targetUser || '';
+        
+        // Normalize worker name for grouping
+        const normalizedUser = targetUser.trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
+        const key = `${normalizedUser}_${payrollDate}`;
+        
+        if (!grouped.has(key)) {
+          grouped.set(key, []);
+        }
+        
+        grouped.get(key).push({
+          id: docSnapshot.id,
+          ...data,
+          timestamp: data.timestamp?.toDate() || data.createdAt?.toDate() || new Date()
+        });
+      });
+      
+      // For each group, keep only the most recent and delete the rest
+      let totalDeleted = 0;
+      for (const [key, notifications] of grouped.entries()) {
+        if (notifications.length > 1) {
+          // Sort by timestamp (most recent first)
+          notifications.sort((a, b) => {
+            const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+            const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+            return timeB - timeA;
+          });
+          
+          // Keep the first (most recent), delete the rest
+          const toDelete = notifications.slice(1);
+          totalDeleted += toDelete.length;
+          
+          console.log(`Found ${notifications.length} duplicates for key ${key}, keeping 1, deleting ${toDelete.length}`);
+          
+          // Delete all duplicates
+          for (const dup of toDelete) {
+            await deleteDoc(doc(db, 'notifications', dup.id));
+          }
+        }
+      }
+      
+      if (totalDeleted > 0) {
+        console.log(`Cleaned up ${totalDeleted} duplicate notifications from Firestore`);
+        // Reload notifications after cleanup
+        setTimeout(() => {
+          this.loadFirestoreNotifications();
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error in aggressive duplicate cleanup:', error);
+    }
   }
 
   // Load notifications from localStorage
@@ -12,10 +94,54 @@ class NotificationService {
       const saved = localStorage.getItem('anchorpoint_notifications');
       if (saved) {
         this.notifications = JSON.parse(saved);
+        // Clean up duplicates on load
+        this.removeDuplicateNotifications();
       }
     } catch (error) {
       console.error('Error loading notifications:', error);
       this.notifications = [];
+    }
+  }
+
+  // Remove duplicate notifications
+  removeDuplicateNotifications() {
+    const seen = new Map();
+    const uniqueNotifications = [];
+    
+    // Process notifications in reverse order to keep the most recent ones
+    for (let i = this.notifications.length - 1; i >= 0; i--) {
+      const notification = this.notifications[i];
+      
+      // Create a unique key based on notification type and identifying info
+      let key = '';
+      
+      if (notification.type === 'weather') {
+        // Only one weather notification should exist
+        key = 'weather';
+      } else if (notification.type === 'payroll') {
+        // For payroll, use type + role + status + payrollDate
+        key = `payroll_${notification.targetRole}_${notification.status}_${notification.payrollDate || ''}`;
+        
+        // For worker notifications, also include targetUser (normalized - remove commas and extra spaces)
+        if (notification.targetUser) {
+          const normalizedUser = notification.targetUser.trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
+          key += `_${normalizedUser}`;
+        }
+      } else {
+        // For other types, use type + title + message
+        key = `${notification.type}_${notification.title}_${notification.message}`;
+      }
+      
+      if (!seen.has(key)) {
+        seen.set(key, true);
+        uniqueNotifications.unshift(notification); // Add to beginning to maintain order
+      }
+    }
+    
+    if (uniqueNotifications.length !== this.notifications.length) {
+      console.log(`Removed ${this.notifications.length - uniqueNotifications.length} duplicate notifications`);
+      this.notifications = uniqueNotifications;
+      this.saveNotifications();
     }
   }
 
@@ -29,7 +155,7 @@ class NotificationService {
   }
 
   // Add a new notification
-  addNotification(notification) {
+  async addNotification(notification) {
     const newNotification = {
       id: Date.now() + Math.random(),
       timestamp: new Date(),
@@ -37,17 +163,217 @@ class NotificationService {
       ...notification
     };
     
-    this.notifications.unshift(newNotification);
-    this.saveNotifications();
-    this.notifyListeners();
-    return newNotification;
+    // For payroll notifications, save to Firestore and let the listener handle adding to local array
+    // This prevents duplicates from being added locally and then again from Firestore
+    if (notification.type === 'payroll') {
+      try {
+        const docRef = await addDoc(collection(db, 'notifications'), {
+          ...newNotification,
+          timestamp: Timestamp.now(),
+          createdAt: Timestamp.now()
+        });
+        // Don't add to local array - the Firestore listener will handle it
+        // This prevents duplicates
+        return { id: docRef.id, ...newNotification };
+      } catch (error) {
+        console.error('Error saving notification to Firestore:', error);
+        // If Firestore save fails, add locally as fallback
+        this.notifications.unshift(newNotification);
+        this.saveNotifications();
+        this.notifyListeners();
+        return newNotification;
+      }
+    } else {
+      // For non-payroll notifications, add locally
+      this.notifications.unshift(newNotification);
+      this.saveNotifications();
+      this.notifyListeners();
+      return newNotification;
+    }
+  }
+
+  // Setup Firestore listener for real-time updates
+  setupFirestoreListener() {
+    try {
+      const q = query(collection(db, 'notifications'));
+      this.firestoreUnsubscribe = onSnapshot(q, async (snapshot) => {
+        const firestoreNotifications = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          firestoreNotifications.push({
+            id: doc.id,
+            ...data,
+            timestamp: data.timestamp?.toDate() || data.createdAt?.toDate() || new Date(),
+            fromFirestore: true // Mark as from Firestore
+          });
+        });
+        
+        // For payroll notifications, use only Firestore (remove local payroll notifications)
+        // For other notifications, keep local ones
+        const localNonPayroll = this.notifications.filter(n => n.type !== 'payroll');
+        
+        // Combine Firestore notifications with local non-payroll notifications
+        const merged = [...firestoreNotifications, ...localNonPayroll];
+        
+        // Remove duplicates using a more robust key - keep only the most recent one
+        const seen = new Map(); // Use Map to store the best version of each notification
+        const duplicatesToDelete = []; // Track duplicates to delete from Firestore
+        
+        merged.forEach(n => {
+          // Create a unique key based on notification content
+          let key = '';
+          if (n.type === 'payroll') {
+            // For payroll, normalize the targetUser name and use type + role + status + payrollDate + normalized targetUser
+            const normalizedUser = (n.targetUser || '').trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
+            key = `payroll_${n.targetRole || ''}_${n.status || ''}_${n.payrollDate || ''}_${normalizedUser}`;
+          } else if (n.type === 'weather') {
+            // For weather, only one should exist
+            key = 'weather';
+          } else {
+            // For other types, use type + title + message
+            key = `${n.type}_${n.title || ''}_${n.message || ''}`;
+          }
+          
+          // If we haven't seen this key, add it
+          if (!seen.has(key)) {
+            seen.set(key, n);
+          } else {
+            // We found a duplicate - keep the most recent one
+            const existing = seen.get(key);
+            const existingTime = existing.timestamp instanceof Date ? existing.timestamp.getTime() : new Date(existing.timestamp).getTime();
+            const newTime = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp).getTime();
+            
+            if (newTime > existingTime) {
+              // New one is more recent - mark old one for deletion if it's from Firestore
+              if (existing.fromFirestore && typeof existing.id === 'string' && existing.id.length > 10) {
+                duplicatesToDelete.push(existing.id);
+              }
+              seen.set(key, n);
+            } else {
+              // Existing one is more recent - mark new one for deletion if it's from Firestore
+              if (n.fromFirestore && typeof n.id === 'string' && n.id.length > 10) {
+                duplicatesToDelete.push(n.id);
+              }
+            }
+          }
+        });
+        
+        // Delete duplicates from Firestore immediately
+        if (duplicatesToDelete.length > 0) {
+          console.log(`Deleting ${duplicatesToDelete.length} duplicate notifications from Firestore`);
+          // Delete all duplicates in parallel and wait for completion
+          await Promise.all(
+            duplicatesToDelete.map(dupId => 
+              deleteDoc(doc(db, 'notifications', dupId)).catch(err => {
+                console.error('Error deleting duplicate notification:', err);
+              })
+            )
+          );
+        }
+        
+        // Convert map values to array and sort
+        const unique = Array.from(seen.values()).sort((a, b) => {
+          const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+          const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+          return timeB - timeA; // Newest first
+        });
+        
+        this.notifications = unique;
+        this.saveNotifications();
+        this.notifyListeners();
+      }, (error) => {
+        console.error('Error in Firestore notification listener:', error);
+      });
+    } catch (error) {
+      console.error('Error setting up Firestore listener:', error);
+    }
+  }
+
+  // Load notifications from Firestore on initialization
+  async loadFirestoreNotifications() {
+    try {
+      const q = query(collection(db, 'notifications'));
+      const snapshot = await getDocs(q);
+      const firestoreNotifications = [];
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        firestoreNotifications.push({
+          id: doc.id,
+          ...data,
+          timestamp: data.timestamp?.toDate() || data.createdAt?.toDate() || new Date(),
+          fromFirestore: true
+        });
+      });
+      
+      // For payroll notifications, use only Firestore (remove local payroll notifications)
+      // For other notifications, keep local ones
+      const localNonPayroll = this.notifications.filter(n => n.type !== 'payroll');
+      const merged = [...firestoreNotifications, ...localNonPayroll];
+      
+      // Remove duplicates using the same logic as the listener
+      const seen = new Map();
+      merged.forEach(n => {
+        let key = '';
+        if (n.type === 'payroll') {
+          // Normalize the targetUser name for better matching
+          const normalizedUser = (n.targetUser || '').trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
+          key = `payroll_${n.targetRole || ''}_${n.status || ''}_${n.payrollDate || ''}_${normalizedUser}`;
+        } else if (n.type === 'weather') {
+          key = 'weather';
+        } else {
+          key = `${n.type}_${n.title || ''}_${n.message || ''}`;
+        }
+        
+        // If we haven't seen this key, add it
+        // If we have seen it, replace with Firestore version if this is from Firestore
+        if (!seen.has(key)) {
+          seen.set(key, n);
+        } else if (n.fromFirestore && !seen.get(key).fromFirestore) {
+          // Replace local with Firestore version
+          seen.set(key, n);
+        } else if (n.fromFirestore && seen.get(key).fromFirestore) {
+          // Both are from Firestore, keep the one with the most recent timestamp
+          const existing = seen.get(key);
+          const existingTime = existing.timestamp instanceof Date ? existing.timestamp.getTime() : new Date(existing.timestamp).getTime();
+          const newTime = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp).getTime();
+          if (newTime > existingTime) {
+            seen.set(key, n);
+          }
+        }
+      });
+      
+      const unique = Array.from(seen.values()).sort((a, b) => {
+        const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+        const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+        return timeB - timeA;
+      });
+      
+      this.notifications = unique;
+      this.saveNotifications();
+      this.notifyListeners();
+    } catch (error) {
+      console.error('Error loading Firestore notifications:', error);
+    }
   }
 
   // Mark notification as read
-  markAsRead(notificationId) {
+  async markAsRead(notificationId) {
     const notification = this.notifications.find(n => n.id === notificationId);
     if (notification) {
       notification.read = true;
+      
+      // Update in Firestore if it's a payroll notification
+      if (notification.type === 'payroll' && typeof notificationId === 'string' && notificationId.length > 10) {
+        try {
+          await updateDoc(doc(db, 'notifications', notificationId), {
+            read: true
+          });
+        } catch (error) {
+          console.error('Error updating notification in Firestore:', error);
+        }
+      }
+      
       this.saveNotifications();
       this.notifyListeners();
     }
@@ -105,19 +431,315 @@ class NotificationService {
     });
   }
 
-  // Create payroll notification for Alice
-  createPayrollNotification(fromUser, message) {
-    console.log('Creating payroll notification:', { fromUser, message });
-    const notification = this.addNotification({
+  // Create payroll approval notification for admin (Alice)
+  createPayrollApprovalNotification(fromUser, payrollDate) {
+    // Check if notification already exists for this payroll date
+    const existingNotification = this.notifications.find(n => 
+      n.type === 'payroll' && 
+      n.targetRole === 'admin' &&
+      n.status === 'pending' &&
+      ((n.payrollDate && n.payrollDate === payrollDate) || 
+       (n.message && n.message.includes(payrollDate)))
+    );
+    
+    if (existingNotification) {
+      console.log('Payroll approval notification already exists for', payrollDate);
+      return existingNotification;
+    }
+    
+    return this.addNotification({
       title: "Payroll Approval Required",
-      message: message,
+      message: `Payroll for ${payrollDate} has been submitted by ${fromUser} and requires your approval.`,
       type: "payroll",
       priority: "high",
       fromUser: fromUser,
-      status: "pending"
+      targetRole: "admin", // For Alice/Admin
+      status: "pending",
+      action: "approve_payroll",
+      payrollDate: payrollDate
     });
-    console.log('Notification created:', notification);
-    return notification;
+  }
+
+  // Create payroll approved notification for scheduler (Carla)
+  createPayrollApprovedNotification(approvedBy, payrollDate) {
+    // Check if notification already exists for this payroll date
+    const existingNotification = this.notifications.find(n => 
+      n.type === 'payroll' && 
+      n.targetRole === 'scheduler' &&
+      n.status === 'approved' &&
+      ((n.payrollDate && n.payrollDate === payrollDate) || 
+       (n.message && n.message.includes(payrollDate)))
+    );
+    
+    if (existingNotification) {
+      console.log('Payroll approved notification already exists for', payrollDate);
+      return existingNotification;
+    }
+    
+    return this.addNotification({
+      title: "Payroll Approved",
+      message: `Payroll for ${payrollDate} has been approved by ${approvedBy}.`,
+      type: "payroll",
+      priority: "medium",
+      fromUser: approvedBy,
+      targetRole: "scheduler", // For Carla/Scheduler
+      status: "approved",
+      payrollDate: payrollDate
+    });
+  }
+
+  // Create payroll available notification for workers (one per worker per payroll date)
+  async createPayrollAvailableNotification(payrollDate, workerName) {
+    // Normalize worker name for comparison (remove commas, extra spaces, convert to lowercase)
+    const normalizedWorkerName = workerName.trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
+    
+    // Check if notification already exists for this specific worker and payroll date
+    // Use strict matching to ensure one notification per worker
+    // First check local notifications
+    const existingLocalNotification = this.notifications.find(n => {
+      if (n.type !== 'payroll' || n.targetRole !== 'worker' || n.status !== 'available') {
+        return false;
+      }
+      
+      // Check payroll date match
+      const dateMatches = (n.payrollDate && n.payrollDate === payrollDate) || 
+                         (n.message && n.message.includes(payrollDate));
+      
+      if (!dateMatches) return false;
+      
+      // Check worker name match - must be exact or contained match
+      if (n.targetUser) {
+        const existingName = n.targetUser.trim().toLowerCase();
+        // Check if names match exactly or if one contains the other
+        return existingName === normalizedWorkerName || 
+               existingName.includes(normalizedWorkerName) || 
+               normalizedWorkerName.includes(existingName);
+      }
+      
+      return false;
+    });
+    
+    if (existingLocalNotification) {
+      console.log('Payroll notification already exists for worker:', workerName, 'date:', payrollDate);
+      return existingLocalNotification;
+    }
+    
+    // Also check Firestore for existing notifications and delete duplicates
+    try {
+      const q = query(
+        collection(db, 'notifications'),
+        where('type', '==', 'payroll'),
+        where('targetRole', '==', 'worker'),
+        where('status', '==', 'available')
+      );
+      const snapshot = await getDocs(q);
+      
+      const matchingNotifications = [];
+      for (const docSnapshot of snapshot.docs) {
+        const data = docSnapshot.data();
+        const dateMatches = (data.payrollDate && data.payrollDate === payrollDate) || 
+                           (data.message && data.message.includes(payrollDate));
+        
+        if (dateMatches && data.targetUser) {
+          const existingName = data.targetUser.trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
+          // Check if names match (normalized)
+          if (existingName === normalizedWorkerName || 
+              existingName.includes(normalizedWorkerName) || 
+              normalizedWorkerName.includes(existingName)) {
+            matchingNotifications.push({ id: docSnapshot.id, ...data });
+          }
+        }
+      }
+      
+      // If we found matching notifications, keep only the most recent one and delete the rest
+      if (matchingNotifications.length > 0) {
+        // Sort by timestamp (most recent first)
+        matchingNotifications.sort((a, b) => {
+          const timeA = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : new Date(a.timestamp || 0).getTime();
+          const timeB = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : new Date(b.timestamp || 0).getTime();
+          return timeB - timeA;
+        });
+        
+        // Keep the most recent one
+        const mostRecent = matchingNotifications[0];
+        
+        // Delete all others immediately
+        if (matchingNotifications.length > 1) {
+          console.log(`Deleting ${matchingNotifications.length - 1} duplicate notifications for worker:`, workerName, 'date:', payrollDate);
+          await Promise.all(
+            matchingNotifications.slice(1).map(dup => 
+              deleteDoc(doc(db, 'notifications', dup.id)).catch(err => {
+                console.error('Error deleting duplicate notification:', err);
+              })
+            )
+          );
+        }
+        
+        console.log('Payroll notification already exists in Firestore for worker:', workerName, 'date:', payrollDate);
+        return { id: mostRecent.id, ...mostRecent };
+      }
+    } catch (error) {
+      console.error('Error checking Firestore for existing notification:', error);
+    }
+    
+    // Create new notification (will be saved to Firestore via addNotification)
+    return await this.addNotification({
+      title: "Payroll Available",
+      message: `Your payroll for ${payrollDate} is now available for review.`,
+      type: "payroll",
+      priority: "medium",
+      fromUser: "System",
+      targetUser: workerName.trim(), // Store normalized worker name
+      targetRole: "worker",
+      status: "available",
+      payrollDate: payrollDate // Store payroll date for easier checking
+    });
+  }
+
+  // Create weather notification (only one at a time)
+  createWeatherNotification(weatherData) {
+    // Remove all existing weather notifications first to ensure only one exists
+    const existingWeatherNotifications = this.notifications.filter(n => n.type === 'weather');
+    
+    if (existingWeatherNotifications.length > 0) {
+      // Remove all existing weather notifications
+      this.notifications = this.notifications.filter(n => n.type !== 'weather');
+      
+      // Update the most recent one (or create new if none found)
+      const { condition, temperature, alert } = weatherData;
+      let message = `Current weather: ${condition}, ${temperature}°C`;
+      if (alert) {
+        message += `. Alert: ${alert}`;
+      }
+      
+      const updatedNotification = {
+        id: existingWeatherNotifications[0].id || Date.now() + Math.random(),
+        title: "Weather Update",
+        message: message,
+        type: "weather",
+        priority: alert ? "high" : "low",
+        fromUser: "Weather Service",
+        targetRole: "all",
+        status: "active",
+        weatherData: weatherData,
+        timestamp: new Date(),
+        read: false
+      };
+      
+      this.notifications.unshift(updatedNotification);
+      this.saveNotifications();
+      this.notifyListeners();
+      return updatedNotification;
+    }
+    
+    const { condition, temperature, alert } = weatherData;
+    let message = `Current weather: ${condition}, ${temperature}°C`;
+    if (alert) {
+      message += `. Alert: ${alert}`;
+    }
+    
+    return this.addNotification({
+      title: "Weather Update",
+      message: message,
+      type: "weather",
+      priority: alert ? "high" : "low",
+      fromUser: "Weather Service",
+      targetRole: "all", // For all users
+      status: "active",
+      weatherData: weatherData
+    });
+  }
+
+  // Create application update notification
+  createAppUpdateNotification(version, updateMessage) {
+    return this.addNotification({
+      title: "Application Update",
+      message: `New update available (v${version}): ${updateMessage}`,
+      type: "update",
+      priority: "medium",
+      fromUser: "System",
+      targetRole: "all", // For all users
+      status: "active",
+      version: version
+    });
+  }
+
+  // Get notifications for specific user role
+  getNotificationsForRole(userRole, userEmail = null, userName = null) {
+    // First, remove any duplicate worker notifications before filtering
+    if (userRole === "worker") {
+      this.removeDuplicateWorkerNotifications();
+    }
+    
+    return this.notifications.filter(notification => {
+      // If notification has targetRole
+      if (notification.targetRole) {
+        // Check if it's for all users
+        if (notification.targetRole === "all") return true;
+        
+        // For worker role, check if notification is specifically for this worker
+        if (userRole === "worker" && notification.targetRole === "worker") {
+          // If notification has a targetUser, only show it to that specific worker
+          if (notification.targetUser && userName) {
+            const notificationName = notification.targetUser.trim().toLowerCase();
+            const userNormalizedName = userName.trim().toLowerCase();
+            // Check if names match exactly or if one contains the other
+            return notificationName === userNormalizedName || 
+                   notificationName.includes(userNormalizedName) || 
+                   userNormalizedName.includes(notificationName);
+          }
+          // If no targetUser specified, show to all workers (backward compatibility)
+          return true;
+        }
+        
+        // For other roles, check if it matches user role
+        if (notification.targetRole === userRole) return true;
+        
+        // Check if it's for specific user (for non-worker roles)
+        if (notification.targetUser && userName) {
+          return notification.targetUser.toLowerCase().includes(userName.toLowerCase());
+        }
+        
+        return false;
+      }
+      
+      // If no targetRole specified, show to all (backward compatibility)
+      return true;
+    });
+  }
+
+  // Remove duplicate worker notifications (keep only one per worker per payroll date)
+  removeDuplicateWorkerNotifications() {
+    const workerNotifications = this.notifications.filter(n => 
+      n.type === 'payroll' && n.targetRole === 'worker' && n.status === 'available'
+    );
+    
+    if (workerNotifications.length === 0) return;
+    
+    // Group by worker name and payroll date
+    const seen = new Map();
+    const toRemove = [];
+    
+    workerNotifications.forEach(notification => {
+      const workerName = (notification.targetUser || '').trim().toLowerCase();
+      const payrollDate = notification.payrollDate || '';
+      const key = `${workerName}_${payrollDate}`;
+      
+      if (seen.has(key)) {
+        // This is a duplicate - mark for removal
+        toRemove.push(notification.id);
+      } else {
+        seen.set(key, notification);
+      }
+    });
+    
+    // Remove duplicates, keeping the first (most recent) one
+    if (toRemove.length > 0) {
+      this.notifications = this.notifications.filter(n => !toRemove.includes(n.id));
+      this.saveNotifications();
+      this.notifyListeners();
+      console.log(`Removed ${toRemove.length} duplicate worker payroll notifications`);
+    }
   }
 
   // Clear all notifications
