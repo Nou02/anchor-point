@@ -858,19 +858,21 @@ const Homepage = () => {
                               (isAlice && (userRole.toLowerCase().includes('senior') || userRole.toLowerCase().includes('supervisor')));
 
     if (isCarla) {
-      // Carla: Only Home and Payroll (no Scheduling, no Reports, no Analytics)
+      // Carla: Home, Payroll, and Storage (view-only)
       return [
         ...baseMenu,
-        { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
+        { id: 'payroll', label: 'Payroll', icon: 'attach_money' },
+        { id: 'storage', label: 'Storage', icon: 'inventory_2' }
       ];
     } else if (isWorker) {
-      // Workers: Only Scheduling and Payroll (no Home, no Reports, no Analytics)
+      // Workers: Scheduling, Payroll, and Storage (view-only)
       return [
         { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
-        { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
+        { id: 'payroll', label: 'Payroll', icon: 'attach_money' },
+        { id: 'storage', label: 'Storage', icon: 'inventory_2' }
       ];
     } else if (isSeniorSupervisor) {
-      // Senior Supervisor: Full access + Storage
+      // Senior Supervisor: Full access + Storage (view-only)
       return [
         ...baseMenu,
         { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
@@ -880,12 +882,13 @@ const Homepage = () => {
         { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
       ];
     } else {
-      // Alice and other users: Full access to all sections (without Storage)
+      // Alice: Full access to all sections including Storage (with edit/delete)
       return [
         ...baseMenu,
         { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
         { id: 'reports', label: 'Reports', icon: 'description' },
         { id: 'analytics', label: 'Analytics', icon: 'analytics' },
+        { id: 'storage', label: 'Storage', icon: 'inventory_2' },
         { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
       ];
     }

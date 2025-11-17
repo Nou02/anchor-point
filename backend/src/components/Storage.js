@@ -6,6 +6,7 @@ import notificationService from '../services/notificationService';
 
 const Storage = () => {
   const [user, setUser] = useState(null);
+  const [isAlice, setIsAlice] = useState(false);
   const [fuelInventory, setFuelInventory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -23,11 +24,22 @@ const Storage = () => {
     lastUpdated: new Date().toISOString()
   });
 
-  // Load user authentication
+  // Load user authentication and check if user is Alice
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        const displayName = currentUser.displayName || '';
+        const email = currentUser.email || '';
+        const isAliceUser = displayName === 'Alice Margaretha Santos' || 
+                           displayName === 'Alice' ||
+                           (displayName && displayName.toLowerCase().includes('alice')) ||
+                           email.toLowerCase().includes('alice');
+        setIsAlice(isAliceUser);
+      } else {
+        setIsAlice(false);
+      }
       setIsLoading(false);
     });
     return () => unsubscribe();
@@ -88,6 +100,13 @@ const Storage = () => {
   // Handle add/edit fuel stock
   const handleSaveFuel = async () => {
     if (!user) return;
+    
+    // Only Alice can add/edit fuel
+    if (!isAlice) {
+      setSaveMessage('Only Alice can add or edit fuel entries');
+      setTimeout(() => setSaveMessage(''), 3000);
+      return;
+    }
 
     // Validation
     if (!formData.fuelType || !formData.currentStock || !formData.location) {
@@ -176,6 +195,12 @@ const Storage = () => {
 
   // Handle edit
   const handleEdit = (fuel) => {
+    // Only Alice can edit fuel
+    if (!isAlice) {
+      alert('Only Alice can edit fuel entries');
+      return;
+    }
+    
     setEditingFuel(fuel);
     setFormData({
       fuelType: fuel.fuelType || '',
@@ -191,6 +216,12 @@ const Storage = () => {
 
   // Handle delete
   const handleDelete = async (fuelId) => {
+    // Only Alice can delete fuel
+    if (!isAlice) {
+      alert('Only Alice can delete fuel entries');
+      return;
+    }
+    
     if (!window.confirm('Are you sure you want to delete this fuel stock entry?')) {
       return;
     }
@@ -282,18 +313,20 @@ const Storage = () => {
         <div className="storage-title-section">
           <h1>Fuel Inventory Management</h1>
         </div>
-        <button
-          className="add-fuel-button"
-          onClick={() => {
-            resetForm();
-            setShowAddModal(true);
-          }}
-        >
-          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-          </svg>
-          Add Fuel Stock
-        </button>
+        {isAlice && (
+          <button
+            className="add-fuel-button"
+            onClick={() => {
+              resetForm();
+              setShowAddModal(true);
+            }}
+          >
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+            Add Fuel Stock
+          </button>
+        )}
       </div>
 
       {saveMessage && (
@@ -312,15 +345,17 @@ const Storage = () => {
             </div>
             <h3>No Fuel Inventory Data</h3>
             <p>Get started by adding your first fuel stock entry</p>
-            <button
-              className="add-fuel-button"
-              onClick={() => {
-                resetForm();
-                setShowAddModal(true);
-              }}
-            >
-              Add Fuel Stock
-            </button>
+            {isAlice && (
+              <button
+                className="add-fuel-button"
+                onClick={() => {
+                  resetForm();
+                  setShowAddModal(true);
+                }}
+              >
+                Add Fuel Stock
+              </button>
+            )}
           </div>
         ) : (
           <div className="fuel-inventory-grid">
@@ -388,26 +423,28 @@ const Storage = () => {
                     </div>
                   </div>
 
-                  <div className="fuel-card-actions">
-                    <button
-                      className="action-button edit-button"
-                      onClick={() => handleEdit(fuel)}
-                    >
-                      <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                      </svg>
-                      Edit
-                    </button>
-                    <button
-                      className="action-button delete-button"
-                      onClick={() => handleDelete(fuel.id)}
-                    >
-                      <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                      </svg>
-                      Delete
-                    </button>
-                  </div>
+                  {isAlice && (
+                    <div className="fuel-card-actions">
+                      <button
+                        className="action-button edit-button"
+                        onClick={() => handleEdit(fuel)}
+                      >
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                        </svg>
+                        Edit
+                      </button>
+                      <button
+                        className="action-button delete-button"
+                        onClick={() => handleDelete(fuel.id)}
+                      >
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
