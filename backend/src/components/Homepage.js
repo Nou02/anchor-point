@@ -671,6 +671,27 @@ const Homepage = () => {
     return `Operations peaked in ${maxEntry.year} and eased in ${last.year}.`;
   }, [analyticsData]);
 
+  const topVesselsNote = useMemo(() => {
+    if (!analyticsData || !analyticsData.topVessels || analyticsData.topVessels.length === 0) return '';
+    
+    const top3 = analyticsData.topVessels.slice(0, 3);
+    if (top3.length === 0) return '';
+    
+    if (top3.length === 1) {
+      return `${top3[0].name} leads with ${top3[0].count} scheduled operations.`;
+    }
+    
+    if (top3.length === 2) {
+      return `${top3[0].name} leads with ${top3[0].count} operations, followed by ${top3[1].name} with ${top3[1].count} scheduled operations.`;
+    }
+    
+    // Top 3 vessels
+    const totalTop3 = top3.reduce((sum, v) => sum + v.count, 0);
+    const percentage = Math.round((totalTop3 / analyticsData.total) * 100);
+    
+    return `${top3[0].name} leads with ${top3[0].count} operations, ${top3[1].name} has ${top3[1].count} scheduled operations, and ${top3[2].name} follows with ${top3[2].count} operations. Together, they account for ${percentage}% of total operations.`;
+  }, [analyticsData]);
+
   const monthlyPerformanceNote = useMemo(() => {
     if (!analyticsData || !analyticsData.byMonth) return '';
     const data = analyticsData.byMonth;
@@ -1031,11 +1052,19 @@ const Homepage = () => {
                               </div>
                               <div className="vessel-info">
                                 <div className="vessel-name">{vessel.name}</div>
-                                <div className="vessel-count">{vessel.count} operations</div>
+                                <div className="vessel-count">{vessel.count} scheduled operations</div>
+                              </div>
+                              <div className="vessel-badge">
+                                {vessel.count}
                               </div>
                             </div>
                           ))}
                         </div>
+                        {topVesselsNote && (
+                          <div className="service-distribution-info">
+                            <p>{topVesselsNote}</p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Next Quarter Forecast */}

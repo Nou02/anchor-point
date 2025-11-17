@@ -459,11 +459,9 @@ const Report = () => {
     const loadData = async () => {
       try {
         console.log('Loading data on component mount...');
+        // Fetch Excel data - fetchTransactions will be called automatically
+        // when vesselData state is updated via the useEffect hook
         await fetchExcelData();
-        // Wait a bit for vesselData to be set
-        setTimeout(async () => {
-          await fetchTransactions();
-        }, 100);
       } catch (error) {
         console.error('Error loading data:', error);
         // Show empty state on error
@@ -479,6 +477,7 @@ const Report = () => {
       }
     };
     
+    // Load data immediately on mount
     loadData();
   }, []);
 
@@ -489,6 +488,8 @@ const Report = () => {
       processExcelData();
       const years = extractAvailableYears(vesselData);
       setAvailableYears(years);
+      // Automatically fetch transactions when vesselData is loaded
+      fetchTransactions();
     }
   }, [vesselData]);
 

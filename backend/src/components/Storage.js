@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, addDoc, query, getDocs, getDoc, updateDoc, doc, setDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import './Storage.css';
+import notificationService from '../services/notificationService';
 
 const Storage = () => {
   const [user, setUser] = useState(null);
@@ -133,6 +134,32 @@ const Storage = () => {
         });
       });
       setFuelInventory(inventory);
+
+      // Send notification to all roles about fuel storage update
+      const action = editingFuel ? 'updated' : 'added';
+      notificationService.addNotification({
+        title: `Fuel Storage ${action.charAt(0).toUpperCase() + action.slice(1)}`,
+        message: `${formData.fuelType} at ${formData.location} has been ${action}. Current stock: ${formData.currentStock} ${formData.unit}. Updated by ${user.displayName || user.email}.`,
+        type: "storage",
+        priority: "medium",
+        fromUser: user.displayName || user.email,
+        targetRole: "all", // Visible to all roles
+        status: "active"
+      });
+
+      // Check if fuel reaches 20 liters and notify Alice
+      const currentStock = parseFloat(formData.currentStock) || 0;
+      if (currentStock <= 20 && formData.unit === 'Liters') {
+        notificationService.addNotification({
+          title: "Low Fuel Alert",
+          message: `${formData.fuelType} at ${formData.location} has reached ${currentStock} liters. Please restock soon.`,
+          type: "storage",
+          priority: "high",
+          fromUser: "System",
+          targetRole: "admin", // For Alice
+          status: "active"
+        });
+      }
 
       // Reset form and close modal
       resetForm();

@@ -7,6 +7,7 @@ import { getWeatherForecast } from '../services/weatherService';
 import CrewAvailabilityTable from './CrewAvailabilityTable';
 import * as XLSX from 'xlsx';
 import api, { excelAPI } from '../services/api';
+import notificationService from '../services/notificationService';
 
 const Scheduling = () => {
   // Initialize Firestore database
@@ -378,6 +379,22 @@ const Scheduling = () => {
           setTimeout(() => {
             loadUpcomingScheduledVessels();
           }, 500);
+          
+          // Create notification for all users
+          const formattedDate = new Date(dateKey).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+          notificationService.addNotification({
+            title: "Vessel Schedule Updated",
+            message: `${vesselFormData.vesselName} schedule has been updated for ${formattedDate} by ${userFullName || userName || 'System'}.`,
+            type: "scheduling",
+            priority: "medium",
+            fromUser: userFullName || userName || 'System',
+            targetRole: "all", // Visible to all roles
+            status: "active"
+          });
         } catch (excelError) {
           // If update fails, try with current vessel name as fallback
           if (vesselNameForExcel !== originalVessel.vesselName) {
@@ -391,6 +408,22 @@ const Scheduling = () => {
             setTimeout(() => {
               loadUpcomingScheduledVessels();
             }, 500);
+            
+            // Create notification for all users
+            const formattedDate = new Date(dateKey).toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            });
+            notificationService.addNotification({
+              title: "Vessel Schedule Updated",
+              message: `${vesselFormData.vesselName} schedule has been updated for ${formattedDate} by ${userFullName || userName || 'System'}.`,
+              type: "scheduling",
+              priority: "medium",
+              fromUser: userFullName || userName || 'System',
+              targetRole: "all", // Visible to all roles
+              status: "active"
+            });
           } else {
             throw excelError;
           }
@@ -468,6 +501,22 @@ const Scheduling = () => {
           setTimeout(() => {
             loadUpcomingScheduledVessels();
           }, 500);
+          
+          // Create notification for all users
+          const formattedDate = clickedDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+          notificationService.addNotification({
+            title: "New Vessel Scheduled",
+            message: `${vesselFormData.vesselName} has been scheduled for ${formattedDate} by ${userFullName || userName || 'System'}.`,
+            type: "scheduling",
+            priority: "medium",
+            fromUser: userFullName || userName || 'System',
+            targetRole: "all", // Visible to all roles
+            status: "active"
+          });
         } catch (excelError) {
           // Don't throw - vessel is already added locally
         }
@@ -785,6 +834,28 @@ const Scheduling = () => {
         // Save to local storage
         saveVesselEntriesToLocalStorage(updatedEntries);
         return updatedEntries;
+      });
+      
+      // Refresh upcoming scheduled vessels after successful deletion
+      // Add a small delay to ensure Excel file is written
+      setTimeout(() => {
+        loadUpcomingScheduledVessels();
+      }, 500);
+      
+      // Create notification for all users
+      const formattedDate = date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      notificationService.addNotification({
+        title: "Vessel Schedule Removed",
+        message: `${vesselToDelete.vesselName} has been removed from the schedule for ${formattedDate} by ${userFullName || userName || 'System'}.`,
+        type: "scheduling",
+        priority: "medium",
+        fromUser: userFullName || userName || 'System',
+        targetRole: "all", // Visible to all roles
+        status: "active"
       });
       
       alert('Vessel entry deleted successfully!');

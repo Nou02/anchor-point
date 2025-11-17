@@ -601,7 +601,7 @@ const AnalyticsContent = ({ refreshData }) => {
                   {vessel.name}
                 </div>
                 <div className="analytics-vessel-operations">
-                  {vessel.count} scheduled operations
+                  {vessel.count} operations
                 </div>
               </div>
 
@@ -611,11 +611,6 @@ const AnalyticsContent = ({ refreshData }) => {
               </div>
             </div>
           ))}
-          {topVesselsNote && (
-            <div className="analytics-vessel-note">
-              {topVesselsNote}
-            </div>
-          )}
         </div>
       </div>
 
