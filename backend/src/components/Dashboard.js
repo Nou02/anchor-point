@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase/config';
 import { signOut } from 'firebase/auth';
+import { getTabUser, clearTabUser, setTabUser } from '../utils/tabAuth';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -10,10 +11,23 @@ const Dashboard = () => {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
+        setTabUser(user);
         setUser(user);
       } else {
-        // Redirect to login if not authenticated
-        window.location.href = '/';
+        // Check if this tab has a stored user
+        const tabUser = getTabUser();
+        if (!tabUser) {
+          // Redirect to login if not authenticated
+          window.location.href = '/';
+        } else {
+          // This tab has a session, maintain it
+          setUser({
+            uid: tabUser.uid,
+            email: tabUser.email,
+            displayName: tabUser.displayName,
+            _tabSession: true
+          });
+        }
       }
       setLoading(false);
     });
@@ -23,7 +37,17 @@ const Dashboard = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      // Get tab user BEFORE clearing
+      const tabUser = getTabUser();
+      const currentUser = auth.currentUser;
+      
+      // Only sign out from Firebase if this tab owns the Firebase session
+      if (tabUser && currentUser && tabUser.uid === currentUser.uid) {
+        await signOut(auth);
+      }
+      
+      // Clear this tab's user session
+      clearTabUser();
       window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);

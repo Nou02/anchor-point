@@ -13,16 +13,31 @@ import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebas
 import { db } from '../firebase/config';
 import notificationService from '../services/notificationService';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
+import { getTabUser, clearTabUser } from '../utils/tabAuth';
 // Using dynamic import for xlsx to handle potential module resolution issues
 let XLSX;
 
 const Homepage = () => {
-  // Logout handler
+  // Logout handler - only clears this tab's session, doesn't affect other tabs
   const handleLogout = async () => {
     try {
+      // Get tab user BEFORE clearing
+      const tabUser = getTabUser();
+      
+      // Check if this tab's user is the current Firebase user
       const { getAuth, signOut } = await import('firebase/auth');
       const auth = getAuth();
-      await signOut(auth);
+      const currentUser = auth.currentUser;
+      
+      // Only sign out from Firebase if this tab owns the Firebase session
+      if (tabUser && currentUser && tabUser.uid === currentUser.uid) {
+        // This tab owns the Firebase session, sign out
+        await signOut(auth);
+      }
+      
+      // Clear this tab's user session (tab-specific, won't affect other tabs)
+      clearTabUser();
+      
       window.location.href = '/login'; // Redirect to login page
     } catch (err) {
       alert('Logout failed: ' + err.message);
