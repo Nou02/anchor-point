@@ -161,10 +161,10 @@ class NotificationService {
       ...notification
     };
     
-    // For payroll and scheduling notifications, save to Firestore and let the listener handle adding to local array
+    // For payroll, scheduling, and storage notifications, save to Firestore and let the listener handle adding to local array
     // This prevents duplicates from being added locally and then again from Firestore
-    // Scheduling notifications need Firestore to sync across browsers in real-time
-    if (notification.type === 'payroll' || notification.type === 'scheduling') {
+    // These notifications need Firestore to sync across browsers in real-time
+    if (notification.type === 'payroll' || notification.type === 'scheduling' || notification.type === 'storage') {
       try {
         const docRef = await addDoc(collection(db, 'notifications'), {
           ...newNotification,
@@ -207,9 +207,9 @@ class NotificationService {
           });
         });
         
-        // For payroll and scheduling notifications, use only Firestore (remove local ones)
+        // For payroll, scheduling, and storage notifications, use only Firestore (remove local ones)
         // For other notifications, keep local ones
-        const localNonSync = this.notifications.filter(n => n.type !== 'payroll' && n.type !== 'scheduling');
+        const localNonSync = this.notifications.filter(n => n.type !== 'payroll' && n.type !== 'scheduling' && n.type !== 'storage');
         
         // Combine Firestore notifications with local non-sync notifications
         const merged = [...firestoreNotifications, ...localNonSync];
@@ -234,6 +234,11 @@ class NotificationService {
             const notificationId = n.id || Date.now() + Math.random();
             const timestamp = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp || 0).getTime();
             key = `scheduling_${notificationId}_${timestamp}`;
+          } else if (n.type === 'storage') {
+            // For storage notifications, use ID and timestamp to make each unique
+            const notificationId = n.id || Date.now() + Math.random();
+            const timestamp = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp || 0).getTime();
+            key = `storage_${notificationId}_${timestamp}`;
           } else if (n.type === 'weather') {
             // For weather, only one should exist
             key = 'weather';
@@ -246,9 +251,9 @@ class NotificationService {
           if (!seen.has(key)) {
             seen.set(key, n);
           } else {
-            // We found a duplicate - keep the most recent one (only for non-payroll/scheduling types)
-            // For payroll and scheduling, each notification should be unique due to ID/timestamp in key
-            if (n.type !== 'payroll' && n.type !== 'scheduling') {
+            // We found a duplicate - keep the most recent one (only for non-payroll/scheduling/storage types)
+            // For payroll, scheduling, and storage, each notification should be unique due to ID/timestamp in key
+            if (n.type !== 'payroll' && n.type !== 'scheduling' && n.type !== 'storage') {
               const existing = seen.get(key);
               const existingTime = existing.timestamp instanceof Date ? existing.timestamp.getTime() : new Date(existing.timestamp).getTime();
               const newTime = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp).getTime();
@@ -321,9 +326,9 @@ class NotificationService {
         });
       });
       
-      // For payroll and scheduling notifications, use only Firestore (remove local ones)
+      // For payroll, scheduling, and storage notifications, use only Firestore (remove local ones)
       // For other notifications, keep local ones
-      const localNonSync = this.notifications.filter(n => n.type !== 'payroll' && n.type !== 'scheduling');
+      const localNonSync = this.notifications.filter(n => n.type !== 'payroll' && n.type !== 'scheduling' && n.type !== 'storage');
       const merged = [...firestoreNotifications, ...localNonSync];
       
       // Remove duplicates using the same logic as the listener
@@ -342,6 +347,11 @@ class NotificationService {
           const notificationId = n.id || Date.now() + Math.random();
           const timestamp = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp || 0).getTime();
           key = `scheduling_${notificationId}_${timestamp}`;
+        } else if (n.type === 'storage') {
+          // For storage notifications, use ID and timestamp to make each unique
+          const notificationId = n.id || Date.now() + Math.random();
+          const timestamp = n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp || 0).getTime();
+          key = `storage_${notificationId}_${timestamp}`;
         } else if (n.type === 'weather') {
           key = 'weather';
         } else {
@@ -349,10 +359,10 @@ class NotificationService {
         }
         
         // If we haven't seen this key, add it
-        // For payroll and scheduling, each notification should be unique due to ID/timestamp in key, so just add it
+        // For payroll, scheduling, and storage, each notification should be unique due to ID/timestamp in key, so just add it
         if (!seen.has(key)) {
           seen.set(key, n);
-        } else if (n.type !== 'payroll' && n.type !== 'scheduling') {
+        } else if (n.type !== 'payroll' && n.type !== 'scheduling' && n.type !== 'storage') {
           // Only apply duplicate logic for non-payroll types
           if (n.fromFirestore && !seen.get(key).fromFirestore) {
             // Replace local with Firestore version
@@ -367,7 +377,7 @@ class NotificationService {
             }
           }
         } else {
-          // For payroll and scheduling, if key exists, it's the exact same notification (same ID) - keep existing
+          // For payroll, scheduling, and storage, if key exists, it's the exact same notification (same ID) - keep existing
           console.log(`${n.type} notification with same ID already exists:`, n.id);
         }
       });
@@ -392,8 +402,8 @@ class NotificationService {
     if (notification) {
       notification.read = true;
       
-      // Update in Firestore if it's a payroll or scheduling notification
-      if ((notification.type === 'payroll' || notification.type === 'scheduling') && typeof notificationId === 'string' && notificationId.length > 10) {
+      // Update in Firestore if it's a payroll, scheduling, or storage notification
+      if ((notification.type === 'payroll' || notification.type === 'scheduling' || notification.type === 'storage') && typeof notificationId === 'string' && notificationId.length > 10) {
         try {
           await updateDoc(doc(db, 'notifications', notificationId), {
             read: true

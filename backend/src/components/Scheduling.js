@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Scheduling.css';
-import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, doc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import '../firebase/config';
 import { getWeatherForecast } from '../services/weatherService';
@@ -457,6 +457,9 @@ const Scheduling = () => {
         // We always want to use the original vessel name from when we first started editing
         // This ensures we can find the entry in Excel even after multiple edits
         
+        // Trigger vessel update in Firestore to notify other browsers
+        await triggerVesselUpdate();
+        
         alert('Vessel entry updated successfully!');
       } else {
         // Create new vessel entry for Excel
@@ -496,11 +499,8 @@ const Scheduling = () => {
         // Try to save to Excel (but don't let it block the UI update)
         try {
           await excelAPI.addVesselEntry(excelData);
-          // Refresh upcoming scheduled vessels after successful save
-          // Add a small delay to ensure Excel file is written
-          setTimeout(() => {
-            loadUpcomingScheduledVessels();
-          }, 500);
+          // Trigger vessel update in Firestore to notify other browsers
+          await triggerVesselUpdate();
           
           // Create notification for all users
           const formattedDate = clickedDate.toLocaleDateString('en-US', { 
@@ -644,6 +644,19 @@ const Scheduling = () => {
       }
     } catch (error) {
       // Error loading upcoming scheduled vessels
+    }
+  };
+
+  // Trigger vessel update in Firestore (to notify other browsers)
+  const triggerVesselUpdate = async () => {
+    try {
+      const updateDocRef = doc(db, 'system', 'vesselUpdates');
+      await setDoc(updateDocRef, {
+        lastUpdated: Timestamp.now(),
+        timestamp: new Date().toISOString()
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error triggering vessel update:', error);
     }
   };
 
@@ -836,11 +849,8 @@ const Scheduling = () => {
         return updatedEntries;
       });
       
-      // Refresh upcoming scheduled vessels after successful deletion
-      // Add a small delay to ensure Excel file is written
-      setTimeout(() => {
-        loadUpcomingScheduledVessels();
-      }, 500);
+      // Trigger vessel update in Firestore to notify other browsers
+      await triggerVesselUpdate();
       
       // Create notification for all users
       const formattedDate = date.toLocaleDateString('en-US', { 
@@ -1126,6 +1136,25 @@ const Scheduling = () => {
     loadVesselEntriesFromExcel();
     loadRecentFinishedVessels();
     loadUpcomingScheduledVessels();
+  }, []);
+
+  // Set up real-time listener for vessel updates
+  useEffect(() => {
+    const updateDocRef = doc(db, 'system', 'vesselUpdates');
+    
+    // Listen for changes to vessel updates
+    const unsubscribe = onSnapshot(updateDocRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        // Vessel data was updated, reload it
+        loadVesselEntriesFromExcel();
+        loadRecentFinishedVessels();
+        loadUpcomingScheduledVessels();
+      }
+    }, (error) => {
+      console.error('Error listening to vessel updates:', error);
+    });
+
+    return () => unsubscribe();
   }, []);
 
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, addDoc, query, getDocs, getDoc, updateDoc, doc, setDoc, deleteDoc, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, getDocs, getDoc, updateDoc, doc, setDoc, deleteDoc, orderBy, onSnapshot } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import './Storage.css';
 import notificationService from '../services/notificationService';
@@ -45,33 +45,30 @@ const Storage = () => {
     return () => unsubscribe();
   }, []);
 
-  // Load fuel inventory from Firestore
+  // Load fuel inventory from Firestore with real-time updates
   useEffect(() => {
-    const loadFuelInventory = async () => {
-      if (!user) return;
-      
-      try {
-        const db = getFirestore();
-        const q = query(collection(db, 'fuelInventory'), orderBy('lastUpdated', 'desc'));
-        const querySnapshot = await getDocs(q);
-        
-        const inventory = [];
-        querySnapshot.forEach((doc) => {
-          inventory.push({
-            id: doc.id,
-            ...doc.data()
-          });
+    if (!user) return;
+    
+    const db = getFirestore();
+    const q = query(collection(db, 'fuelInventory'), orderBy('lastUpdated', 'desc'));
+    
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const inventory = [];
+      querySnapshot.forEach((doc) => {
+        inventory.push({
+          id: doc.id,
+          ...doc.data()
         });
-        
-        setFuelInventory(inventory);
-      } catch (error) {
-        console.error('Error loading fuel inventory:', error);
-      }
-    };
+      });
+      
+      setFuelInventory(inventory);
+    }, (error) => {
+      console.error('Error loading fuel inventory:', error);
+    });
 
-    if (user) {
-      loadFuelInventory();
-    }
+    // Cleanup listener on unmount
+    return () => unsubscribe();
   }, [user]);
 
   // Handle form input changes
@@ -142,17 +139,7 @@ const Storage = () => {
         setSaveMessage('Fuel stock added successfully!');
       }
 
-      // Reload inventory
-      const q = query(collection(db, 'fuelInventory'), orderBy('lastUpdated', 'desc'));
-      const querySnapshot = await getDocs(q);
-      const inventory = [];
-      querySnapshot.forEach((doc) => {
-        inventory.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-      setFuelInventory(inventory);
+      // Note: Real-time listener will automatically update the inventory
 
       // Send notification to all roles about fuel storage update
       const action = editingFuel ? 'updated' : 'added';
@@ -230,17 +217,7 @@ const Storage = () => {
       const db = getFirestore();
       await deleteDoc(doc(db, 'fuelInventory', fuelId));
       
-      // Reload inventory
-      const q = query(collection(db, 'fuelInventory'), orderBy('lastUpdated', 'desc'));
-      const querySnapshot = await getDocs(q);
-      const inventory = [];
-      querySnapshot.forEach((doc) => {
-        inventory.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-      setFuelInventory(inventory);
+      // Note: Real-time listener will automatically update the inventory
       
       setSaveMessage('Fuel stock deleted successfully!');
       setTimeout(() => setSaveMessage(''), 3000);
