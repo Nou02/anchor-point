@@ -373,6 +373,11 @@ const Scheduling = () => {
             vesselNameForExcel,
             excelUpdateData
           );
+          // Refresh upcoming scheduled vessels after successful update
+          // Add a small delay to ensure Excel file is written
+          setTimeout(() => {
+            loadUpcomingScheduledVessels();
+          }, 500);
         } catch (excelError) {
           // If update fails, try with current vessel name as fallback
           if (vesselNameForExcel !== originalVessel.vesselName) {
@@ -382,6 +387,10 @@ const Scheduling = () => {
               originalVessel.vesselName,
               excelUpdateData
             );
+            // Refresh upcoming scheduled vessels after successful fallback update
+            setTimeout(() => {
+              loadUpcomingScheduledVessels();
+            }, 500);
           } else {
             throw excelError;
           }
@@ -454,6 +463,11 @@ const Scheduling = () => {
         // Try to save to Excel (but don't let it block the UI update)
         try {
           await excelAPI.addVesselEntry(excelData);
+          // Refresh upcoming scheduled vessels after successful save
+          // Add a small delay to ensure Excel file is written
+          setTimeout(() => {
+            loadUpcomingScheduledVessels();
+          }, 500);
         } catch (excelError) {
           // Don't throw - vessel is already added locally
         }
