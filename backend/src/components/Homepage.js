@@ -453,9 +453,17 @@ const Homepage = () => {
       
       const normalized = service.trim().toUpperCase();
       
-      // Standardize mooring buoy variations
-      if (normalized.includes('MOORING BUOY')) {
-        if (normalized.includes('SHIFTING')) {
+      // Filter out N/A values
+      if (normalized === 'N/A' || normalized === 'NA') {
+        return '';
+      }
+      
+      // Fix common typos: BOUY -> BUOY
+      const fixed = normalized.replace(/BOUY/g, 'BUOY');
+      
+      // Standardize mooring buoy variations (after fixing BOUY typo)
+      if (fixed.includes('MOORING BUOY')) {
+        if (fixed.includes('SHIFTING')) {
           return 'W/MOORING BUOY & SHIFTING';
         } else {
           return 'W/MOORING BUOY';
@@ -522,14 +530,18 @@ const Homepage = () => {
       if (item.service && item.service.trim()) {
         // Service is already normalized in parsed data
         const normalizedService = item.service;
-        serviceCount.set(normalizedService, (serviceCount.get(normalizedService) || 0) + 1);
         
-        const monthKey = m;
-        if (!servicesByMonth.has(monthKey)) {
-          servicesByMonth.set(monthKey, new Map());
+        // Skip N/A values
+        if (normalizedService.toUpperCase() !== 'N/A' && normalizedService.toUpperCase() !== 'NA') {
+          serviceCount.set(normalizedService, (serviceCount.get(normalizedService) || 0) + 1);
+          
+          const monthKey = m;
+          if (!servicesByMonth.has(monthKey)) {
+            servicesByMonth.set(monthKey, new Map());
+          }
+          const monthServices = servicesByMonth.get(monthKey);
+          monthServices.set(normalizedService, (monthServices.get(normalizedService) || 0) + 1);
         }
-        const monthServices = servicesByMonth.get(monthKey);
-        monthServices.set(normalizedService, (monthServices.get(normalizedService) || 0) + 1);
       }
       
       if (item.vessel) {

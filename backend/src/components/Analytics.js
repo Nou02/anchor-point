@@ -203,9 +203,17 @@ const AnalyticsContent = ({ refreshData }) => {
       
       const normalized = service.trim().toUpperCase();
       
-      // Standardize mooring buoy variations
-      if (normalized.includes('MOORING BUOY')) {
-        if (normalized.includes('SHIFTING')) {
+      // Filter out N/A values
+      if (normalized === 'N/A' || normalized === 'NA') {
+        return '';
+      }
+      
+      // Fix common typos: BOUY -> BUOY
+      const fixed = normalized.replace(/BOUY/g, 'BUOY');
+      
+      // Standardize mooring buoy variations (after fixing BOUY typo)
+      if (fixed.includes('MOORING BUOY')) {
+        if (fixed.includes('SHIFTING')) {
           return 'W/MOORING BUOY & SHIFTING';
         } else {
           return 'W/MOORING BUOY';
@@ -280,10 +288,14 @@ const AnalyticsContent = ({ refreshData }) => {
       if (item.service) {
         // Service is already normalized in parsed data
         const normalizedService = item.service;
-        serviceCount.set(normalizedService, (serviceCount.get(normalizedService) || 0) + 1);
         
-        // Track services by month
-        if (normalizedService && normalizedService.trim()) {
+        // Skip N/A values
+        if (normalizedService && normalizedService.trim() && 
+            normalizedService.toUpperCase() !== 'N/A' && 
+            normalizedService.toUpperCase() !== 'NA') {
+          serviceCount.set(normalizedService, (serviceCount.get(normalizedService) || 0) + 1);
+          
+          // Track services by month
           const monthKey = m;
           if (!servicesByMonth.has(monthKey)) {
             servicesByMonth.set(monthKey, new Map());
@@ -318,7 +330,11 @@ const AnalyticsContent = ({ refreshData }) => {
     const byMonth = Array.from(byMonthMap.entries())
       .sort((a,b) => a[0] - b[0])
       .map(([month, count]) => ({ month: monthNames[month], count }));
-    const topServices = Array.from(serviceCount.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([name,count])=>({name,count}));
+    const topServices = Array.from(serviceCount.entries())
+      .filter(([name]) => name && name.trim() && name.toUpperCase() !== 'N/A' && name.toUpperCase() !== 'NA')
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,5)
+      .map(([name,count])=>({name,count}));
     
     // Sort vessels by count (highest first) to match Homepage
     const topVessels = Array.from(vesselStats.entries())
@@ -415,6 +431,27 @@ const AnalyticsContent = ({ refreshData }) => {
     }
 
     return `Operations peaked in ${maxEntry.year} and eased in ${last.year}.`;
+  }, [stats]);
+
+  const topVesselsNote = useMemo(() => {
+    if (!stats || !stats.topVessels || stats.topVessels.length === 0) return '';
+    
+    const top3 = stats.topVessels.slice(0, 3);
+    if (top3.length === 0) return '';
+    
+    if (top3.length === 1) {
+      return `${top3[0].name} leads with ${top3[0].count} scheduled operations.`;
+    }
+    
+    if (top3.length === 2) {
+      return `${top3[0].name} leads with ${top3[0].count} operations, followed by ${top3[1].name} with ${top3[1].count} scheduled operations.`;
+    }
+    
+    // Top 3 vessels
+    const totalTop3 = top3.reduce((sum, v) => sum + v.count, 0);
+    const percentage = Math.round((totalTop3 / stats.total) * 100);
+    
+    return `${top3[0].name} leads with ${top3[0].count} operations, ${top3[1].name} has ${top3[1].count} scheduled operations, and ${top3[2].name} follows with ${top3[2].count} operations. Together, they account for ${percentage}% of total operations.`;
   }, [stats]);
 
   if (loading) return <div className="analytics-loading">Loading analytics…</div>;
@@ -564,7 +601,7 @@ const AnalyticsContent = ({ refreshData }) => {
                   {vessel.name}
                 </div>
                 <div className="analytics-vessel-operations">
-                  {vessel.count} operations
+                  {vessel.count} scheduled operations
                 </div>
               </div>
 
@@ -574,6 +611,11 @@ const AnalyticsContent = ({ refreshData }) => {
               </div>
             </div>
           ))}
+          {topVesselsNote && (
+            <div className="analytics-vessel-note">
+              {topVesselsNote}
+            </div>
+          )}
         </div>
       </div>
 
