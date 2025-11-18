@@ -24,12 +24,9 @@ const Homepage = () => {
       // Clear this tab's session
       clearTabUser();
       
-      // Only sign out from Firebase if this tab owns the Firebase session
-      if (isCurrentTabOwner()) {
-        const { getAuth, signOut } = await import('firebase/auth');
-        const auth = getAuth();
-        await signOut(auth);
-      }
+      // Don't call Firebase signOut() for tab-specific logout
+      // This prevents other tabs from being logged out
+      // Just clear sessionStorage and redirect
       
       // Redirect to landing page
       window.location.href = '/';

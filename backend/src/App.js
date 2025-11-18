@@ -50,13 +50,14 @@ function App() {
         }
       } else {
         // Firebase signed out
-        // Only clear this tab's session if it doesn't have a stored session
-        // or if this tab owns the Firebase session
-        if (!currentTabUser || isCurrentTabOwner()) {
+        // If this tab has a stored session, keep it (ignore Firebase sign-out from other tabs)
+        // Only clear if this tab doesn't have a stored session
+        if (!currentTabUser) {
           setUser(null);
           setPage('landing');
         } else {
-          // Keep showing this tab's user even though Firebase is signed out
+          // This tab has its own session, keep it even though Firebase is signed out
+          // This allows multiple tabs to have different users
           setUser(currentTabUser);
           setPage('home');
         }

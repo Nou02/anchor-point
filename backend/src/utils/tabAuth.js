@@ -47,12 +47,8 @@ export const getTabUser = () => {
  */
 export const clearTabUser = () => {
   sessionStorage.removeItem('tabUser');
-  // Only clear Firebase session owner if this tab owns it
-  const ownerTabId = localStorage.getItem('firebaseSessionOwner');
-  const currentTabId = getTabId();
-  if (ownerTabId === currentTabId) {
-    localStorage.removeItem('firebaseSessionOwner');
-  }
+  // Don't clear Firebase session owner - let other tabs keep their sessions
+  // Each tab manages its own session independently
 };
 
 /**
@@ -70,4 +66,5 @@ export const isCurrentTabOwner = () => {
 export const hasTabSession = () => {
   return !!getTabUser();
 };
+
 
