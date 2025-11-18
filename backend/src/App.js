@@ -16,79 +16,61 @@ function App() {
     // Initialize tab ID
     getTabId();
     
-    // Check if this tab has a stored user session
-    const tabUser = getTabUser();
-    if (tabUser) {
-      // This tab has a user session, show home page
-      setUser(tabUser);
-      setPage('home');
+    // Check sessionStorage first - this is the source of truth for this tab
+    const checkTabSession = () => {
+      const tabUser = getTabUser();
+      if (tabUser) {
+        // This tab has a user session, show home page
+        setUser(tabUser);
+        setPage('home');
+        return true; // Has session
+      }
+      return false; // No session
+    };
+    
+    // Check on mount
+    const hasSession = checkTabSession();
+    
+    if (hasSession) {
+      // Tab has session, don't set up Firebase listener at all
+      // sessionStorage is the source of truth - completely ignore Firebase
+      return;
     }
 
+    // Only set up Firebase listener if this tab doesn't have a session
+    // This listener is ONLY for detecting when a user logs in through LoginSignUp
+    // It should NOT affect tabs that already have a session
     const auth = getAuth();
-    let isInitialLoad = true;
     
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      // CRITICAL: ALWAYS check sessionStorage first on EVERY Firebase auth change
+      // If this tab has a session, completely ignore Firebase and return immediately
       const currentTabUser = getTabUser();
-      const tabHasExplicitLogin = hasExplicitLogin();
-      
-      if (firebaseUser) {
-        // Only accept Firebase user if:
-        // 1. This tab has explicitly logged in (not just received a change from another tab)
-        // 2. OR this tab's stored user matches the Firebase user (same user logging in again)
-        // 3. OR this is the initial load and tab has no user (first time opening - new tab inherits login)
-        if (tabHasExplicitLogin) {
-          // This tab explicitly logged in, accept the Firebase user
-          setTabUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL
-          }, true);
-          setUser(firebaseUser);
-          setPage('home');
-        } else if (currentTabUser && currentTabUser.uid === firebaseUser.uid) {
-          // Same user, just update the stored user info
-          setTabUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL
-          }, false);
-          setUser(firebaseUser);
-          setPage('home');
-        } else if (isInitialLoad && !currentTabUser) {
-          // Initial load with no stored user - new tab inherits the Firebase login
-          setTabUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL
-          }, false);
-          setUser(firebaseUser);
-          setPage('home');
-        } else if (currentTabUser) {
-          // This tab has a different user stored, keep it (ignore Firebase change from another tab)
-          setUser(currentTabUser);
-          setPage('home');
-        }
-        // If tab has no user and this is not initial load, ignore the Firebase change
-      } else {
-        // Firebase signed out
-        // If this tab has a stored session, keep it (ignore Firebase sign-out from other tabs)
-        // Only clear if this tab doesn't have a stored session
-        if (!currentTabUser) {
-          setUser(null);
-          setPage('landing');
-        } else {
-          // This tab has its own session, keep it even though Firebase is signed out
-          // This allows multiple tabs to have different users
-          setUser(currentTabUser);
-          setPage('home');
-        }
+      if (currentTabUser) {
+        // This tab has its own session, completely ignore Firebase auth changes
+        // This prevents other tabs' logins/logouts from affecting this tab
+        // Update state to ensure we're showing the correct user
+        setUser(currentTabUser);
+        setPage('home');
+        return;
       }
       
-      isInitialLoad = false;
+      // Only process Firebase auth if this tab has no session in sessionStorage
+      // This means the user is either:
+      // 1. On the landing page (no session)
+      // 2. Just logged in through LoginSignUp (which sets sessionStorage)
+      if (firebaseUser) {
+        // Firebase user exists, but we don't have it in sessionStorage yet
+        // This happens when LoginSignUp component calls signInWithEmailAndPassword
+        // The LoginSignUp component will set sessionStorage, so we don't need to do anything here
+        // Just wait for the page to refresh or the state to update
+      } else {
+        // Firebase is signed out and this tab has no session
+        setUser(null);
+        setPage('landing');
+      }
     });
+    
     return () => unsubscribe();
   }, []);
 
@@ -98,13 +80,23 @@ function App() {
 
   const handleLogin = (loginData) => {
     // Authentication is handled in LoginSignUp component
-    // This will be called after successful login
+    // LoginSignUp has already set sessionStorage via setTabUser()
+    // Check sessionStorage to get the user and update state
+    const tabUser = getTabUser();
+    if (tabUser) {
+      setUser(tabUser);
+    }
     setPage('home');
   };
 
   const handleSignUp = (signUpData) => {
     // Authentication is handled in LoginSignUp component
-    // This will be called after successful signup
+    // LoginSignUp has already set sessionStorage via setTabUser()
+    // Check sessionStorage to get the user and update state
+    const tabUser = getTabUser();
+    if (tabUser) {
+      setUser(tabUser);
+    }
     setPage('home');
   };
 
