@@ -15,18 +15,31 @@ export const getTabId = () => {
 
 /**
  * Store user info for this tab
+ * @param {Object} user - User object to store
+ * @param {boolean} isExplicitLogin - Whether this is an explicit login from this tab
  */
-export const setTabUser = (user) => {
+export const setTabUser = (user, isExplicitLogin = false) => {
   const tabId = getTabId();
   sessionStorage.setItem('tabUser', JSON.stringify({
     ...user,
     tabId: tabId,
     timestamp: Date.now()
   }));
+  // Mark that this tab has explicitly logged in (not just received a Firebase change)
+  if (isExplicitLogin) {
+    sessionStorage.setItem('tabHasExplicitLogin', 'true');
+  }
   // Also store which tab owns the Firebase session
   if (!localStorage.getItem('firebaseSessionOwner')) {
     localStorage.setItem('firebaseSessionOwner', tabId);
   }
+};
+
+/**
+ * Check if this tab has explicitly logged in (not just received a Firebase auth change)
+ */
+export const hasExplicitLogin = () => {
+  return sessionStorage.getItem('tabHasExplicitLogin') === 'true';
 };
 
 /**
@@ -47,6 +60,7 @@ export const getTabUser = () => {
  */
 export const clearTabUser = () => {
   sessionStorage.removeItem('tabUser');
+  sessionStorage.removeItem('tabHasExplicitLogin');
   // Don't clear Firebase session owner - let other tabs keep their sessions
   // Each tab manages its own session independently
 };

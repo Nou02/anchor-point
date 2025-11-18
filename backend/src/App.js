@@ -6,7 +6,7 @@ import Homepage from './components/Homepage';
 import LoginSignUp from './components/LoginSignUp';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import './firebase/config';
-import { getTabUser, setTabUser, getTabId, isCurrentTabOwner } from './utils/tabAuth';
+import { getTabUser, setTabUser, getTabId, isCurrentTabOwner, hasExplicitLogin } from './utils/tabAuth';
 
 function App() {
   const [page, setPage] = useState('landing'); // 'landing', 'auth', 'home'
@@ -25,29 +25,53 @@ function App() {
     }
 
     const auth = getAuth();
+    let isInitialLoad = true;
+    
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       const currentTabUser = getTabUser();
+      const tabHasExplicitLogin = hasExplicitLogin();
       
       if (firebaseUser) {
-        // If this tab doesn't have a stored user, or if Firebase user matches this tab's user
-        // Store/update user info in sessionStorage for this tab
-        if (!currentTabUser || currentTabUser.uid === firebaseUser.uid) {
+        // Only accept Firebase user if:
+        // 1. This tab has explicitly logged in (not just received a change from another tab)
+        // 2. OR this tab's stored user matches the Firebase user (same user logging in again)
+        // 3. OR this is the initial load and tab has no user (first time opening - new tab inherits login)
+        if (tabHasExplicitLogin) {
+          // This tab explicitly logged in, accept the Firebase user
           setTabUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             displayName: firebaseUser.displayName,
             photoURL: firebaseUser.photoURL
-          });
+          }, true);
           setUser(firebaseUser);
           setPage('home');
-        } else {
-          // Firebase user changed but this tab has a different user stored
-          // Keep showing this tab's user (don't change)
-          if (currentTabUser) {
-            setUser(currentTabUser);
-            setPage('home');
-          }
+        } else if (currentTabUser && currentTabUser.uid === firebaseUser.uid) {
+          // Same user, just update the stored user info
+          setTabUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL
+          }, false);
+          setUser(firebaseUser);
+          setPage('home');
+        } else if (isInitialLoad && !currentTabUser) {
+          // Initial load with no stored user - new tab inherits the Firebase login
+          setTabUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL
+          }, false);
+          setUser(firebaseUser);
+          setPage('home');
+        } else if (currentTabUser) {
+          // This tab has a different user stored, keep it (ignore Firebase change from another tab)
+          setUser(currentTabUser);
+          setPage('home');
         }
+        // If tab has no user and this is not initial load, ignore the Firebase change
       } else {
         // Firebase signed out
         // If this tab has a stored session, keep it (ignore Firebase sign-out from other tabs)
@@ -62,6 +86,8 @@ function App() {
           setPage('home');
         }
       }
+      
+      isInitialLoad = false;
     });
     return () => unsubscribe();
   }, []);

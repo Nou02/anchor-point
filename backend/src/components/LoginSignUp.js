@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { setTabUser } from '../utils/tabAuth';
 import './LoginSignUp.css';
 
 const LoginSignUp = ({ onLogin, onSignUp }) => {
@@ -27,7 +28,17 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Mark this as an explicit login from this tab
+        setTabUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        }, true); // true = explicit login
+        
         onLogin({ email, password });
       } else {
         if (password !== confirmPassword) {
@@ -35,6 +46,14 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
         }
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+        
+        // Mark this as an explicit login from this tab
+        setTabUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        }, true); // true = explicit login
         
         // Save user data to Firestore
         const db = getFirestore();
