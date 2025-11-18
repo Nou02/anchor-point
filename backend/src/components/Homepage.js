@@ -12,18 +12,27 @@ import { getAuth } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import notificationService from '../services/notificationService';
+import { clearTabUser, isCurrentTabOwner, getTabUser } from '../utils/tabAuth';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 // Using dynamic import for xlsx to handle potential module resolution issues
 let XLSX;
 
 const Homepage = () => {
-  // Logout handler
+  // Logout handler - tab-specific
   const handleLogout = async () => {
     try {
-      const { getAuth, signOut } = await import('firebase/auth');
-      const auth = getAuth();
-      await signOut(auth);
-      window.location.href = '/login'; // Redirect to login page
+      // Clear this tab's session
+      clearTabUser();
+      
+      // Only sign out from Firebase if this tab owns the Firebase session
+      if (isCurrentTabOwner()) {
+        const { getAuth, signOut } = await import('firebase/auth');
+        const auth = getAuth();
+        await signOut(auth);
+      }
+      
+      // Redirect to landing page
+      window.location.href = '/';
     } catch (err) {
       alert('Logout failed: ' + err.message);
     }
@@ -65,27 +74,27 @@ const Homepage = () => {
   // Fetch user profile data and show info button for specific users
   useEffect(() => {
     const checkUser = async () => {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) {
+      // First check sessionStorage for this tab's user
+      const tabUser = getTabUser();
+      if (!tabUser) {
         setShowInfoButton(false);
         setUserProfile(null);
         return;
       }
-      
-      // Try to get user data from Firestore
+
+      // Try to get user data from Firestore using tab user's UID
       try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userDoc = await getDoc(doc(db, 'users', tabUser.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
           setUserProfile({
-            fullName: userData.fullName || user.displayName || user.email.split('@')[0],
+            fullName: userData.fullName || tabUser.displayName || tabUser.email.split('@')[0],
             role: userData.role || 'Employee',
-            email: userData.email || user.email
+            email: userData.email || tabUser.email
           });
           
           // Show info button only for Alice
-          const displayName = userData.fullName || user.displayName || '';
+          const displayName = userData.fullName || tabUser.displayName || '';
           const isAlice = displayName === 'Alice Margaretha Santos' || 
                          displayName === 'Alice' ||
                          (displayName && displayName.toLowerCase().includes('alice'));
@@ -96,9 +105,9 @@ const Homepage = () => {
         } else {
           // Fallback if no Firestore data
           setUserProfile({
-            fullName: user.displayName || user.email.split('@')[0],
+            fullName: tabUser.displayName || tabUser.email.split('@')[0],
             role: 'Employee',
-            email: user.email
+            email: tabUser.email
           });
           setShowInfoButton(false);
           setShowNotificationButton(true);
@@ -107,9 +116,9 @@ const Homepage = () => {
         console.error('Error fetching user profile:', error);
         // Fallback if error
         setUserProfile({
-          fullName: user.displayName || user.email.split('@')[0],
+          fullName: tabUser.displayName || tabUser.email.split('@')[0],
           role: 'Employee',
-          email: user.email
+          email: tabUser.email
         });
         setShowInfoButton(false);
         setShowNotificationButton(true);
