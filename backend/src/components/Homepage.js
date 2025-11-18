@@ -26,18 +26,24 @@ const Homepage = () => {
       clearTabUser();
       
       // DO NOT call Firebase signOut() - it triggers onAuthStateChanged in ALL tabs
-      // Instead, just clear sessionStorage and redirect
+      // Instead, just clear sessionStorage
+      // The App.js component has a periodic check that will detect the cleared sessionStorage
+      // and automatically redirect to the landing page
       // Other tabs will continue to work because they check sessionStorage first
       // and ignore Firebase auth state changes if they have a session
       
-      // Redirect to landing page
-      // Using window.location.href causes a full reload, which will check sessionStorage
-      // and find no user, so it will show the landing page
-      window.location.href = '/';
+      // Force a redirect by using window.location
+      // The App.js periodic check will handle the state update, but we need to trigger
+      // a re-render. Using a small delay to ensure sessionStorage is cleared first.
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     } catch (err) {
-      // Even if there's an error, clear sessionStorage and redirect
+      // Even if there's an error, clear sessionStorage
       clearTabUser();
-      window.location.href = '/';
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     }
   };
 

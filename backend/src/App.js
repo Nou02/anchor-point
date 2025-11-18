@@ -28,13 +28,27 @@ function App() {
       return false; // No session
     };
     
-    // Check on mount
+    // Check on mount - this is the PRIMARY check
     const hasSession = checkTabSession();
     
     if (hasSession) {
       // Tab has session, don't set up Firebase listener at all
       // sessionStorage is the source of truth - completely ignore Firebase
-      return;
+      // Set up a periodic check to ensure sessionStorage is still valid
+      // This protects against logout scenarios where sessionStorage is cleared
+      const intervalId = setInterval(() => {
+        // Only check this tab's sessionStorage - it's tab-specific
+        const currentTabUser = getTabUser();
+        if (!currentTabUser) {
+          // Session was cleared (e.g., by logout in this tab), redirect to landing
+          setUser(null);
+          setPage('landing');
+          clearInterval(intervalId);
+        }
+        // If session exists, keep showing home - don't update state unnecessarily
+      }, 500); // Check every 500ms for responsive logout detection
+      
+      return () => clearInterval(intervalId);
     }
 
     // Only set up Firebase listener if this tab doesn't have a session
