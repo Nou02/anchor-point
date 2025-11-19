@@ -384,18 +384,40 @@
 
 .analytics-year-fill {
   height: 100%;
-  background: linear-gradient(90deg, #17a2b8, #5bc0de);
+  background: linear-gradient(90deg, #2F3B70, #4a6fa5);
   border-radius: 6px;
 }
 
 .analytics-year-note {
-  margin-top: 12px;
-  font-size: 0.82rem;
-  color: #2F3B70;
-  background: rgba(23, 162, 184, 0.08);
-  border-radius: 6px;
-  padding: 10px 12px;
-  line-height: 1.3;
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.analytics-note-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analytics-note-label {
+  font-weight: 700;
+  color: #1e3a8a;
+  font-size: 0.9rem;
+}
+
+.analytics-note-value {
+  color: #3b82f6;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 /* Top Vessels */
@@ -592,7 +614,7 @@
 }
 
 .analytics-insight-value-peak {
-  color: #28a745;
+  color: #2F3B70;
 }
 
 .analytics-insight-value-vessel {
@@ -603,7 +625,7 @@
 
 .analytics-insight-value-service {
   font-size: 1rem;
-  color: #17a2b8;
+  color: #2F3B70;
   word-break: break-word;
 }
 
