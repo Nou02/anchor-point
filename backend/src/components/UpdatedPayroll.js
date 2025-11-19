@@ -1081,13 +1081,13 @@ const UpdatedPayroll = () => {
                 <thead>
                   <tr>
                     <th>Worker Name</th>
-                    <th>Gross Earnings</th>
+                    <th className="gross-earnings-column">Gross Earnings</th>
                     <th>SSS Deduction</th>
                     <th>PAG-IBIG Deduction</th>
                     <th>PhilHealth Deduction</th>
                     <th>Cash Advance</th>
                     <th>Total Deductions</th>
-                    <th>Net Amount</th>
+                    <th className="net-amount-column">Net Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1103,13 +1103,13 @@ const UpdatedPayroll = () => {
                     return (
                       <tr key={index}>
                         <td className="worker-name">{worker.workerName}</td>
-                        <td className="earnings">₱{grossEarnings.toLocaleString()}</td>
+                        <td className="earnings gross-earnings-column">₱{grossEarnings.toLocaleString()}</td>
                         <td className="deduction">₱{sss.toLocaleString()}</td>
                         <td className="deduction">₱{pagibig.toLocaleString()}</td>
                         <td className="deduction">₱{philhealth.toLocaleString()}</td>
                         <td className="deduction">₱{cashAdvance.toLocaleString()}</td>
                         <td className="total-deductions">₱{totalDeductions.toLocaleString()}</td>
-                        <td className={`net-amount ${netAmount < 0 ? 'negative' : ''}`}>
+                        <td className={`net-amount net-amount-column ${netAmount < 0 ? 'negative' : ''}`}>
                           ₱{netAmount.toLocaleString()}
                         </td>
                       </tr>
@@ -1117,13 +1117,13 @@ const UpdatedPayroll = () => {
                   })}
                   <tr className="grand-total-row">
                     <td><strong>GRAND TOTAL</strong></td>
-                    <td><strong>₱{data.totals.totalEarnings.toLocaleString()}</strong></td>
+                    <td className="gross-earnings-column"><strong>₱{data.totals.totalEarnings.toLocaleString()}</strong></td>
                     <td><strong>₱{data.totals.sss.toLocaleString()}</strong></td>
                     <td><strong>₱{data.totals.pagibig.toLocaleString()}</strong></td>
                     <td><strong>₱{data.totals.philhealth.toLocaleString()}</strong></td>
                     <td><strong>₱{data.totals.cashAdvance.toLocaleString()}</strong></td>
                     <td><strong>₱{(data.totals.sss + data.totals.pagibig + data.totals.philhealth + data.totals.cashAdvance).toLocaleString()}</strong></td>
-                    <td><strong>₱{data.totals.netTotal.toLocaleString()}</strong></td>
+                    <td className="net-amount-column"><strong>₱{data.totals.netTotal.toLocaleString()}</strong></td>
                   </tr>
                 </tbody>
               </table>

@@ -1295,17 +1295,12 @@ return (
                     return (
                       <div key={index} className="upcoming-vessel-card">
                         <div className="vessel-info">
-                          <div className="vessel-name-row">
-                            <span className="vessel-name">{vessel.vessel || 'N/A'}</span>
-                            <span className="control-number-label">Control No: {vessel.controlId || 'N/A'}</span>
-                          </div>
-                          <div className="vessel-date-row">
-                            <span className="vessel-date">{formattedDate}</span>
-                            <span className="voyage-number-label">Voyage No: {vessel.voyage || 'N/A'}</span>
-                          </div>
+                          <div className="vessel-name">{vessel.vessel || 'N/A'}</div>
+                          <div className="control-number-label">Control No: {vessel.controlId || 'N/A'}</div>
+                          <div className="vessel-date">{formattedDate}</div>
                         </div>
                         <div className="vessel-status">
-                          <span className="status-badge upcoming">Upcoming</span>
+                          <span className="status-badge upcoming">UPCOMING</span>
                         </div>
                       </div>
                     );

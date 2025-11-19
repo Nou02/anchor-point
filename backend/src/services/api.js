@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getTabUser, clearTabUser } from '../utils/tabAuth';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
@@ -13,7 +14,8 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
+    // Use sessionStorage for tab-specific token storage
+    const token = sessionStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -29,9 +31,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
+      // Handle unauthorized access - clear tab-specific storage
+      sessionStorage.removeItem('authToken');
+      clearTabUser();
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -55,21 +57,28 @@ export const authAPI = {
   },
 
   logout: () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    // Clear tab-specific storage
+    sessionStorage.removeItem('authToken');
+    clearTabUser();
   },
 
   getCurrentUser: () => {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+    // Use tab-specific user storage instead of localStorage
+    return getTabUser();
   },
 
   setAuthToken: (token) => {
-    localStorage.setItem('authToken', token);
+    // Use sessionStorage for tab-specific token storage
+    sessionStorage.setItem('authToken', token);
   },
 
   setUser: (user) => {
-    localStorage.setItem('user', JSON.stringify(user));
+    // This should use setTabUser from tabAuth.js instead
+    // Keeping for backward compatibility but it should be called from LoginSignUp
+    // Import and use setTabUser from tabAuth.js in components instead
+    console.warn('authAPI.setUser() is deprecated. Use setTabUser() from utils/tabAuth.js instead.');
+    // Still set it in sessionStorage for backward compatibility
+    sessionStorage.setItem('user', JSON.stringify(user));
   }
 };
 
