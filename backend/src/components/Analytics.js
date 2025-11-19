@@ -479,7 +479,7 @@ const AnalyticsContent = ({ refreshData }) => {
                   style={{ width: `${(Math.max(...Object.values(stats.byQuarter)) / Math.max(...Object.values(stats.byQuarter))) * 100}%` }}
                 ></div>
               </div>
-              <div className="analytics-progress-value analytics-progress-value-quarter">{Math.max(...Object.values(stats.byQuarter))}</div>
+              <div className="analytics-progress-value analytics-progress-value-quarter">{Math.max(...Object.values(stats.byQuarter))} vessels</div>
             </div>
           </div>
           
@@ -495,7 +495,7 @@ const AnalyticsContent = ({ refreshData }) => {
                   style={{ width: `${(stats.bestMonth?.count || 0) / Math.max(stats.bestMonth?.count || 1, 1) * 100}%` }}
                 ></div>
               </div>
-              <div className="analytics-progress-value analytics-progress-value-month">{stats.bestMonth?.count || 0}</div>
+              <div className="analytics-progress-value analytics-progress-value-month">{stats.bestMonth?.count || 0} vessels</div>
             </div>
           </div>
         </div>
@@ -531,11 +531,11 @@ const AnalyticsContent = ({ refreshData }) => {
           {stats.topServices && stats.topServices.length > 0 && (
             <div className="analytics-year-note">
               <div className="analytics-note-item">
-                <span className="analytics-note-label">Top Service:</span>
+                <span className="analytics-note-label">Top:</span>
                 <span className="analytics-note-value">{stats.topServices[0].name}</span>
               </div>
               <div className="analytics-note-item">
-                <span className="analytics-note-label">Services Total:</span>
+                <span className="analytics-note-label">Total:</span>
                 <span className="analytics-note-value">{stats.topServices[0].count}</span>
               </div>
             </div>
@@ -557,7 +557,7 @@ const AnalyticsContent = ({ refreshData }) => {
               <div key={year} className="analytics-year-item">
                 <div className="analytics-year-header">
                   <span className="analytics-year-label">{year}</span>
-                  <span className="analytics-year-count">{count}</span>
+                  <span className="analytics-year-count">{count} vessels</span>
                 </div>
                 <div className="analytics-year-bar">
                   <div 
