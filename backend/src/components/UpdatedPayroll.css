@@ -2805,7 +2805,7 @@
 /* Alice Payroll Validation Styles */
 .alice-payroll-validation {
   width: 100%;
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 24px;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
@@ -2881,13 +2881,15 @@
   overflow-x: auto;
   margin-bottom: 32px;
   border: 1px solid rgba(226, 232, 240, 0.8);
+  width: 100%;
 }
 
 .validation-table {
   width: 100%;
-  min-width: 800px;
+  min-width: 1200px;
   border-collapse: collapse;
   font-size: 0.9rem;
+  table-layout: auto;
 }
 
 .validation-table th {
@@ -2897,11 +2899,24 @@
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 16px 12px;
+  padding: 16px 14px;
   text-align: left;
   border: none;
   position: relative;
-  white-space: nowrap;
+  white-space: normal;
+  word-wrap: break-word;
+  min-width: 100px;
+}
+
+.validation-table th:first-child {
+  min-width: 180px;
+  width: 15%;
+}
+
+.validation-table th.gross-earnings-column,
+.validation-table th.net-amount-column {
+  min-width: 130px;
+  width: 12%;
 }
 
 .validation-table th::after {
@@ -2928,13 +2943,27 @@
 }
 
 .validation-table td {
-  padding: 14px 12px;
+  padding: 14px 14px;
   border-bottom: 1px solid #e5e7eb;
   vertical-align: middle;
   color: #374151;
   font-weight: 500;
-  white-space: nowrap;
+  white-space: normal;
+  word-wrap: break-word;
   background: #ffffff;
+  min-width: 100px;
+}
+
+.validation-table td:first-child {
+  min-width: 180px;
+  width: 15%;
+}
+
+.validation-table td.gross-earnings-column,
+.validation-table td.net-amount-column {
+  min-width: 130px;
+  width: 12%;
+  white-space: nowrap;
 }
 
 /* Light blue/teal background for Gross Earnings and Net Amount data cells */
