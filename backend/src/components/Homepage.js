@@ -7,7 +7,7 @@ import Sidebar from './Sidebar';
 import InfoContent from './InfoContent';
 import NotificationContent from './NotificationContent';
 import Analytics from './Analytics';
-import Storage from './Storage';
+import Assets from './Assets';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -436,14 +436,6 @@ const Homepage = () => {
     setRefreshKey(prev => prev + 1);
   };
 
-  // Auto-refresh data periodically to catch Excel file updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshKey(prev => prev + 1);
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Process vessel data for analytics
   const analyticsData = useMemo(() => {
@@ -870,14 +862,14 @@ const Homepage = () => {
       return [
         ...baseMenu,
         { id: 'payroll', label: 'Payroll', icon: 'attach_money' },
-        { id: 'storage', label: 'Storage', icon: 'inventory_2' }
+        { id: 'assets', label: 'Assets', icon: 'inventory_2' }
       ];
     } else if (isWorker) {
       // Workers: Scheduling, Payroll, and Storage (view-only)
       return [
         { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
         { id: 'payroll', label: 'Payroll', icon: 'attach_money' },
-        { id: 'storage', label: 'Storage', icon: 'inventory_2' }
+        { id: 'assets', label: 'Assets', icon: 'inventory_2' }
       ];
     } else if (isSeniorSupervisor) {
       // Senior Supervisor: Full access + Storage (view-only)
@@ -886,7 +878,7 @@ const Homepage = () => {
         { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
         { id: 'reports', label: 'Reports', icon: 'description' },
         { id: 'analytics', label: 'Analytics', icon: 'analytics' },
-        { id: 'storage', label: 'Storage', icon: 'inventory_2' },
+        { id: 'assets', label: 'Assets', icon: 'inventory_2' },
         { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
       ];
     } else {
@@ -896,7 +888,7 @@ const Homepage = () => {
         { id: 'scheduling', label: 'Scheduling', icon: 'calendar_month' },
         { id: 'reports', label: 'Reports', icon: 'description' },
         { id: 'analytics', label: 'Analytics', icon: 'analytics' },
-        { id: 'storage', label: 'Storage', icon: 'inventory_2' },
+        { id: 'assets', label: 'Assets', icon: 'inventory_2' },
         { id: 'payroll', label: 'Payroll', icon: 'attach_money' }
       ];
     }
@@ -941,8 +933,8 @@ const Homepage = () => {
         return <Report />;
       case 'analytics':
         return <Analytics />;
-      case 'storage':
-        return <Storage />;
+      case 'assets':
+        return <Assets />;
       case 'payroll':
         return <Payroll />;
       case 'home':
