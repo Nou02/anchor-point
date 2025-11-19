@@ -46,7 +46,7 @@ function App() {
           clearInterval(intervalId);
         }
         // If session exists, keep showing home - don't update state unnecessarily
-      }, 500); // Check every 500ms for responsive logout detection
+      }, 100); // Check every 100ms for faster logout detection
       
       return () => clearInterval(intervalId);
     }

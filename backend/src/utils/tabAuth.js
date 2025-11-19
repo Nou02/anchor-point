@@ -50,12 +50,25 @@ export const getTabUser = () => {
   if (!tabUserStr) return null;
   try {
     const user = JSON.parse(tabUserStr);
-    // Verify this is for the current tab
+    // Get current tab ID (this will create one if it doesn't exist)
     const currentTabId = getTabId();
+    
+    // If user has a tabId and it doesn't match, this might be from a different tab
+    // But we should be lenient - if the tabId doesn't exist in the user object,
+    // it might be from an older session, so we'll accept it and update it
     if (user.tabId && user.tabId !== currentTabId) {
-      console.warn(`[Tab ${currentTabId}] Found user data for different tab (${user.tabId}). This should not happen.`);
+      // This is likely from a different tab - reject it
+      console.warn(`[Tab ${currentTabId}] Found user data for different tab (${user.tabId}). Rejecting.`);
       return null;
     }
+    
+    // If user doesn't have a tabId, or it matches, return the user
+    // Also update the tabId if it's missing (for backward compatibility)
+    if (!user.tabId) {
+      user.tabId = currentTabId;
+      sessionStorage.setItem('tabUser', JSON.stringify(user));
+    }
+    
     return user;
   } catch (e) {
     return null;
