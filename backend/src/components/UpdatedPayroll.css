@@ -2914,6 +2914,19 @@
   background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
 }
 
+/* Distinct styling for Gross Earnings and Net Amount columns */
+.validation-table th.gross-earnings-column {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+  color: white;
+  font-weight: 800;
+}
+
+.validation-table th.net-amount-column {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+  color: white;
+  font-weight: 800;
+}
+
 .validation-table td {
   padding: 14px 12px;
   border-bottom: 1px solid #e5e7eb;
@@ -2921,10 +2934,33 @@
   color: #374151;
   font-weight: 500;
   white-space: nowrap;
+  background: #ffffff;
+}
+
+/* Light blue/teal background for Gross Earnings and Net Amount data cells */
+.validation-table td.gross-earnings-column {
+  background-color: #e0f2fe !important;
+  border-left: 2px solid #0ea5e9;
+  border-right: 2px solid #0ea5e9;
+  font-weight: 600;
+  color: #0c4a6e;
+}
+
+.validation-table td.net-amount-column {
+  background-color: #e0f2fe !important;
+  border-left: 2px solid #0ea5e9;
+  border-right: 2px solid #0ea5e9;
+  font-weight: 600;
+  color: #0c4a6e;
 }
 
 .validation-table tr:hover {
   background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.validation-table tr:hover td.gross-earnings-column,
+.validation-table tr:hover td.net-amount-column {
+  background-color: #bae6fd !important;
 }
 
 /* Alice payroll validation table grand total row */
@@ -2944,6 +2980,14 @@
   background: transparent;
   font-family: inherit;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Keep distinct color for Gross Earnings and Net Amount in grand total row */
+.validation-table .grand-total-row td.gross-earnings-column,
+.validation-table .grand-total-row td.net-amount-column {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  border-left: 2px solid #0ea5e9;
+  border-right: 2px solid #0ea5e9;
 }
 
 .validation-table .grand-total-row td:first-child {
