@@ -21,29 +21,21 @@ const Homepage = () => {
   // Logout handler - tab-specific
   const handleLogout = async () => {
     try {
-      // Clear this tab's session from sessionStorage
+      // Clear this tab's session from sessionStorage ONLY
       // This is the source of truth - once cleared, this tab is logged out
+      // DO NOT call Firebase signOut() - it triggers onAuthStateChanged in ALL tabs
+      // DO NOT redirect - let the App.js periodic check detect the cleared sessionStorage
+      // and handle the navigation automatically
+      // Other tabs will continue to work because they check their own sessionStorage
+      // which is tab-specific and won't be affected by this tab's logout
       clearTabUser();
       
-      // DO NOT call Firebase signOut() - it triggers onAuthStateChanged in ALL tabs
-      // Instead, just clear sessionStorage
-      // The App.js component has a periodic check that will detect the cleared sessionStorage
-      // and automatically redirect to the landing page
-      // Other tabs will continue to work because they check sessionStorage first
-      // and ignore Firebase auth state changes if they have a session
-      
-      // Force a redirect by using window.location
-      // The App.js periodic check will handle the state update, but we need to trigger
-      // a re-render. Using a small delay to ensure sessionStorage is cleared first.
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
+      // The App.js component has a periodic check (every 500ms) that will detect
+      // when sessionStorage is cleared and automatically update the page state
+      // No need to redirect manually - this prevents any potential cross-tab interference
     } catch (err) {
       // Even if there's an error, clear sessionStorage
       clearTabUser();
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
     }
   };
 

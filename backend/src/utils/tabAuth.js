@@ -49,7 +49,14 @@ export const getTabUser = () => {
   const tabUserStr = sessionStorage.getItem('tabUser');
   if (!tabUserStr) return null;
   try {
-    return JSON.parse(tabUserStr);
+    const user = JSON.parse(tabUserStr);
+    // Verify this is for the current tab
+    const currentTabId = getTabId();
+    if (user.tabId && user.tabId !== currentTabId) {
+      console.warn(`[Tab ${currentTabId}] Found user data for different tab (${user.tabId}). This should not happen.`);
+      return null;
+    }
+    return user;
   } catch (e) {
     return null;
   }
@@ -59,10 +66,13 @@ export const getTabUser = () => {
  * Clear user info for this tab
  */
 export const clearTabUser = () => {
+  const tabId = getTabId();
+  console.log(`[Tab ${tabId}] Clearing sessionStorage for this tab only`);
   sessionStorage.removeItem('tabUser');
   sessionStorage.removeItem('tabHasExplicitLogin');
   // Don't clear Firebase session owner - let other tabs keep their sessions
   // Each tab manages its own session independently
+  console.log(`[Tab ${tabId}] SessionStorage cleared. Other tabs should not be affected.`);
 };
 
 /**
