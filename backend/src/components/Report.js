@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import api from '../services/api';
+import * as XLSX from 'xlsx';
 import './Report.css';
 
 const Report = () => {
@@ -447,6 +448,266 @@ const Report = () => {
     setYearFilter('');
   };
 
+  // Handle print functionality
+  const handlePrint = () => {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Anchor Point Past History Reports</title>
+          <style>
+            @media print {
+              @page {
+                size: landscape;
+                margin: 1cm;
+              }
+              body {
+                margin: 0;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+              }
+            }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 20px;
+            }
+            h1 {
+              text-align: center;
+              color: #1e2a5e;
+              margin-bottom: 10px;
+              font-size: 24px;
+            }
+            .report-info {
+              text-align: center;
+              color: #64748b;
+              margin-bottom: 20px;
+              font-size: 14px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+              font-size: 12px;
+            }
+            th {
+              background: #1e3a8a;
+              color: white;
+              padding: 12px 8px;
+              text-align: center;
+              font-weight: 700;
+              border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            td {
+              padding: 10px 8px;
+              border: 1px solid #e5e7eb;
+              text-align: center;
+            }
+            tr:nth-child(even) {
+              background: #f8fafc;
+            }
+            .date-cell {
+              color: #1e40af;
+              font-weight: 600;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Anchor Point Past History Reports</h1>
+          <div class="report-info">
+            Generated on: ${new Date().toLocaleString()}<br>
+            Total Records: ${filteredTransactions.length}
+            ${yearFilter ? `<br>Filter: Year ${yearFilter}` : ''}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>CONTROL ID</th>
+                <th>VESSEL</th>
+                <th>VOYAGE</th>
+                <th>DATE</th>
+                <th>TIME</th>
+                <th>TIME FINISHED</th>
+                <th>PURPOSE</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredTransactions.map((transaction) => {
+                const formatDate = (dateStr) => {
+                  try {
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return 'Invalid Date';
+                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                     'July', 'August', 'September', 'October', 'November', 'December'];
+                    const month = monthNames[date.getUTCMonth()];
+                    const day = String(date.getUTCDate()).padStart(2, '0');
+                    const year = date.getUTCFullYear();
+                    return `${month} ${day}, ${year}`;
+                  } catch (e) {
+                    return 'Error';
+                  }
+                };
+                
+                const formatTime = (timeStr) => {
+                  if (!timeStr || timeStr === 'N/A' || timeStr === '') return '-';
+                  try {
+                    let time = timeStr.trim();
+                    if (time.includes('AM') || time.includes('PM')) return time;
+                    if (time.includes(':')) {
+                      const [hours, minutes] = time.split(':');
+                      const hour24 = parseInt(hours, 10);
+                      const mins = minutes || '00';
+                      if (hour24 === 0) return `12:${mins} AM`;
+                      if (hour24 < 12) return `${hour24}:${mins} AM`;
+                      if (hour24 === 12) return `12:${mins} PM`;
+                      return `${hour24 - 12}:${mins} PM`;
+                    }
+                    return time;
+                  } catch (e) {
+                    return timeStr;
+                  }
+                };
+                
+                return `
+                  <tr>
+                    <td>${transaction.controlId || 'N/A'}</td>
+                    <td>${transaction.vesselName || 'N/A'}</td>
+                    <td>${transaction.voyageNo || 'N/A'}</td>
+                    <td class="date-cell">${formatDate(transaction.date)}</td>
+                    <td>${formatTime(transaction.time)}</td>
+                    <td>${formatTime(transaction.timeFinished)}</td>
+                    <td>${transaction.purposeOfCall || 'N/A'}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load, then print
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
+
+  // Handle download functionality (Excel/CSV)
+  const handleDownload = (format = 'xlsx') => {
+    if (filteredTransactions.length === 0) {
+      alert('No data to download');
+      return;
+    }
+
+    // Prepare data for export
+    const exportData = filteredTransactions.map((transaction) => {
+      const formatDate = (dateStr) => {
+        try {
+          const date = new Date(dateStr);
+          if (isNaN(date.getTime())) return 'Invalid Date';
+          const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+          const month = monthNames[date.getUTCMonth()];
+          const day = String(date.getUTCDate()).padStart(2, '0');
+          const year = date.getUTCFullYear();
+          return `${month} ${day}, ${year}`;
+        } catch (e) {
+          return 'Error';
+        }
+      };
+      
+      const formatTime = (timeStr) => {
+        if (!timeStr || timeStr === 'N/A' || timeStr === '') return '-';
+        try {
+          let time = timeStr.trim();
+          if (time.includes('AM') || time.includes('PM')) return time;
+          if (time.includes(':')) {
+            const [hours, minutes] = time.split(':');
+            const hour24 = parseInt(hours, 10);
+            const mins = minutes || '00';
+            if (hour24 === 0) return `12:${mins} AM`;
+            if (hour24 < 12) return `${hour24}:${mins} AM`;
+            if (hour24 === 12) return `12:${mins} PM`;
+            return `${hour24 - 12}:${mins} PM`;
+          }
+          return time;
+        } catch (e) {
+          return timeStr;
+        }
+      };
+
+      return {
+        'Control ID': transaction.controlId || 'N/A',
+        'Vessel': transaction.vesselName || 'N/A',
+        'Voyage': transaction.voyageNo || 'N/A',
+        'Date': formatDate(transaction.date),
+        'Time': formatTime(transaction.time),
+        'Time Finished': formatTime(transaction.timeFinished),
+        'Purpose': transaction.purposeOfCall || 'N/A'
+      };
+    });
+
+    if (format === 'xlsx') {
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      
+      // Set column widths
+      const colWidths = [
+        { wch: 15 }, // Control ID
+        { wch: 25 }, // Vessel
+        { wch: 15 }, // Voyage
+        { wch: 20 }, // Date
+        { wch: 12 }, // Time
+        { wch: 15 }, // Time Finished
+        { wch: 30 }  // Purpose
+      ];
+      ws['!cols'] = colWidths;
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Reports');
+      
+      // Generate filename with current date
+      const filename = `AnchorPoint_Reports_${yearFilter || 'AllYears'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      
+      // Write file
+      XLSX.writeFile(wb, filename);
+    } else if (format === 'csv') {
+      // Convert to CSV
+      const headers = ['Control ID', 'Vessel', 'Voyage', 'Date', 'Time', 'Time Finished', 'Purpose'];
+      const csvRows = [
+        headers.join(','),
+        ...exportData.map(row => [
+          `"${row['Control ID']}"`,
+          `"${row['Vessel']}"`,
+          `"${row['Voyage']}"`,
+          `"${row['Date']}"`,
+          `"${row['Time']}"`,
+          `"${row['Time Finished']}"`,
+          `"${row['Purpose']}"`
+        ].join(','))
+      ];
+      
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `AnchorPoint_Reports_${yearFilter || 'AllYears'}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   // Load Excel data and transactions on component mount
   useEffect(() => {
     // Clear any existing data first and show loading state
@@ -734,11 +995,81 @@ const Report = () => {
                         fontWeight: '600',
                         cursor: 'pointer',
                         transition: 'all 0.3s ease',
-                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
                       }}
                     >
+                      <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/>
+                      </svg>
                       Refresh Data
                     </button>
+                    
+                    <button
+                      onClick={handlePrint}
+                      disabled={filteredTransactions.length === 0}
+                      style={{
+                        padding: '8px 16px',
+                        background: filteredTransactions.length === 0 
+                          ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                          : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        cursor: filteredTransactions.length === 0 ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.3s ease',
+                        boxShadow: filteredTransactions.length === 0 
+                          ? '0 2px 8px rgba(107, 114, 128, 0.2)'
+                          : '0 2px 8px rgba(59, 130, 246, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        opacity: filteredTransactions.length === 0 ? 0.6 : 1
+                      }}
+                      title="Print Report"
+                    >
+                      <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M18,3H6V7H18M19,12A1,1 0 0,1 18,11A1,1 0 0,1 19,10A1,1 0 0,1 20,11A1,1 0 0,1 19,12M16,19H8V14H16M19,8H5A3,3 0 0,0 2,11V17H6V21H18V17H22V11A3,3 0 0,0 19,8Z"/>
+                      </svg>
+                      Print
+                    </button>
+                    
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        onClick={() => handleDownload('xlsx')}
+                        disabled={filteredTransactions.length === 0}
+                        style={{
+                          padding: '8px 16px',
+                          background: filteredTransactions.length === 0 
+                            ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                            : 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '0.9rem',
+                          fontWeight: '600',
+                          cursor: filteredTransactions.length === 0 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.3s ease',
+                          boxShadow: filteredTransactions.length === 0 
+                            ? '0 2px 8px rgba(107, 114, 128, 0.2)'
+                            : '0 2px 8px rgba(139, 92, 246, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          opacity: filteredTransactions.length === 0 ? 0.6 : 1
+                        }}
+                        title="Download as Excel"
+                      >
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        Download
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1041,7 +1372,7 @@ const Report = () => {
                   }}>
                     <thead>
                       <tr style={{
-                        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
+                        background: '#1e3a8a',
                         color: 'white',
                         fontWeight: '700',
                         fontSize: '0.85rem',
@@ -1049,6 +1380,30 @@ const Report = () => {
                         top: 0,
                         zIndex: 10
                       }}>
+                        <th style={{ 
+                          padding: '16px 12px',
+                          textAlign: 'center',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                          width: '14%'
+                        }}>
+                          CONTROL ID
+                        </th>
+                        <th style={{ 
+                          padding: '16px 12px',
+                          textAlign: 'center',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                          width: '18%'
+                        }}>
+                          VESSEL
+                        </th>
+                        <th style={{ 
+                          padding: '16px 12px',
+                          textAlign: 'center',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                          width: '12%'
+                        }}>
+                          VOYAGE
+                        </th>
                         <th style={{ 
                           padding: '16px 12px',
                           textAlign: 'center',
@@ -1076,33 +1431,9 @@ const Report = () => {
                         <th style={{ 
                           padding: '16px 12px',
                           textAlign: 'center',
-                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
-                          width: '18%'
-                        }}>
-                          VESSEL
-                        </th>
-                        <th style={{ 
-                          padding: '16px 12px',
-                          textAlign: 'center',
-                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
-                          width: '12%'
-                        }}>
-                          VOYAGE
-                        </th>
-                        <th style={{ 
-                          padding: '16px 12px',
-                          textAlign: 'center',
-                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
                           width: '23%'
                         }}>
                           PURPOSE
-                        </th>
-                        <th style={{ 
-                          padding: '16px 12px',
-                          textAlign: 'center',
-                          width: '14%'
-                        }}>
-                          CONTROL ID
                         </th>
                       </tr>
                     </thead>
@@ -1120,6 +1451,32 @@ const Report = () => {
                               boxShadow: '0 4px 12px rgba(59, 130, 246, 0.1)'
                             }
                           }}>
+                            <td style={{ 
+                              padding: '12px',
+                              color: '#1f2937',
+                              fontWeight: '500',
+                              textAlign: 'center',
+                              borderRight: '1px solid #e5e7eb'
+                            }}>
+                              {transaction.controlId}
+                            </td>
+                            <td style={{ 
+                              padding: '12px',
+                              color: '#1f2937',
+                              fontWeight: '500',
+                              borderRight: '1px solid #e5e7eb'
+                            }}>
+                              {transaction.vesselName}
+                            </td>
+                            <td style={{ 
+                              padding: '12px',
+                              color: '#1f2937',
+                              fontWeight: '500',
+                              textAlign: 'center',
+                              borderRight: '1px solid #e5e7eb'
+                            }}>
+                              {transaction.voyageNo}
+                            </td>
                             <td style={{ 
                               padding: '12px',
                               color: '#1e40af',
@@ -1238,39 +1595,13 @@ const Report = () => {
                               padding: '12px',
                               color: '#1f2937',
                               fontWeight: '500',
-                              borderRight: '1px solid #e5e7eb'
-                            }}>
-                              {transaction.vesselName}
-                            </td>
-                            <td style={{ 
-                              padding: '12px',
-                              color: '#1f2937',
-                              fontWeight: '500',
                               textAlign: 'center',
-                              borderRight: '1px solid #e5e7eb'
-                            }}>
-                              {transaction.voyageNo}
-                            </td>
-                            <td style={{ 
-                              padding: '12px',
-                              color: '#1f2937',
-                              fontWeight: '500',
-                              textAlign: 'center',
-                              borderRight: '1px solid #e5e7eb',
                               maxWidth: '200px',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap'
                             }} title={transaction.purposeOfCall}>
                               {transaction.purposeOfCall}
-                            </td>
-                            <td style={{ 
-                              padding: '12px',
-                              color: '#1f2937',
-                              fontWeight: '500',
-                              textAlign: 'center'
-                            }}>
-                              {transaction.controlId}
                             </td>
                           </tr>
                         );
