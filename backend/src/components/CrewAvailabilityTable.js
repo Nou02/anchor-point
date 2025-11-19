@@ -11,6 +11,7 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
   const [userName, setUserName] = useState('');
   const [userFullName, setUserFullName] = useState('');
   const [selectedWorker, setSelectedWorker] = useState(null);
+  const [allWorkers, setAllWorkers] = useState([]);
 
   // Initialize Firestore database
   const db = getFirestore();
@@ -22,9 +23,10 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
     const userEmail = user ? user.email : '';
     const matchName = userFullName || userName;
     
-    // Check for Alice Margaretha Santos
+    // Check for Alice Margaretha Santos (handle both "Alice Margaretha Santos" and "Santos, Alice Margaretha" formats)
     const isAliceUser = 
       matchName === 'Alice Margaretha Santos' || 
+      matchName === 'Santos, Alice Margaretha' ||
       matchName === 'Alice' ||
       (matchName && matchName.toLowerCase().includes('alice')) ||
       (userEmail && userEmail.toLowerCase().includes('alice'));
@@ -93,9 +95,10 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
     const userEmail = user ? user.email : '';
     const matchName = userFullName || userName;
     
-    // Check if current user is Alice
+    // Check if current user is Alice (handle both name formats)
     const isAliceUser = 
       matchName === 'Alice Margaretha Santos' || 
+      matchName === 'Santos, Alice Margaretha' ||
       matchName === 'Alice' ||
       (matchName && matchName.toLowerCase().includes('alice')) ||
       (userEmail && userEmail.toLowerCase().includes('alice'));
@@ -159,9 +162,10 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
     const userEmail = user ? user.email : '';
     const matchName = userFullName || userName;
     
-    // Check if current user is Alice
+    // Check if current user is Alice (handle both name formats)
     const isAliceUser = 
       matchName === 'Alice Margaretha Santos' || 
+      matchName === 'Santos, Alice Margaretha' ||
       matchName === 'Alice' ||
       (matchName && matchName.toLowerCase().includes('alice')) ||
       (userEmail && userEmail.toLowerCase().includes('alice'));
@@ -213,9 +217,10 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
     const userEmail = user ? user.email : '';
     const matchName = userFullName || userName;
     
-    // Check if current user is Alice
+    // Check if current user is Alice (handle both name formats)
     const isAliceUser = 
       matchName === 'Alice Margaretha Santos' || 
+      matchName === 'Santos, Alice Margaretha' ||
       matchName === 'Alice' ||
       (matchName && matchName.toLowerCase().includes('alice')) ||
       (userEmail && userEmail.toLowerCase().includes('alice'));
@@ -283,6 +288,82 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
     loadSavedDates();
   }, []);
 
+  // Fetch all users from Firebase to populate workers list
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      try {
+        const db = getFirestore();
+        const q = query(collection(db, 'users'));
+        const querySnapshot = await getDocs(q);
+        
+        const workers = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          // Get firstName and lastName from database
+          const firstName = data.firstName || '';
+          const lastName = data.lastName || '';
+          
+          // Convert "Employee" to "Crew" for backward compatibility
+          let role = data.role || data.type || 'Crew';
+          if (role === 'Employee') role = 'Crew';
+          
+          // Format name as "LastName, FirstName" or fallback to fullName
+          let name = '';
+          if (firstName && lastName) {
+            name = `${lastName}, ${firstName}`.trim();
+          } else if (data.fullName) {
+            name = data.fullName;
+          } else if (data.username) {
+            name = data.username;
+          } else {
+            name = data.name || 'Unknown';
+          }
+          
+          // Map role to type for display
+          let type = role;
+          if (role === 'HR') {
+            type = 'HR';
+          } else if (role === 'Manager' || role === 'Admin') {
+            type = 'Senior Supervisor';
+          } else if (role === 'Scheduler') {
+            type = 'Scheduler';
+          } else {
+            type = 'Dock Worker';
+          }
+          
+          workers.push({
+            name: name,
+            type: type,
+            firstName: firstName,
+            lastName: lastName,
+            email: data.email || '',
+            role: role
+          });
+        });
+        
+        // Sort workers alphabetically by last name, then first name
+        workers.sort((a, b) => {
+          const lastNameA = a.lastName || '';
+          const lastNameB = b.lastName || '';
+          if (lastNameA === lastNameB) {
+            const firstNameA = a.firstName || '';
+            const firstNameB = b.firstName || '';
+            return firstNameA.localeCompare(firstNameB);
+          }
+          return lastNameA.localeCompare(lastNameB);
+        });
+        
+        setAllWorkers(workers);
+      } catch (error) {
+        console.error('Error fetching workers:', error);
+        // Fallback to empty array or default workers if needed
+        setAllWorkers([]);
+      }
+    };
+    
+    fetchWorkers();
+  }, []);
+
   // Get logged-in user's name and full name from Firestore if needed
   useEffect(() => {
     const auth = getAuth();
@@ -307,13 +388,18 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
           if (!querySnapshot.empty) {
             const userData = querySnapshot.docs[0].data();
             console.log('Debug - Firestore userData:', userData);
-            if (userData.fullName) {
-              setUserFullName(userData.fullName);
-              console.log('Debug - set userFullName to:', userData.fullName);
+            // Prefer firstName + lastName, fallback to fullName
+            // Format as "LastName, FirstName" to match worker name format
+            let fullName = '';
+            if (userData.firstName && userData.lastName) {
+              fullName = `${userData.lastName}, ${userData.firstName}`.trim();
+            } else if (userData.fullName) {
+              fullName = userData.fullName;
             } else {
-              setUserFullName(name);
-              console.log('Debug - set userFullName to name:', name);
+              fullName = name;
             }
+            setUserFullName(fullName);
+            console.log('Debug - set userFullName to:', fullName);
           } else {
             setUserFullName(name);
             console.log('Debug - set userFullName to name (no Firestore data):', name);
@@ -413,83 +499,45 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
             </tr>
           </thead>
           <tbody>
-            {/* Show workers based on user role - Alice sees all, others see only their row */}
+            {/* Show only the current user's row */}
             {(() => {
-              // List of all workers
-              const allWorkers = [
-                { name: 'Alice Margaretha Santos', type: 'Senior Supervisor' },
-                { name: 'Carla Dela Peña', type: 'Scheduler' },
-                { name: 'Bryan Matthew Cruz', type: 'Dock Worker' },
-                { name: 'David Emmanuel Reyes', type: 'Mechanic' },
-                { name: 'Junnel, Cusi', type: 'Dock Worker' },
-                { name: 'Aljon, Dipasupil', type: 'Dock Worker' },
-                { name: 'Phil Allen, Eje', type: 'Dock Worker' },
-                { name: 'Rhed, Escalon', type: 'Dock Worker' },
-                { name: 'Fortune, Garcia Jr.', type: 'Dock Worker' },
-                { name: 'Keith, Javier', type: 'Dock Worker' },
-                { name: 'Ericson, Mendoza', type: 'Dock Worker' },
-                { name: 'Alec, Sino-ag', type: 'Dock Worker' },
-                { name: 'Romeo, Velasquez', type: 'Dock Worker' },
-                { name: 'Rodel, Maranan', type: 'Dock Worker' },
-                { name: 'Alloi, Sino-ag', type: 'Dock Worker' },
-                { name: 'Renzy, Cantos', type: 'Dock Worker' },
-                { name: 'PJ, Cusi', type: 'Dock Worker' }
-              ];
-              
               // Get logged-in user's information for filtering
               const auth = getAuth();
               const user = auth.currentUser;
               const userEmail = user ? user.email : '';
               const matchName = userFullName || userName;
               
-              // Check if current user is Alice
-              const isAliceUser = 
-                matchName === 'Alice Margaretha Santos' || 
-                matchName === 'Alice' ||
-                (matchName && matchName.toLowerCase().includes('alice')) ||
-                (userEmail && userEmail.toLowerCase().includes('alice'));
-              
-              // Filter workers based on user role
-              let workersToShow;
-              if (isAliceUser) {
-                // Alice sees only her own row in the table
-                const aliceWorker = allWorkers.find(worker => 
-                  worker.name === 'Alice Margaretha Santos' || 
-                  worker.name.toLowerCase().includes('alice')
-                );
-                workersToShow = aliceWorker ? [aliceWorker] : [];
-              } else {
-                // Regular workers see only their own row
-                const currentWorker = allWorkers.find(worker => {
-                  const workerNameLower = worker.name.toLowerCase();
-                  const matchNameLower = matchName.toLowerCase();
-                  const userEmailLower = userEmail.toLowerCase();
-                  
-                  // Check for exact name match
-                  if (workerNameLower === matchNameLower) return true;
-                  
-                  // Check for partial name match
-                  const workerNameParts = workerNameLower.split(/[\s,]+/);
-                  const matchNameParts = matchNameLower.split(/[\s,]+/);
-                  
-                  for (const workerPart of workerNameParts) {
-                    for (const matchPart of matchNameParts) {
-                      if (workerPart === matchPart && workerPart.length > 2) return true;
-                    }
-                  }
-                  
-                  // Check email matches
-                  if (userEmailLower.includes(workerNameLower.replace(/[\s,]+/g, ''))) return true;
-                  
-                  const emailUsername = userEmail.split('@')[0].toLowerCase();
-                  if (workerNameLower.includes(emailUsername)) return true;
-                  
-                  return false;
-                });
+              // Find the current user in the workers list (all users see only their own row)
+              const currentWorker = allWorkers.find(worker => {
+                const workerNameLower = worker.name.toLowerCase();
+                const matchNameLower = matchName.toLowerCase();
+                const userEmailLower = userEmail.toLowerCase();
                 
-                // Show only the current worker's row, or empty array if not found
-                workersToShow = currentWorker ? [currentWorker] : [];
-              }
+                // Check for exact name match
+                if (workerNameLower === matchNameLower) return true;
+                
+                // Check for partial name match
+                const workerNameParts = workerNameLower.split(/[\s,]+/);
+                const matchNameParts = matchNameLower.split(/[\s,]+/);
+                
+                for (const workerPart of workerNameParts) {
+                  for (const matchPart of matchNameParts) {
+                    if (workerPart === matchPart && workerPart.length > 2) return true;
+                  }
+                }
+                
+                // Check email matches
+                if (userEmailLower && worker.email && userEmailLower === worker.email.toLowerCase()) return true;
+                if (userEmailLower.includes(workerNameLower.replace(/[\s,]+/g, ''))) return true;
+                
+                const emailUsername = userEmail.split('@')[0].toLowerCase();
+                if (workerNameLower.includes(emailUsername)) return true;
+                
+                return false;
+              });
+              
+              // Show only the current worker's row, or empty array if not found
+              const workersToShow = currentWorker ? [currentWorker] : [];
               
               // Get today's day index (0=Sun, 1=Mon, ..., 6=Sat)
               const todayIdx = new Date().getDay();
@@ -545,214 +593,190 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
         </table>
       </div>
 
-      {/* Comprehensive Worker Details Container - Only for Alice */}
+      {/* All Workers Availability Overview */}
       {(() => {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        const userEmail = user ? user.email : '';
-        const matchName = userFullName || userName;
+        const today = new Date();
+        const currentDay = today.getDay();
+        const dayNames = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
         
-        // Check if current user is Alice
-        const isAliceUser = 
-          matchName === 'Alice Margaretha Santos' || 
-          matchName === 'Alice' ||
-          (matchName && matchName.toLowerCase().includes('alice')) ||
-          (userEmail && userEmail.toLowerCase().includes('alice'));
-        
-        if (isAliceUser) {
-          // List of all workers
-          const allWorkers = [
-            { name: 'Alice Margaretha Santos', type: 'Senior Supervisor' },
-            { name: 'Carla Dela Peña', type: 'Scheduler' },
-            { name: 'Bryan Matthew Cruz', type: 'Dock Worker' },
-            { name: 'David Emmanuel Reyes', type: 'Mechanic' },
-            { name: 'Junnel, Cusi', type: 'Dock Worker' },
-            { name: 'Aljon, Dipasupil', type: 'Dock Worker' },
-            { name: 'Phil Allen, Eje', type: 'Dock Worker' },
-            { name: 'Rhed, Escalon', type: 'Dock Worker' },
-            { name: 'Fortune, Garcia Jr.', type: 'Dock Worker' },
-            { name: 'Keith, Javier', type: 'Dock Worker' },
-            { name: 'Ericson, Mendoza', type: 'Dock Worker' },
-            { name: 'Alec, Sino-ag', type: 'Dock Worker' },
-            { name: 'Romeo, Velasquez', type: 'Dock Worker' },
-            { name: 'Rodel, Maranan', type: 'Dock Worker' },
-            { name: 'Alloi, Sino-ag', type: 'Dock Worker' },
-            { name: 'Renzy, Cantos', type: 'Dock Worker' },
-            { name: 'PJ, Cusi', type: 'Dock Worker' }
-          ];
+        // Calculate the start of the current week (Sunday)
+        const startOfWeek = new Date(today);
+        const dayOfWeek = today.getDay();
+        startOfWeek.setDate(today.getDate() - dayOfWeek);
 
-          const today = new Date();
-          const currentDay = today.getDay();
-          const dayNames = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
-          
-          // Calculate the start of the current week (Sunday)
-          const startOfWeek = new Date(today);
-          const dayOfWeek = today.getDay();
-          startOfWeek.setDate(today.getDate() - dayOfWeek);
-
-          return (
-            <div className="comprehensive-worker-details">
-              <div className="details-header">
-                <h3>All Workers Availability Overview</h3>
-                <p>Comprehensive view of all crew members' availability for the current week</p>
-              </div>
-              
-              <div className="worker-cards-container">
-                {allWorkers.map((worker, idx) => {
-                  const workerKey = worker.name.toLowerCase().replace(/[\s,]+/g, '_');
-                  const workerAvailability = crewAvailability[workerKey] || {};
-                  
-                  // Calculate availability stats
-                  const availabilityStats = dayNames.map((day, dayIndex) => {
-                    const dayKey = day.toLowerCase().replace(/[\s,]+/g, '_');
-                    const isAvailable = workerAvailability[dayKey] !== false;
-                    const isPastDay = dayIndex < currentDay;
-                    const isAssigned = checkIfWorkerAssignedToAppointment(worker.name, dayIndex);
-                    
-                    return {
-                      day,
-                      dayIndex,
-                      isAvailable: isPastDay ? null : isAvailable,
-                      isAssigned,
-                      isPastDay,
-                      isToday: dayIndex === currentDay
-                    };
-                  });
-
-                  const availableDays = availabilityStats.filter(stat => stat.isAvailable === true).length;
-                  const unavailableDays = availabilityStats.filter(stat => stat.isAvailable === false).length;
-                  const assignedDays = availabilityStats.filter(stat => stat.isAssigned).length;
-                  const totalActiveDays = availableDays + unavailableDays + assignedDays;
-
-                  // Calculate overall status
-                  let statusIndicator = '';
-                  let statusClass = '';
-                  if (assignedDays > 0) {
-                    statusIndicator = 'On Duty';
-                    statusClass = 'status-on-duty';
-                  } else if (availableDays >= 5) {
-                    statusIndicator = 'Highly Available';
-                    statusClass = 'status-highly-available';
-                  } else if (availableDays >= 3) {
-                    statusIndicator = 'Available';
-                    statusClass = 'status-available';
-                  } else if (availableDays >= 1) {
-                    statusIndicator = 'Limited Availability';
-                    statusClass = 'status-limited';
-                  } else {
-                    statusIndicator = 'Unavailable';
-                    statusClass = 'status-unavailable';
-                  }
-
-                  return (
-                    <div 
-                      key={worker.name} 
-                      className={`worker-card ${selectedWorker === worker.name ? 'selected' : ''}`}
-                      onClick={() => setSelectedWorker(selectedWorker === worker.name ? null : worker.name)}
-                    >
-                      {selectedWorker === worker.name ? (
-                        <>
-                          <div className="worker-card-header">
-                            <div className="worker-name-and-status">
-                              <h4 className="worker-name">{worker.name}</h4>
-                              <span className={`status-indicator ${statusClass}`}>{statusIndicator}</span>
-                            </div>
-                            <span className="worker-type">{worker.type}</span>
-                          </div>
-                          
-                          {/* Quick Stats - Always Visible */}
-                          <div className="quick-stats">
-                            <div className="quick-stat">
-                              <span className="quick-stat-number">{availableDays}</span>
-                              <span className="quick-stat-label">Available</span>
-                            </div>
-                            <div className="quick-stat">
-                              <span className="quick-stat-number">{assignedDays}</span>
-                              <span className="quick-stat-label">On Duty</span>
-                            </div>
-                            <div className="quick-stat">
-                              <span className="quick-stat-number">{unavailableDays}</span>
-                              <span className="quick-stat-label">Unavailable</span>
-                            </div>
-                          </div>
-                          
-                          <div className="worker-details">
-                          <div className="availability-summary">
-                            <div className="summary-stats">
-                              <div className="stat-item available">
-                                <span className="stat-number">{availableDays}</span>
-                                <span className="stat-label">Available</span>
-                              </div>
-                              <div className="stat-item unavailable">
-                                <span className="stat-number">{unavailableDays}</span>
-                                <span className="stat-label">Unavailable</span>
-                              </div>
-                              <div className="stat-item assigned">
-                                <span className="stat-number">{assignedDays}</span>
-                                <span className="stat-label">On Duty</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="weekly-schedule">
-                            <div className="schedule-grid">
-                              {availabilityStats.slice(0, 7).map((stat, dayIdx) => {
-                                const date = new Date(startOfWeek);
-                                date.setDate(startOfWeek.getDate() + dayIdx);
-                                
-                                let statusClass = '';
-                                
-                                if (stat.isPastDay) {
-                                  statusClass = 'past-day';
-                                } else if (stat.isAssigned) {
-                                  statusClass = 'assigned';
-                                } else if (stat.isAvailable === true) {
-                                  statusClass = 'available';
-                                } else if (stat.isAvailable === false) {
-                                  statusClass = 'unavailable';
-                                }
-
-                                return (
-                                  <div key={dayIdx} className={`schedule-day ${statusClass} ${stat.isToday ? 'today' : ''}`}>
-                                    <div className="day-name">{stat.day.substring(0, 3)}</div>
-                                    <div className="day-date">{date.getDate()}</div>
-                                    {stat.isToday && <div className="today-badge">TODAY</div>}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          <div className="worker-actions">
-                            <button 
-                              className="edit-availability-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Scroll to table and highlight this worker's row
-                                const tableWrapper = document.querySelector('.crew-availability-table-wrapper');
-                                if (tableWrapper) {
-                                  tableWrapper.scrollIntoView({ behavior: 'smooth' });
-                                }
-                              }}
-                            >
-                              Edit Availability
-                            </button>
-                          </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="worker-name-only">
-                          <h4 className="worker-name">{worker.name}</h4>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+        return (
+          <div className="comprehensive-worker-details">
+            <div className="details-header">
+              <h3>All Workers Availability Overview</h3>
+              <p>Comprehensive view of all crew members' availability for the current week</p>
             </div>
-          );
-        }
-        return null;
+            
+            <div className="worker-cards-container">
+              {allWorkers && allWorkers.length > 0 ? (
+                allWorkers.map((worker, idx) => {
+                  return (
+                    <div key={worker.name || idx}>
+                    {(() => {
+                      const workerKey = worker.name.toLowerCase().replace(/[\s,]+/g, '_');
+                      const workerAvailability = crewAvailability[workerKey] || {};
+                      
+                      // Calculate availability stats
+                      const availabilityStats = dayNames.map((day, dayIndex) => {
+                        const dayKey = day.toLowerCase().replace(/[\s,]+/g, '_');
+                        const isAvailable = workerAvailability[dayKey] !== false;
+                        const isPastDay = dayIndex < currentDay;
+                        const isAssigned = checkIfWorkerAssignedToAppointment(worker.name, dayIndex);
+                        
+                        return {
+                          day,
+                          dayIndex,
+                          isAvailable: isPastDay ? null : isAvailable,
+                          isAssigned,
+                          isPastDay,
+                          isToday: dayIndex === currentDay
+                        };
+                      });
+
+                      const availableDays = availabilityStats.filter(stat => stat.isAvailable === true).length;
+                      const unavailableDays = availabilityStats.filter(stat => stat.isAvailable === false).length;
+                      const assignedDays = availabilityStats.filter(stat => stat.isAssigned).length;
+                      const totalActiveDays = availableDays + unavailableDays + assignedDays;
+
+                      // Calculate overall status
+                      let statusIndicator = '';
+                      let statusClass = '';
+                      if (assignedDays > 0) {
+                        statusIndicator = 'On Duty';
+                        statusClass = 'status-on-duty';
+                      } else if (availableDays >= 5) {
+                        statusIndicator = 'Highly Available';
+                        statusClass = 'status-highly-available';
+                      } else if (availableDays >= 3) {
+                        statusIndicator = 'Available';
+                        statusClass = 'status-available';
+                      } else if (availableDays >= 1) {
+                        statusIndicator = 'Limited Availability';
+                        statusClass = 'status-limited';
+                      } else {
+                        statusIndicator = 'Unavailable';
+                        statusClass = 'status-unavailable';
+                      }
+
+                      return (
+                        <div 
+                          key={worker.name} 
+                          className={`worker-card ${selectedWorker === worker.name ? 'selected' : ''}`}
+                          onClick={() => setSelectedWorker(selectedWorker === worker.name ? null : worker.name)}
+                        >
+                          {selectedWorker === worker.name ? (
+                            <>
+                              <div className="worker-card-header">
+                                <div className="worker-name-and-status">
+                                  <h4 className="worker-name">{worker.name}</h4>
+                                  <span className={`status-indicator ${statusClass}`}>{statusIndicator}</span>
+                                </div>
+                                <span className="worker-type">{worker.type}</span>
+                              </div>
+                              
+                              {/* Quick Stats - Always Visible */}
+                              <div className="quick-stats">
+                                <div className="quick-stat">
+                                  <span className="quick-stat-number">{availableDays}</span>
+                                  <span className="quick-stat-label">Available</span>
+                                </div>
+                                <div className="quick-stat">
+                                  <span className="quick-stat-number">{assignedDays}</span>
+                                  <span className="quick-stat-label">On Duty</span>
+                                </div>
+                                <div className="quick-stat">
+                                  <span className="quick-stat-number">{unavailableDays}</span>
+                                  <span className="quick-stat-label">Unavailable</span>
+                                </div>
+                              </div>
+                              
+                              <div className="worker-details">
+                              <div className="availability-summary">
+                                <div className="summary-stats">
+                                  <div className="stat-item available">
+                                    <span className="stat-number">{availableDays}</span>
+                                    <span className="stat-label">Available</span>
+                                  </div>
+                                  <div className="stat-item unavailable">
+                                    <span className="stat-number">{unavailableDays}</span>
+                                    <span className="stat-label">Unavailable</span>
+                                  </div>
+                                  <div className="stat-item assigned">
+                                    <span className="stat-number">{assignedDays}</span>
+                                    <span className="stat-label">On Duty</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="weekly-schedule">
+                                <div className="schedule-grid">
+                                  {availabilityStats.slice(0, 7).map((stat, dayIdx) => {
+                                    const date = new Date(startOfWeek);
+                                    date.setDate(startOfWeek.getDate() + dayIdx);
+                                    
+                                    let statusClass = '';
+                                    
+                                    if (stat.isPastDay) {
+                                      statusClass = 'past-day';
+                                    } else if (stat.isAssigned) {
+                                      statusClass = 'assigned';
+                                    } else if (stat.isAvailable === true) {
+                                      statusClass = 'available';
+                                    } else if (stat.isAvailable === false) {
+                                      statusClass = 'unavailable';
+                                    }
+
+                                    return (
+                                      <div key={dayIdx} className={`schedule-day ${statusClass} ${stat.isToday ? 'today' : ''}`}>
+                                        <div className="day-name">{stat.day.substring(0, 3)}</div>
+                                        <div className="day-date">{date.getDate()}</div>
+                                        {stat.isToday && <div className="today-badge">TODAY</div>}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              <div className="worker-actions">
+                                <button 
+                                  className="edit-availability-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Scroll to table and highlight this worker's row
+                                    const tableWrapper = document.querySelector('.crew-availability-table-wrapper');
+                                    if (tableWrapper) {
+                                      tableWrapper.scrollIntoView({ behavior: 'smooth' });
+                                    }
+                                  }}
+                                >
+                                  Edit Availability
+                                </button>
+                              </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="worker-name-only">
+                              <h4 className="worker-name">{worker.name}</h4>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  );
+                })
+              ) : (
+                <div className="no-workers-message">
+                  <p>No workers found. Workers will appear here once they are added to the system.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
       })()}
       
       {/* Save Button */}

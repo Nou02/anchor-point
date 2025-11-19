@@ -13,7 +13,7 @@ import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebas
 import { db } from '../firebase/config';
 import notificationService from '../services/notificationService';
 import { clearTabUser, isCurrentTabOwner, getTabUser } from '../utils/tabAuth';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, Cell, ResponsiveContainer } from 'recharts';
 // Using dynamic import for xlsx to handle potential module resolution issues
 let XLSX;
 
@@ -86,14 +86,20 @@ const Homepage = () => {
         const userDoc = await getDoc(doc(db, 'users', tabUser.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          // Prefer firstName + lastName, fallback to fullName
+          const fullName = userData.firstName && userData.lastName
+            ? `${userData.firstName} ${userData.lastName}`.trim()
+            : (userData.fullName || tabUser.displayName || tabUser.email.split('@')[0]);
           setUserProfile({
-            fullName: userData.fullName || tabUser.displayName || tabUser.email.split('@')[0],
+            firstName: userData.firstName || '',
+            lastName: userData.lastName || '',
+            fullName: fullName,
             role: userData.role || 'Employee',
             email: userData.email || tabUser.email
           });
           
           // Show info button only for Alice
-          const displayName = userData.fullName || tabUser.displayName || '';
+          const displayName = fullName;
           const isAlice = displayName === 'Alice Margaretha Santos' || 
                          displayName === 'Alice' ||
                          (displayName && displayName.toLowerCase().includes('alice'));
@@ -104,6 +110,8 @@ const Homepage = () => {
         } else {
           // Fallback if no Firestore data
           setUserProfile({
+            firstName: '',
+            lastName: '',
             fullName: tabUser.displayName || tabUser.email.split('@')[0],
             role: 'Employee',
             email: tabUser.email
@@ -115,6 +123,8 @@ const Homepage = () => {
         console.error('Error fetching user profile:', error);
         // Fallback if error
         setUserProfile({
+          firstName: '',
+          lastName: '',
           fullName: tabUser.displayName || tabUser.email.split('@')[0],
           role: 'Employee',
           email: tabUser.email
@@ -1001,39 +1011,41 @@ const Homepage = () => {
                         {/* Yearly Growth - 2D Line Chart */}
                         <div className="dashboard-section">
                         <h3 className="section-title">Yearly Growth</h3>
-                        <div className="chart-container">
-                          <LineChart width="100%" height={150} data={analyticsData.byYear} isAnimationActive={!hasAnimated}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
-                            <XAxis 
-                              dataKey="year" 
-                              tick={{ fontSize: 12, fill: '#64748b' }}
-                              axisLine={{ stroke: '#e2e8f0' }}
-                            />
-                            <YAxis 
-                              tick={{ fontSize: 12, fill: '#64748b' }}
-                              axisLine={{ stroke: '#e2e8f0' }}
-                            />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: '#ffffff', 
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '8px',
-                                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                              }}
-                            />
-                            <Legend />
-                            <Line 
-                              type="monotone" 
-                              dataKey="count" 
-                              stroke="#2F3B70" 
-                              strokeWidth={3}
-                              dot={{ fill: '#2F3B70', strokeWidth: 2, r: 4 }}
-                              activeDot={{ r: 6, stroke: '#2F3B70', strokeWidth: 2 }}
-                              name="Vessel Operations"
-                              isAnimationActive={!hasAnimated}
-                              animationDuration={1000}
-                            />
-                          </LineChart>
+                        <div className="chart-container" style={{ width: '100%', height: '150px', minHeight: '150px' }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={analyticsData.byYear} isAnimationActive={!hasAnimated}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
+                              <XAxis 
+                                dataKey="year" 
+                                tick={{ fontSize: 12, fill: '#64748b' }}
+                                axisLine={{ stroke: '#e2e8f0' }}
+                              />
+                              <YAxis 
+                                tick={{ fontSize: 12, fill: '#64748b' }}
+                                axisLine={{ stroke: '#e2e8f0' }}
+                              />
+                              <Tooltip 
+                                contentStyle={{ 
+                                  backgroundColor: '#ffffff', 
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                                }}
+                              />
+                              <Legend />
+                              <Line 
+                                type="monotone" 
+                                dataKey="count" 
+                                stroke="#2F3B70" 
+                                strokeWidth={3}
+                                dot={{ fill: '#2F3B70', strokeWidth: 2, r: 4 }}
+                                activeDot={{ r: 6, stroke: '#2F3B70', strokeWidth: 2 }}
+                                name="Vessel Operations"
+                                isAnimationActive={!hasAnimated}
+                                animationDuration={1000}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
                         </div>
                         {yearlyGrowthNote && (
                           <div className="service-distribution-info">
@@ -1083,7 +1095,7 @@ const Homepage = () => {
                             </div>
                             <div className="forecast-item">
                               <div className="forecast-label">Expected Peak Days</div>
-                              <div className="forecast-value">{Math.round((analyticsData.peakDayOperations || 53) * 1.1)}</div>
+                              <div className="forecast-value">Thursday</div>
                               <div className="forecast-trend">+10% daily capacity</div>
                             </div>
                             <div className="forecast-item">
@@ -1106,46 +1118,48 @@ const Homepage = () => {
                         {/* Monthly Performance */}
                       <div className="dashboard-section">
                         <h3 className="section-title">Monthly Performance</h3>
-                        <div className="chart-container">
-                          <BarChart width="100%" height={150} data={analyticsData.byMonth || []} isAnimationActive={!hasAnimated}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
-                            <XAxis 
-                              dataKey="month" 
-                              tick={{ fontSize: 12, fill: '#64748b' }}
-                              axisLine={{ stroke: '#e2e8f0' }}
-                            />
-                            <YAxis 
-                              tick={{ fontSize: 12, fill: '#64748b' }}
-                              axisLine={{ stroke: '#e2e8f0' }}
-                            />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: '#ffffff', 
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '8px',
-                                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                              }}
-                            />
-                            <Legend />
-                            <Bar 
-                              dataKey="count" 
-                              name="Operations"
-                              radius={[4, 4, 0, 0]}
-                              isAnimationActive={!hasAnimated}
-                              animationDuration={1000}
-                            >
-                              {(analyticsData.byMonth || []).map((entry, index) => {
-                                const maxCount = Math.max(...(analyticsData.byMonth || []).map(m => m.count || 0));
-                                const isHighest = entry.count === maxCount;
-                                return (
-                                  <Cell 
-                                    key={`cell-${index}`}
-                                    fill={isHighest ? '#2F3B70' : '#6b8fc7'}
-                                  />
-                                );
-                              })}
-                            </Bar>
-                          </BarChart>
+                        <div className="chart-container" style={{ width: '100%', height: '150px', minHeight: '150px' }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={analyticsData.byMonth || []} isAnimationActive={!hasAnimated}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
+                              <XAxis 
+                                dataKey="month" 
+                                tick={{ fontSize: 12, fill: '#64748b' }}
+                                axisLine={{ stroke: '#e2e8f0' }}
+                              />
+                              <YAxis 
+                                tick={{ fontSize: 12, fill: '#64748b' }}
+                                axisLine={{ stroke: '#e2e8f0' }}
+                              />
+                              <Tooltip 
+                                contentStyle={{ 
+                                  backgroundColor: '#ffffff', 
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                                }}
+                              />
+                              <Legend />
+                              <Bar 
+                                dataKey="count" 
+                                name="Operations"
+                                radius={[4, 4, 0, 0]}
+                                isAnimationActive={!hasAnimated}
+                                animationDuration={1000}
+                              >
+                                {(analyticsData.byMonth || []).map((entry, index) => {
+                                  const maxCount = Math.max(...(analyticsData.byMonth || []).map(m => m.count || 0));
+                                  const isHighest = entry.count === maxCount;
+                                  return (
+                                    <Cell 
+                                      key={`cell-${index}`}
+                                      fill={isHighest ? '#2F3B70' : '#6b8fc7'}
+                                    />
+                                  );
+                                })}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
                         </div>
                         {monthlyPerformanceNote && (
                           <div className="service-distribution-info">

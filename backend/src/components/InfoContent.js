@@ -3,6 +3,47 @@ import './InfoContent.css';
 import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
+// Generate a simple user ID based on date and order
+const generateUserIdForExistingUser = (createdAt, allUsers, currentUserIndex) => {
+  const createdDate = new Date(createdAt);
+  const year = createdDate.getFullYear().toString().slice(-2);
+  const month = String(createdDate.getMonth() + 1).padStart(2, '0');
+  const day = String(createdDate.getDate()).padStart(2, '0');
+  const datePrefix = `${year}${month}${day}`;
+  
+  // Find the highest order number for that date from users that already have userId
+  let maxOrder = 0;
+  allUsers.forEach((userData) => {
+    if (userData.userId && userData.userId.startsWith(datePrefix)) {
+      const orderPart = userData.userId.split('-')[1];
+      if (orderPart) {
+        const orderNum = parseInt(orderPart, 10);
+        if (!isNaN(orderNum) && orderNum > maxOrder) {
+          maxOrder = orderNum;
+        }
+      }
+    }
+  });
+  
+  // Count how many users on the same date without userId come before this user
+  let usersWithoutIdBefore = 0;
+  for (let i = 0; i < currentUserIndex; i++) {
+    const userData = allUsers[i];
+    if (!userData.userId && userData.createdAt) {
+      const userCreatedDate = new Date(userData.createdAt);
+      if (userCreatedDate.getFullYear() === createdDate.getFullYear() &&
+          userCreatedDate.getMonth() === createdDate.getMonth() &&
+          userCreatedDate.getDate() === createdDate.getDate()) {
+        usersWithoutIdBefore++;
+      }
+    }
+  }
+  
+  const nextOrder = maxOrder + usersWithoutIdBefore + 1;
+  const orderSuffix = String(nextOrder).padStart(3, '0');
+  return `${datePrefix}-${orderSuffix}`;
+};
+
 
 const InfoContent = () => {
   const [users, setUsers] = useState([]);
@@ -18,19 +59,122 @@ const InfoContent = () => {
     const fetchUsers = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, 'users'));
-        const userList = querySnapshot.docs.map(doc => ({
+        const allUsersData = querySnapshot.docs.map(doc => ({
           ...doc.data(),
-          uid: doc.id, // Ensure uid is set from document ID
-          // Normalize the data structure
-          username: doc.data().username || doc.data().fullName || '',
-          fullName: doc.data().fullName || doc.data().username || '',
-          phone: doc.data().phone || '',
-          role: doc.data().role || doc.data().type || 'Employee',
-          type: doc.data().type || doc.data().role || 'Employee',
-          status: doc.data().status || 'Active',
-          createdAt: doc.data().createdAt || new Date(),
-          email: doc.data().email || ''
+          uid: doc.id
         }));
+        
+        // Sort users by createdAt to ensure proper sequencing
+        allUsersData.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateA - dateB;
+        });
+        
+        // Generate userId for users that don't have one
+        const usersToUpdate = [];
+        const userList = allUsersData.map((data, index) => {
+          // Use firstName and lastName directly from database
+          const firstName = data.firstName || '';
+          const lastName = data.lastName || '';
+          // Compute fullName from firstName and lastName for display purposes
+          const fullName = firstName && lastName 
+            ? `${firstName} ${lastName}`.trim() 
+            : (data.fullName || data.username || '');
+          
+          // Generate userId if missing
+          let userId = data.userId;
+          if (!userId && data.createdAt) {
+            userId = generateUserIdForExistingUser(data.createdAt, allUsersData, index);
+            usersToUpdate.push({ uid: data.uid, userId });
+          }
+          
+          // Convert "Employee" to "Crew" for backward compatibility
+          let role = data.role || data.type || 'Crew';
+          let type = data.type || data.role || 'Crew';
+          if (role === 'Employee') role = 'Crew';
+          if (type === 'Employee') type = 'Crew';
+          
+          // Set Carla's designation to HR
+          const fullNameCheck = fullName.toLowerCase();
+          const emailCheck = (data.email || '').toLowerCase();
+          const firstNameCheck = firstName.toLowerCase();
+          const lastNameCheck = lastName.toLowerCase();
+          const isCarla = fullNameCheck.includes('carla') || 
+                         emailCheck.includes('carla') ||
+                         (firstNameCheck.includes('carla') && lastNameCheck.includes('dela'));
+          if (isCarla) {
+            role = 'HR';
+            type = 'HR';
+          }
+          
+          return {
+            ...data,
+            uid: data.uid,
+            userId: userId,
+            firstName: firstName,
+            lastName: lastName,
+            username: data.username || fullName || '',
+            fullName: fullName,
+            phone: data.phone || '',
+            role: role,
+            type: type,
+            status: data.status || 'Active',
+            createdAt: data.createdAt || new Date(),
+            email: data.email || ''
+          };
+        });
+        
+        // Update users in Firebase that don't have userId
+        for (const userUpdate of usersToUpdate) {
+          try {
+            await updateDoc(doc(db, 'users', userUpdate.uid), {
+              userId: userUpdate.userId
+            });
+          } catch (error) {
+            console.error(`Error updating userId for user ${userUpdate.uid}:`, error);
+          }
+        }
+        
+        // Update users with "Employee" role to "Crew" in Firebase
+        const usersToUpdateRole = [];
+        allUsersData.forEach((data) => {
+          if ((data.role === 'Employee' || data.type === 'Employee') && data.uid) {
+            usersToUpdateRole.push({ uid: data.uid, role: 'Crew', type: 'Crew' });
+          }
+        });
+        
+        // Update Carla's designation to HR in Firebase
+        allUsersData.forEach((data) => {
+          const firstName = data.firstName || '';
+          const lastName = data.lastName || '';
+          const fullName = firstName && lastName 
+            ? `${firstName} ${lastName}`.trim() 
+            : (data.fullName || data.username || '');
+          const fullNameCheck = fullName.toLowerCase();
+          const emailCheck = (data.email || '').toLowerCase();
+          const firstNameCheck = firstName.toLowerCase();
+          const lastNameCheck = lastName.toLowerCase();
+          const isCarla = fullNameCheck.includes('carla') || 
+                         emailCheck.includes('carla') ||
+                         (firstNameCheck.includes('carla') && lastNameCheck.includes('dela'));
+          
+          if (isCarla && data.uid && (data.role !== 'HR' || data.type !== 'HR')) {
+            usersToUpdateRole.push({ uid: data.uid, role: 'HR', type: 'HR' });
+          }
+        });
+        
+        for (const userUpdate of usersToUpdateRole) {
+          try {
+            await updateDoc(doc(db, 'users', userUpdate.uid), {
+              role: userUpdate.role,
+              type: userUpdate.type
+            });
+          } catch (error) {
+            console.error(`Error updating role for user ${userUpdate.uid}:`, error);
+          }
+        }
+        
         setUsers(userList);
       } catch (err) {
         console.error('Error fetching users:', err);
@@ -47,6 +191,9 @@ const InfoContent = () => {
     setUsers([
       ...users,
       {
+        firstName: '',
+        lastName: '',
+        fullName: '',
         username: '',
         phone: '',
         role: '',
@@ -101,13 +248,29 @@ const InfoContent = () => {
   const saveUserChanges = async (user) => {
     try {
       if (user.uid && !user.isNew) {
+        // Use firstName and lastName from database fields
+        const firstName = user.firstName || '';
+        const lastName = user.lastName || '';
+        // Compute fullName from firstName and lastName
+        const fullName = firstName && lastName 
+          ? `${firstName} ${lastName}`.trim() 
+          : '';
+        
+        // Convert "Employee" to "Crew" when saving
+        let role = user.role || 'Crew';
+        let type = user.type || 'Crew';
+        if (role === 'Employee') role = 'Crew';
+        if (type === 'Employee') type = 'Crew';
+        
         await updateDoc(doc(db, 'users', user.uid), {
-          fullName: user.fullName,
-          username: user.username,
+          firstName: firstName, // Save to database firstName field
+          lastName: lastName, // Save to database lastName field
+          fullName: fullName, // Computed for backward compatibility
+          username: fullName || user.username || '',
           email: user.email,
           phone: user.phone,
-          role: user.role,
-          type: user.type,
+          role: role,
+          type: type,
           status: user.status,
           updatedAt: new Date().toISOString()
         });
@@ -128,19 +291,39 @@ const InfoContent = () => {
     }
   };
 
-  // Filter users by search
-  const filteredUsers = users.filter(user =>
-    (user.username || user.fullName || '').toLowerCase().includes(search.toLowerCase()) ||
-    (user.email || '').toLowerCase().includes(search.toLowerCase()) ||
-    (user.phone || '').toLowerCase().includes(search.toLowerCase())
-  );
+  // Filter users by search - filter by first letter of last name when typing
+  const filteredUsers = users.filter(user => {
+    const lastName = user.lastName || '';
+    const firstName = user.firstName || '';
+    const fullName = firstName && lastName 
+      ? `${firstName} ${lastName}`.trim() 
+      : (user.fullName || user.username || '');
+    
+    // If search is a single letter, filter by first letter of last name
+    if (search.length === 1 && search.match(/[a-zA-Z]/)) {
+      return lastName.toLowerCase().charAt(0) === search.toLowerCase();
+    }
+    
+    // Otherwise, search across all fields
+    return (
+      fullName.toLowerCase().includes(search.toLowerCase()) ||
+      firstName.toLowerCase().includes(search.toLowerCase()) ||
+      lastName.toLowerCase().includes(search.toLowerCase()) ||
+      (user.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      (user.phone || '').toLowerCase().includes(search.toLowerCase())
+    );
+  });
 
   // Sort users based on sortBy
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     if (sortBy === 'name') {
-      const nameA = (a.username || a.fullName || '').toLowerCase();
-      const nameB = (b.username || b.fullName || '').toLowerCase();
-      return nameA.localeCompare(nameB);
+      const fullNameA = a.firstName && a.lastName 
+        ? `${a.firstName} ${a.lastName}`.trim() 
+        : (a.fullName || a.username || '');
+      const fullNameB = b.firstName && b.lastName 
+        ? `${b.firstName} ${b.lastName}`.trim() 
+        : (b.fullName || b.username || '');
+      return fullNameA.toLowerCase().localeCompare(fullNameB.toLowerCase());
     } else if (sortBy === 'date') {
       const dateA = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : (a.createdAt ? new Date(a.createdAt).getTime() / 1000 : 0);
       const dateB = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : (b.createdAt ? new Date(b.createdAt).getTime() / 1000 : 0);
@@ -238,10 +421,12 @@ const InfoContent = () => {
                 <th className="checkbox-column">
                   <input type="checkbox" className="select-all-checkbox" />
                 </th>
-                <th>Full Name</th>
+                <th>User ID</th>
+                <th>Last Name</th>
+                <th>First Name</th>
                 <th>Email</th>
                 <th>Phone No.</th>
-                <th>User Type</th>
+                <th>Designation</th>
                 <th>Date Created</th>
                 <th>Status</th>
               </tr>
@@ -249,14 +434,14 @@ const InfoContent = () => {
             <tbody>
               {loading ? (
                 <tr className="loading-row">
-                  <td colSpan="7" className="loading-cell">
+                  <td colSpan="9" className="loading-cell">
                     <div className="loading-spinner"></div>
                     <span>Loading users...</span>
                   </td>
                 </tr>
               ) : sortedUsers.length === 0 ? (
                 <tr className="empty-row">
-                  <td colSpan="7" className="empty-cell">
+                  <td colSpan="9" className="empty-cell">
                     <div className="empty-state">
                       <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
                         <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -278,19 +463,50 @@ const InfoContent = () => {
                         onChange={() => handleSelectRow(user.uid)} 
                       />
                     </td>
-                    <td className="username-cell">
+                    <td className="userid-cell">
+                      <span className="user-id-text" title={user.uid || ''}>
+                        {user.userId || (user.uid ? `${user.uid.substring(0, 8)}...` : '')}
+                      </span>
+                    </td>
+                    <td className="lastname-cell">
                       {editMode ? (
                         <input 
                           className="table-input"
-                          value={user.fullName || user.username || ''} 
-                          onChange={e => handleCellChange(user.uid, 'fullName', e.target.value)} 
+                          placeholder="Last Name"
+                          value={user.lastName || ''} 
+                          onChange={e => {
+                            handleCellChange(user.uid, 'lastName', e.target.value);
+                            // Update fullName for display
+                            const fullName = `${user.firstName || ''} ${e.target.value}`.trim();
+                            handleCellChange(user.uid, 'fullName', fullName);
+                          }}
+                        />
+                      ) : (
+                        <span className="user-name">{user.lastName || ''}</span>
+                      )}
+                    </td>
+                    <td className="firstname-cell">
+                      {editMode ? (
+                        <input 
+                          className="table-input"
+                          placeholder="First Name"
+                          value={user.firstName || ''} 
+                          onChange={e => {
+                            handleCellChange(user.uid, 'firstName', e.target.value);
+                            // Update fullName for display
+                            const fullName = `${e.target.value} ${user.lastName || ''}`.trim();
+                            handleCellChange(user.uid, 'fullName', fullName);
+                          }}
                         />
                       ) : (
                         <div className="user-info">
                           <div className="user-avatar">
-                            {(user.fullName || user.username || 'U').charAt(0).toUpperCase()}
+                            {(() => {
+                              const firstName = user.firstName || '';
+                              return firstName ? firstName.charAt(0).toUpperCase() : 'U';
+                            })()}
                           </div>
-                          <span className="user-name">{user.fullName || user.username || ''}</span>
+                          <span className="user-name">{user.firstName || ''}</span>
                         </div>
                       )}
                     </td>
@@ -321,12 +537,26 @@ const InfoContent = () => {
                       {editMode ? (
                         <input 
                           className="table-input"
-                          value={user.role || user.type || ''} 
-                          onChange={e => handleCellChange(user.uid, 'role', e.target.value)} 
+                          value={(() => {
+                            const role = user.role || user.type || '';
+                            return role === 'Employee' ? 'Crew' : role;
+                          })()} 
+                          onChange={e => {
+                            const value = e.target.value === 'Employee' ? 'Crew' : e.target.value;
+                            handleCellChange(user.uid, 'role', value);
+                            handleCellChange(user.uid, 'type', value);
+                          }} 
                         />
                       ) : (
-                        <span className={`role-badge ${(user.role || user.type || '').toLowerCase().replace(/\s+/g, '-')}`}>
-                          {user.role || user.type || ''}
+                        <span className={`role-badge ${(() => {
+                          const role = user.role || user.type || '';
+                          const displayRole = role === 'Employee' ? 'Crew' : role;
+                          return displayRole.toLowerCase().replace(/\s+/g, '-');
+                        })()}`}>
+                          {(() => {
+                            const role = user.role || user.type || '';
+                            return role === 'Employee' ? 'Crew' : role;
+                          })()}
                         </span>
                       )}
                     </td>

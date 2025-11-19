@@ -171,58 +171,52 @@ const UpdatedPayroll = () => {
     return () => clearInterval(intervalId);
   }, []); // Empty dependency array - only run on mount
 
-  // Load workers data
+  // Load workers data - dynamically from Firebase
   useEffect(() => {
     const loadWorkers = async () => {
       try {
-        // Hardcoded list of workers to ensure they appear in payroll
-        const hardcodedWorkers = [
-          { id: '1', name: 'Bryan Matthew Cruz', email: '', role: 'Worker' },
-          { id: '2', name: 'David Emmanuel Reyes', email: '', role: 'Worker' },
-          { id: '3', name: 'Junnel, Cusi', email: '', role: 'Worker' },
-          { id: '4', name: 'Aljon, Dipasupil', email: '', role: 'Worker' },
-          { id: '5', name: 'Phil Allen, Eje', email: '', role: 'Worker' },
-          { id: '6', name: 'Rhed, Escalon', email: '', role: 'Worker' },
-          { id: '7', name: 'Fortune, Garcia Jr.', email: '', role: 'Worker' },
-          { id: '8', name: 'Keith, Javier', email: '', role: 'Worker' },
-          { id: '9', name: 'Ericson, Mendoza', email: '', role: 'Worker' },
-          { id: '10', name: 'Alec, Sino-ag', email: '', role: 'Worker' },
-          { id: '11', name: 'Romeo, Velasquez', email: '', role: 'Worker' },
-          { id: '12', name: 'Rodel, Maranan', email: '', role: 'Worker' },
-          { id: '13', name: 'Alloi, Sino-ag', email: '', role: 'Worker' }
-        ];
-
-        // Try to load additional workers from Firebase
-        let firebaseWorkers = [];
-        try {
-          const db = getFirestore();
-          const q = query(collection(db, 'users'));
-          const querySnapshot = await getDocs(q);
+        // Load all users from Firebase
+        const db = getFirestore();
+        const q = query(collection(db, 'users'));
+        const querySnapshot = await getDocs(q);
+        
+        const allWorkers = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          // Get firstName and lastName from database
+          const firstName = data.firstName || '';
+          const lastName = data.lastName || '';
           
-          querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            if (data.role === 'Worker' || data.type === 'Worker') {
-              firebaseWorkers.push({
-                id: doc.id,
-                name: data.name || data.fullName || data.username || 'Unknown',
-                email: data.email || '',
-                role: data.role || data.type || 'Worker'
-              });
-            }
+          // Get userId for display
+          const userId = data.userId || '';
+          
+          // Convert "Employee" to "Crew" for backward compatibility
+          let role = data.role || data.type || 'Crew';
+          if (role === 'Employee') role = 'Crew';
+          
+          // Include all users in the payroll table with separate fields
+          allWorkers.push({
+            id: doc.id,
+            userId: userId,
+            lastName: lastName,
+            firstName: firstName,
+            name: firstName && lastName ? `${lastName}, ${firstName}`.trim() : (data.fullName || data.username || data.name || 'Unknown'),
+            email: data.email || '',
+            role: role
           });
-        } catch (firebaseError) {
-          console.warn('Could not load workers from Firebase:', firebaseError);
-        }
-
-        // Combine hardcoded workers with Firebase workers, avoiding duplicates
-        const allWorkers = [...hardcodedWorkers];
-        firebaseWorkers.forEach(firebaseWorker => {
-          const exists = allWorkers.some(worker => 
-            worker.name.toLowerCase() === firebaseWorker.name.toLowerCase()
-          );
-          if (!exists) {
-            allWorkers.push(firebaseWorker);
+        });
+        
+        // Sort workers alphabetically by last name
+        allWorkers.sort((a, b) => {
+          const lastNameA = a.lastName || '';
+          const lastNameB = b.lastName || '';
+          // If last names are the same, sort by first name
+          if (lastNameA === lastNameB) {
+            const firstNameA = a.firstName || '';
+            const firstNameB = b.firstName || '';
+            return firstNameA.localeCompare(firstNameB);
           }
+          return lastNameA.localeCompare(lastNameB);
         });
         
         setWorkers(allWorkers);
@@ -910,7 +904,7 @@ const UpdatedPayroll = () => {
             <table className="manager-table">
               <thead>
                 <tr>
-                  <th rowSpan="2">Workers</th>
+                  <th colSpan="3">Workers</th>
                   <th colSpan="2">Local Vessel</th>
                   <th colSpan="2">Foreign Vessel</th>
                   <th rowSpan="2">TOTAL</th>
@@ -921,6 +915,9 @@ const UpdatedPayroll = () => {
                   <th rowSpan="2">NET TOTAL</th>
                 </tr>
                 <tr>
+                  <th>User ID</th>
+                  <th>Last Name</th>
+                  <th>First Name</th>
                   <th>Mooring</th>
                   <th>Unmooring</th>
                   <th>Mooring</th>
@@ -932,7 +929,9 @@ const UpdatedPayroll = () => {
                   const workerData = workerPayrollData[worker.id] || {};
                   return (
                     <tr key={worker.id}>
-                      <td className="worker-name-cell">{worker.name}</td>
+                      <td className="worker-userid-cell">{worker.userId || ''}</td>
+                      <td className="worker-lastname-cell">{worker.lastName || ''}</td>
+                      <td className="worker-firstname-cell">{worker.firstName || ''}</td>
                       <td>
                         <input 
                           type="number" 
@@ -1019,7 +1018,7 @@ const UpdatedPayroll = () => {
                   );
                 })}
                 <tr className="grand-total-row">
-                  <td>GRAND TOTAL</td>
+                  <td colSpan="3">GRAND TOTAL</td>
                   <td>{calculateTotals.localMooringCount}</td>
                   <td>{calculateTotals.localUnmooringCount}</td>
                   <td>{calculateTotals.foreignMooringCount}</td>
@@ -1341,9 +1340,18 @@ const UpdatedPayroll = () => {
           {/* User Information Header */}
           <div className="worker-payroll-header">
             <div className="worker-avatar">
-              {(userInfo?.fullName || userInfo?.username || user.displayName || 'U').charAt(0).toUpperCase()}
+              {(() => {
+                const fullName = userInfo?.firstName && userInfo?.lastName
+                  ? `${userInfo.firstName} ${userInfo.lastName}`.trim()
+                  : (userInfo?.fullName || userInfo?.username || user.displayName || 'U');
+                return fullName.charAt(0).toUpperCase();
+              })()}
             </div>
-            <h2 className="worker-name">{userInfo?.fullName || userInfo?.username || user.displayName || 'Worker'}</h2>
+            <h2 className="worker-name">
+              {userInfo?.firstName && userInfo?.lastName
+                ? `${userInfo.firstName} ${userInfo.lastName}`.trim()
+                : (userInfo?.fullName || userInfo?.username || user.displayName || 'Worker')}
+            </h2>
             <p className="worker-email">{user.email}</p>
             <p className="billing-date">Billing of this day ({formatDate(payrollData.approvedAt)})</p>
           </div>

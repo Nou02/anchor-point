@@ -19,8 +19,8 @@ body, #root, .App {
   padding: 40px;
   margin: 20px auto;
   max-width: 98vw;
-  min-width: 1000px;
-  width: 1200px;
+  min-width: 1400px;
+  width: 1600px;
   max-height: calc(100vh - 40px);
   box-shadow: 
     0 20px 60px rgba(0, 0, 0, 0.1),
@@ -289,8 +289,8 @@ body, #root, .App {
   width: 100%;
   border-collapse: collapse;
   background: #ffffff;
-  min-width: 1000px;
-  table-layout: fixed;
+  min-width: 1400px;
+  table-layout: auto;
 }
 
 /* Table Headers */
@@ -332,13 +332,43 @@ body, #root, .App {
 }
 
 /* Column Widths */
-.info-table th:nth-child(1), .info-table td:nth-child(1) { width: 60px; } /* Checkbox */
-.info-table th:nth-child(2), .info-table td:nth-child(2) { width: 200px; } /* Full Name */
-.info-table th:nth-child(3), .info-table td:nth-child(3) { width: 250px; } /* Email */
-.info-table th:nth-child(4), .info-table td:nth-child(4) { width: 150px; } /* Phone */
-.info-table th:nth-child(5), .info-table td:nth-child(5) { width: 150px; } /* User Type */
-.info-table th:nth-child(6), .info-table td:nth-child(6) { width: 120px; } /* Date Created */
-.info-table th:nth-child(7), .info-table td:nth-child(7) { width: 100px; } /* Status */
+.info-table th:nth-child(1), .info-table td:nth-child(1) { 
+  width: 60px; 
+  min-width: 60px;
+  max-width: 60px;
+} /* Checkbox */
+.info-table th:nth-child(2), .info-table td:nth-child(2) { 
+  width: 200px; 
+  min-width: 180px;
+} /* User ID */
+.info-table th:nth-child(3), .info-table td:nth-child(3) { 
+  width: 180px; 
+  min-width: 150px;
+} /* Last Name */
+.info-table th:nth-child(4), .info-table td:nth-child(4) { 
+  width: 180px; 
+  min-width: 150px;
+} /* First Name */
+.info-table th:nth-child(5), .info-table td:nth-child(5) { 
+  width: 250px; 
+  min-width: 200px;
+} /* Email */
+.info-table th:nth-child(6), .info-table td:nth-child(6) { 
+  width: 150px; 
+  min-width: 130px;
+} /* Phone */
+.info-table th:nth-child(7), .info-table td:nth-child(7) { 
+  width: 180px; 
+  min-width: 150px;
+} /* User Type */
+.info-table th:nth-child(8), .info-table td:nth-child(8) { 
+  width: 140px; 
+  min-width: 120px;
+} /* Date Created */
+.info-table th:nth-child(9), .info-table td:nth-child(9) { 
+  width: 120px; 
+  min-width: 100px;
+} /* Status */
 
 /* Table Rows */
 .user-row {
@@ -366,6 +396,9 @@ body, #root, .App {
   vertical-align: middle;
   font-weight: 600;
   background: #ffffff;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 /* Checkbox Styling */
@@ -401,6 +434,17 @@ body, #root, .App {
 .user-name {
   font-weight: 600;
   color: #1e293b;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* Last Name and First Name Cells */
+.lastname-cell,
+.firstname-cell {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 /* Password Cell */
@@ -672,13 +716,58 @@ body, #root, .App {
   font-size: 0.95rem;
   color: #4b5563;
   min-width: 200px;
-  max-width: 250px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 .email-text {
   color: #3b82f6;
   font-weight: 500;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Phone Cell */
+.phone-cell {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* Role Cell */
+.role-cell {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* Date Cell */
+.date-cell {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* Status Cell */
+.status-cell {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* User ID Cell */
+.userid-cell {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
+.user-id-text {
+  color: #64748b;
+  font-weight: 500;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }

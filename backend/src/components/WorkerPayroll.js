@@ -129,9 +129,18 @@ const WorkerPayroll = () => {
         <div className="worker-payroll-container">
           <div className="worker-payroll-header">
             <div className="worker-avatar">
-              {(userInfo?.fullName || userInfo?.username || user.displayName || 'U').charAt(0).toUpperCase()}
+              {(() => {
+                const fullName = userInfo?.firstName && userInfo?.lastName
+                  ? `${userInfo.firstName} ${userInfo.lastName}`.trim()
+                  : (userInfo?.fullName || userInfo?.username || user.displayName || 'U');
+                return fullName.charAt(0).toUpperCase();
+              })()}
             </div>
-            <h2 className="worker-name">{userInfo?.fullName || userInfo?.username || user.displayName || 'Worker'}</h2>
+            <h2 className="worker-name">
+              {userInfo?.firstName && userInfo?.lastName
+                ? `${userInfo.firstName} ${userInfo.lastName}`.trim()
+                : (userInfo?.fullName || userInfo?.username || user.displayName || 'Worker')}
+            </h2>
             <p className="worker-email">{user.email}</p>
             <p className="billing-date">No approved payroll available</p>
           </div>

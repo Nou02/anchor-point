@@ -1292,39 +1292,16 @@ return (
                       year: 'numeric'
                     });
                     
-                    const formattedTime = vessel.time ? (() => {
-                      try {
-                        const timeStr = vessel.time.trim();
-                        if (timeStr.includes('AM') || timeStr.includes('PM')) {
-                          return timeStr;
-                        }
-                        if (timeStr.includes(':')) {
-                          const [hours, minutes] = timeStr.split(':');
-                          const hour24 = parseInt(hours, 10);
-                          const mins = minutes || '00';
-                          
-                          if (hour24 === 0) return `12:${mins} AM`;
-                          if (hour24 < 12) return `${hour24}:${mins} AM`;
-                          if (hour24 === 12) return `12:${mins} PM`;
-                          return `${hour24 - 12}:${mins} PM`;
-                        }
-                        return timeStr;
-                      } catch (e) {
-                        return vessel.time;
-                      }
-                    })() : '';
-                    
                     return (
                       <div key={index} className="upcoming-vessel-card">
                         <div className="vessel-info">
-                          <div className="vessel-name">{vessel.vessel}</div>
-                          <div className="vessel-details">
-                            <span className="vessel-date">{formattedDate}</span>
-                            {formattedTime && <span className="vessel-time">{formattedTime}</span>}
+                          <div className="vessel-name-row">
+                            <span className="vessel-name">{vessel.vessel || 'N/A'}</span>
+                            <span className="control-number-label">Control No: {vessel.controlId || 'N/A'}</span>
                           </div>
-                          <div className="vessel-meta">
-                            <span className="vessel-type">{vessel.vesselType || 'Local'}</span>
-                            <span className="voyage-id">{vessel.voyage || 'N/A'}</span>
+                          <div className="vessel-date-row">
+                            <span className="vessel-date">{formattedDate}</span>
+                            <span className="voyage-number-label">Voyage No: {vessel.voyage || 'N/A'}</span>
                           </div>
                         </div>
                         <div className="vessel-status">
@@ -1357,39 +1334,16 @@ return (
                       year: 'numeric'
                     });
                     
-                    const formattedTime = vessel.time ? (() => {
-                      try {
-                        const timeStr = vessel.time.trim();
-                        if (timeStr.includes('AM') || timeStr.includes('PM')) {
-                          return timeStr;
-                        }
-                        if (timeStr.includes(':')) {
-                          const [hours, minutes] = timeStr.split(':');
-                          const hour24 = parseInt(hours, 10);
-                          const mins = minutes || '00';
-                          
-                          if (hour24 === 0) return `12:${mins} AM`;
-                          if (hour24 < 12) return `${hour24}:${mins} AM`;
-                          if (hour24 === 12) return `12:${mins} PM`;
-                          return `${hour24 - 12}:${mins} PM`;
-                        }
-                        return timeStr;
-                      } catch (e) {
-                        return vessel.time;
-                      }
-                    })() : '';
-                    
                     return (
                       <div key={index} className="finished-vessel-card">
                         <div className="vessel-info">
-                          <div className="vessel-name">{vessel.vessel}</div>
-                          <div className="vessel-details">
-                            <span className="vessel-date">{formattedDate}</span>
-                            {formattedTime && <span className="vessel-time">{formattedTime}</span>}
+                          <div className="vessel-name-row">
+                            <span className="vessel-name">{vessel.vessel || 'N/A'}</span>
+                            <span className="control-number-label">Control No: {vessel.controlId || 'N/A'}</span>
                           </div>
-                          <div className="vessel-meta">
-                            <span className="vessel-type">{vessel.vesselType || 'Local'}</span>
-                            <span className="voyage-id">{vessel.voyage || 'N/A'}</span>
+                          <div className="vessel-date-row">
+                            <span className="vessel-date">{formattedDate}</span>
+                            <span className="voyage-number-label">Voyage No: {vessel.voyage || 'N/A'}</span>
                           </div>
                         </div>
                         <div className="vessel-status">

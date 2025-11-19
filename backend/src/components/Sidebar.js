@@ -208,7 +208,12 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
           flexShrink: 0,
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
         }}>
-          {userProfile.fullName ? userProfile.fullName.charAt(0).toUpperCase() : 'U'}
+          {(() => {
+            const fullName = userProfile.firstName && userProfile.lastName
+              ? `${userProfile.firstName} ${userProfile.lastName}`.trim()
+              : (userProfile.fullName || '');
+            return fullName ? fullName.charAt(0).toUpperCase() : 'U';
+          })()}
         </div>
         
         {/* User Info */}
@@ -222,7 +227,9 @@ const Sidebar = ({ activeMenu, setActiveMenu, handleLogout, onInfoClick, onNotif
             overflowWrap: 'break-word',
             lineHeight: '1.3'
           }}>
-            {userProfile.fullName || 'User'}
+            {userProfile.firstName && userProfile.lastName
+              ? `${userProfile.firstName} ${userProfile.lastName}`.trim()
+              : (userProfile.fullName || 'User')}
           </div>
           <div style={{
             color: 'rgba(255, 255, 255, 0.7)',

@@ -525,7 +525,7 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.3);
   min-width: 100%;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 
@@ -546,11 +546,18 @@
   letter-spacing: 0.05em;
 }
 
-/* Vessel column headers - allow text wrapping and better fitting */
-.manager-table th:nth-child(2),
-.manager-table th:nth-child(3),
+/* Center Workers, Local Vessel, and Foreign Vessel main headers */
+.manager-table th:first-child,
 .manager-table th:nth-child(4),
 .manager-table th:nth-child(5) {
+  text-align: center;
+}
+
+/* Vessel column headers - allow text wrapping and better fitting */
+.manager-table th:nth-child(4),
+.manager-table th:nth-child(5),
+.manager-table th:nth-child(6),
+.manager-table th:nth-child(7) {
   white-space: nowrap;
   line-height: 1.2;
   font-size: 0.8rem; /* increase legibility for grouped headers */
@@ -574,32 +581,92 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Workers column - bigger for better readability */
-.manager-table th:first-child,
-.manager-table td:first-child {
-  width: 22%;
-  text-align: left;
-  padding-left: 16px;
+/* Workers columns (User ID, Last Name, First Name) - grouped under "Workers" */
+/* Main Workers header is centered, sub-headers are centered */
+.manager-table th:first-child {
+  text-align: center;
 }
 
-/* Align first column left; rest right */
+.manager-table th:nth-child(2),
+.manager-table th:nth-child(3) {
+  text-align: center;
+}
+
+.manager-table td:first-child,
+.manager-table td:nth-child(2),
+.manager-table td:nth-child(3) {
+  text-align: left;
+  padding: 10px 12px;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* User ID column */
 .manager-table th:first-child,
 .manager-table td:first-child {
-  text-align: left;
+  width: 10%;
+  min-width: 100px;
 }
-.manager-table td:nth-child(n+2) {
+
+/* Last Name column */
+.manager-table th:nth-child(2),
+.manager-table td:nth-child(2) {
+  width: 12%;
+  min-width: 120px;
+}
+
+/* First Name column */
+.manager-table th:nth-child(3),
+.manager-table td:nth-child(3) {
+  width: 12%;
+  min-width: 120px;
+}
+
+/* Worker cell styles */
+.worker-userid-cell {
+  font-weight: 500;
+  text-align: left;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.worker-lastname-cell {
+  font-weight: 500;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.worker-firstname-cell {
+  font-weight: 500;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Align remaining columns right */
+.manager-table td:nth-child(n+4) {
   text-align: right;
 }
 
 /* Vessel columns (Local Mooring, Local Unmooring, Foreign Mooring, Foreign Unmooring) */
-.manager-table th:nth-child(2),
-.manager-table th:nth-child(3),
 .manager-table th:nth-child(4),
 .manager-table th:nth-child(5),
-.manager-table td:nth-child(2),
-.manager-table td:nth-child(3),
+.manager-table th:nth-child(6),
+.manager-table th:nth-child(7),
 .manager-table td:nth-child(4),
-.manager-table td:nth-child(5) {
+.manager-table td:nth-child(5),
+.manager-table td:nth-child(6),
+.manager-table td:nth-child(7) {
   width: 12%;
   font-size: 0.8rem; /* match header size for clarity */
   line-height: 1.2;
@@ -609,15 +676,15 @@
 }
 
 /* TOTAL column - smaller */
-.manager-table th:nth-child(6),
-.manager-table td:nth-child(6) {
+.manager-table th:nth-child(8),
+.manager-table td:nth-child(8) {
   width: 6%;
   white-space: nowrap;
 }
 
 /* SSS column - smaller */
-.manager-table th:nth-child(7),
-.manager-table td:nth-child(7) {
+.manager-table th:nth-child(9),
+.manager-table td:nth-child(9) {
   width: 7%;
   font-size: 0.7rem;
   padding: 6px 4px;
@@ -625,24 +692,6 @@
 }
 
 /* PAG-IBIG column - wider for full text */
-.manager-table th:nth-child(8),
-.manager-table td:nth-child(8) {
-  width: 9%;
-  font-size: 0.7rem;
-  padding: 6px 4px;
-  white-space: nowrap;
-}
-
-/* PhilHealth column - medium */
-.manager-table th:nth-child(9),
-.manager-table td:nth-child(9) {
-  width: 8%;
-  font-size: 0.7rem;
-  padding: 6px 4px;
-  white-space: nowrap;
-}
-
-/* Cash Advance column - wider for full text */
 .manager-table th:nth-child(10),
 .manager-table td:nth-child(10) {
   width: 9%;
@@ -651,9 +700,27 @@
   white-space: nowrap;
 }
 
-/* NET TOTAL column - smaller */
+/* PhilHealth column - medium */
 .manager-table th:nth-child(11),
 .manager-table td:nth-child(11) {
+  width: 8%;
+  font-size: 0.7rem;
+  padding: 6px 4px;
+  white-space: nowrap;
+}
+
+/* Cash Advance column - wider for full text */
+.manager-table th:nth-child(12),
+.manager-table td:nth-child(12) {
+  width: 9%;
+  font-size: 0.7rem;
+  padding: 6px 4px;
+  white-space: nowrap;
+}
+
+/* NET TOTAL column - smaller */
+.manager-table th:nth-child(13),
+.manager-table td:nth-child(13) {
   width: 8%;
   white-space: nowrap;
 }
@@ -1018,53 +1085,53 @@
     padding: 4px 2px;
   }
   
-  /* Maintain column proportions on mobile */
+  /* Maintain column proportions on mobile - Workers columns */
   .manager-table th:first-child,
   .manager-table td:first-child {
-    width: 15%;
+    width: 8%;
+    min-width: 80px;
     padding-left: 4px;
   }
   
   .manager-table th:nth-child(2),
+  .manager-table td:nth-child(2) {
+    width: 10%;
+    min-width: 90px;
+    font-size: 0.45rem;
+  }
+  
   .manager-table th:nth-child(3),
+  .manager-table td:nth-child(3) {
+    width: 10%;
+    min-width: 90px;
+    font-size: 0.45rem;
+  }
+  
+  /* Vessel columns */
   .manager-table th:nth-child(4),
   .manager-table th:nth-child(5),
-  .manager-table td:nth-child(2),
-  .manager-table td:nth-child(3),
+  .manager-table th:nth-child(6),
+  .manager-table th:nth-child(7),
   .manager-table td:nth-child(4),
-  .manager-table td:nth-child(5) {
-    width: 12%;
+  .manager-table td:nth-child(5),
+  .manager-table td:nth-child(6),
+  .manager-table td:nth-child(7) {
+    width: 10%;
     min-width: 60px;
     font-size: 0.45rem;
   }
   
-  .manager-table th:nth-child(6),
-  .manager-table td:nth-child(6) {
+  .manager-table th:nth-child(8),
+  .manager-table td:nth-child(8) {
     width: 6%;
     min-width: 40px;
     white-space: nowrap;
   }
   
-  .manager-table th:nth-child(7),
-  .manager-table td:nth-child(7) {
-    width: 7%;
-    min-width: 45px;
-    font-size: 0.6rem;
-    white-space: nowrap;
-  }
-  
-  .manager-table th:nth-child(8),
-  .manager-table td:nth-child(8) {
-    width: 9%;
-    min-width: 55px;
-    font-size: 0.6rem;
-    white-space: nowrap;
-  }
-  
   .manager-table th:nth-child(9),
   .manager-table td:nth-child(9) {
-    width: 8%;
-    min-width: 50px;
+    width: 7%;
+    min-width: 45px;
     font-size: 0.6rem;
     white-space: nowrap;
   }
@@ -1079,6 +1146,22 @@
   
   .manager-table th:nth-child(11),
   .manager-table td:nth-child(11) {
+    width: 8%;
+    min-width: 50px;
+    font-size: 0.6rem;
+    white-space: nowrap;
+  }
+  
+  .manager-table th:nth-child(12),
+  .manager-table td:nth-child(12) {
+    width: 9%;
+    min-width: 55px;
+    font-size: 0.6rem;
+    white-space: nowrap;
+  }
+  
+  .manager-table th:nth-child(13),
+  .manager-table td:nth-child(13) {
     width: 8%;
     min-width: 50px;
     white-space: nowrap;

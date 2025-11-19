@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { setTabUser } from '../utils/tabAuth';
 import './LoginSignUp.css';
 
@@ -15,11 +15,64 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('');
 
   const auth = getAuth();
+
+  // Generate a simple user ID based on date and order
+  const generateUserId = async (db) => {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2); // Last 2 digits of year
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // Month (01-12)
+    const day = String(now.getDate()).padStart(2, '0'); // Day (01-31)
+    const datePrefix = `${year}${month}${day}`; // Format: YYMMDD
+    
+    try {
+      // Get all users and filter by date prefix in userId or createdAt
+      const usersRef = collection(db, 'users');
+      const querySnapshot = await getDocs(usersRef);
+      
+      // Find the highest order number for today
+      let maxOrder = 0;
+      querySnapshot.forEach((doc) => {
+        const userData = doc.data();
+        // Check if user has userId with today's date prefix
+        if (userData.userId && userData.userId.startsWith(datePrefix)) {
+          const orderPart = userData.userId.split('-')[1];
+          if (orderPart) {
+            const orderNum = parseInt(orderPart, 10);
+            if (!isNaN(orderNum) && orderNum > maxOrder) {
+              maxOrder = orderNum;
+            }
+          }
+        }
+        // Also check users created today without userId (for backward compatibility)
+        else if (userData.createdAt) {
+          const createdDate = new Date(userData.createdAt);
+          if (createdDate.getFullYear() === now.getFullYear() &&
+              createdDate.getMonth() === now.getMonth() &&
+              createdDate.getDate() === now.getDate()) {
+            // This user was created today but doesn't have userId yet
+            // We'll count them too to avoid conflicts
+          }
+        }
+      });
+      
+      // Generate next order number
+      const nextOrder = maxOrder + 1;
+      const orderSuffix = String(nextOrder).padStart(3, '0'); // Format: 001, 002, etc.
+      
+      return `${datePrefix}-${orderSuffix}`;
+    } catch (error) {
+      console.error('Error generating user ID:', error);
+      // Fallback: use timestamp-based ID
+      const timestamp = Date.now().toString().slice(-6);
+      return `${datePrefix}-${timestamp}`;
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,20 +110,28 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
         
         // Save user data to Firestore
         const db = getFirestore();
+        const fullName = `${firstName} ${lastName}`.trim();
+        
+        // Generate simple user ID based on date and order
+        const userId = await generateUserId(db);
+        
         await setDoc(doc(db, 'users', user.uid), {
           uid: user.uid,
-          fullName: name,
-          username: name, // Add username field for compatibility
+          userId: userId, // Simple user ID: YYMMDD-XXX
+          firstName: firstName,
+          lastName: lastName,
+          fullName: fullName, // Keep for backward compatibility
+          username: fullName, // Add username field for compatibility
           email: email,
           phone: phone,
-          role: role || 'Employee',
-          type: role || 'Employee', // Add type field for compatibility
+          role: role || 'Crew',
+          type: role || 'Crew', // Add type field for compatibility
           status: 'Active',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
         
-        onSignUp({ name, email, phone, password });
+        onSignUp({ name: fullName, email, phone, password });
       }
     } catch (err) {
       setError(err.message);
@@ -136,14 +197,24 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
             {/* Main Form */}
             <form onSubmit={handleSubmit}>
               {!isLogin && (
-                <input
-                  type="text"
-                  placeholder="Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="input-field"
-                  required
-                />
+                <>
+                  <input
+                    type="text"
+                    placeholder="First Name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="input-field"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Last Name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="input-field"
+                    required
+                  />
+                </>
               )}
 
               <input
@@ -176,7 +247,7 @@ const LoginSignUp = ({ onLogin, onSignUp }) => {
                   <option value="">Select Role</option>
                   <option value="Manager">Manager</option>
                   <option value="Supervisor">Supervisor</option>
-                  <option value="Employee">Employee</option>
+                  <option value="Crew">Crew</option>
                   <option value="Administrator">Administrator</option>
                 </select>
               )}
