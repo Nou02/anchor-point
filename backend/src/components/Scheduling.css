@@ -1567,19 +1567,23 @@ html, body {
 
 .upcoming-vessel-card {
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   padding: 10px 12px;
   margin-bottom: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  transition: all 0.2s ease;
   flex-shrink: 0;
-  height: 60px;
+  min-height: 70px;
   overflow: hidden;
+}
+
+.upcoming-vessel-card:last-child {
+  margin-bottom: 0;
 }
 
 .upcoming-vessel-card:hover {
@@ -1894,33 +1898,6 @@ html, body {
 
 .upcoming-vessels-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
-}
-
-.upcoming-vessel-card {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  padding: 10px 12px;
-  margin-bottom: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  transition: all 0.2s ease;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  flex-shrink: 0;
-  min-height: 70px;
-  overflow: hidden;
-}
-
-.upcoming-vessel-card:last-child {
-  margin-bottom: 0;
-}
-
-.upcoming-vessel-card:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .status-badge.upcoming {
