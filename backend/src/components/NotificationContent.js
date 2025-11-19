@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './NotificationContent.css';
 import notificationService from '../services/notificationService';
-import { getTabUser } from '../utils/tabAuth';
+import { getAuth } from 'firebase/auth';
 import { getWeatherColor } from '../services/weatherService';
 
 const NotificationContent = () => {
@@ -13,13 +13,14 @@ const NotificationContent = () => {
   const [filter, setFilter] = useState('all'); // all, unread, read
   const [sortBy, setSortBy] = useState('newest'); // newest, oldest
 
-  // Get user role and name from tab-specific storage
+  // Get user role and name
   useEffect(() => {
-    const tabUser = getTabUser();
+    const auth = getAuth();
+    const user = auth.currentUser;
     
-    if (tabUser) {
-      const email = tabUser.email || '';
-      const name = tabUser.displayName || '';
+    if (user) {
+      const email = user.email || '';
+      const name = user.displayName || '';
       
       // Determine user role
       let role = 'worker';

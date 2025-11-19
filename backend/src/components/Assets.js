@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, addDoc, query, getDocs, getDoc, updateDoc, doc, setDoc, deleteDoc, orderBy, onSnapshot } from 'firebase/firestore';
-import { getTabUser } from '../utils/tabAuth';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import './Assets.css';
 import notificationService from '../services/notificationService';
 
@@ -38,23 +38,25 @@ const Assets = () => {
     model: '' // For vehicles and equipment
   });
 
-  // Load user authentication and check if user is Alice from tab-specific storage
+  // Load user authentication and check if user is Alice
   useEffect(() => {
-    const tabUser = getTabUser();
-    if (tabUser) {
-      setUser(tabUser);
-      const displayName = tabUser.displayName || '';
-      const email = tabUser.email || '';
-      const isAliceUser = displayName === 'Alice Margaretha Santos' || 
-                         displayName === 'Alice' ||
-                         (displayName && displayName.toLowerCase().includes('alice')) ||
-                         email.toLowerCase().includes('alice');
-      setIsAlice(isAliceUser);
-    } else {
-      setUser(null);
-      setIsAlice(false);
-    }
-    setIsLoading(false);
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const displayName = currentUser.displayName || '';
+        const email = currentUser.email || '';
+        const isAliceUser = displayName === 'Alice Margaretha Santos' || 
+                           displayName === 'Alice' ||
+                           (displayName && displayName.toLowerCase().includes('alice')) ||
+                           email.toLowerCase().includes('alice');
+        setIsAlice(isAliceUser);
+      } else {
+        setIsAlice(false);
+      }
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   // Load fuel inventory
