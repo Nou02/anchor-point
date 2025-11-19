@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import './NotificationContent.css';
 import notificationService from '../services/notificationService';
 import { getAuth } from 'firebase/auth';
+import { getWeatherColor } from '../services/weatherService';
 
 const NotificationContent = () => {
   const [notifications, setNotifications] = useState([]);
   const [userRole, setUserRole] = useState(null);
   const [userName, setUserName] = useState(null);
+  const [expandedNotifications, setExpandedNotifications] = useState(new Set());
 
   const [filter, setFilter] = useState('all'); // all, unread, read
   const [sortBy, setSortBy] = useState('newest'); // newest, oldest
@@ -60,6 +62,23 @@ const NotificationContent = () => {
     };
   }, [userRole, userName]);
 
+  // Toggle notification expansion
+  const toggleNotification = (id) => {
+    setExpandedNotifications(prev => {
+      // If clicking the same notification, collapse it
+      if (prev.has(id)) {
+        return new Set();
+      } else {
+        // If clicking a different notification, close all others and open this one
+        const newSet = new Set();
+        newSet.add(id);
+        // Mark as read when expanded
+        notificationService.markAsRead(id);
+        return newSet;
+      }
+    });
+  };
+
   // Mark notification as read
   const markAsRead = (id) => {
     notificationService.markAsRead(id);
@@ -106,7 +125,7 @@ const NotificationContent = () => {
       case 'weather':
         return (
           <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM1 10.5h3v2H1v-2zm11-9h2v3h-2v-3zm8.04 2.88l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8zm-1.8 13.12l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8zM20 10.5h3v2h-3v-2zm-2-5c0 3.04-2.46 5.5-5.5 5.5S7 8.54 7 5.5 9.46 0 12.5 0 18 2.46 18 5.5zm-2 0c0-1.93-1.57-3.5-3.5-3.5S9 3.57 9 5.5s1.57 3.5 3.5 3.5 3.5-1.57 3.5-3.5zM5.64 16.36l1.41-1.41 1.41 1.41-1.41 1.41-1.41-1.41zM12 20.5c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5-3.5-1.57-3.5-3.5z"/>
+            <path d="M19.36 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.64-4.96z"/>
           </svg>
         );
       case 'assignment':
@@ -125,6 +144,12 @@ const NotificationContent = () => {
         return (
           <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
             <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+          </svg>
+        );
+      case 'storage':
+        return (
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6-6H6V4h12v2z"/>
           </svg>
         );
       case 'update':
@@ -148,23 +173,34 @@ const NotificationContent = () => {
     }
   };
 
-  // Get notification color based on type
-  const getNotificationColor = (type) => {
+  // Get notification color based on type and weather data
+  const getNotificationColor = (notification) => {
+    const type = notification.type;
+    
+    // For weather notifications, use weather condition to determine color
+    if (type === 'weather' && notification.weatherData) {
+      const condition = notification.weatherData.condition || notification.weatherData.description || '';
+      return getWeatherColor(condition);
+    }
+    
+    // For other notification types, use default colors
     switch (type) {
       case 'arrival':
         return '#4CAF50';
       case 'weather':
-        return '#FF9800';
+        return '#2196F3'; // Default blue if no weather data
       case 'assignment':
         return '#2196F3';
       case 'system':
         return '#9C27B0';
       case 'payroll':
-        return '#F44336';
+        return '#FFA500';
       case 'update':
         return '#00BCD4';
       case 'safety':
         return '#FF5722';
+      case 'storage':
+        return '#8B4513';
       default:
         return '#607D8B';
     }
@@ -282,15 +318,15 @@ const NotificationContent = () => {
           </div>
         ) : (
           filteredNotifications.map(notification => {
-            const priorityInfo = getPriorityIndicator(notification.priority);
-            const statusInfo = getStatusIndicator(notification.status);
-            const typeColor = getNotificationColor(notification.type);
+            const typeColor = getNotificationColor(notification);
+            
+            const isExpanded = expandedNotifications.has(notification.id);
             
             return (
               <div 
                 key={notification.id} 
-                className={`notification-item ${!notification.read ? 'unread' : ''}`}
-                onClick={() => markAsRead(notification.id)}
+                className={`notification-item ${!notification.read ? 'unread' : ''} ${isExpanded ? 'expanded' : ''}`}
+                onClick={() => toggleNotification(notification.id)}
               >
                 <div className="notification-icon" style={{ backgroundColor: typeColor }}>
                   {getNotificationIcon(notification.type)}
@@ -298,22 +334,23 @@ const NotificationContent = () => {
                 <div className="notification-content-main">
                   <div className="notification-item-header">
                     <div className="notification-title-section">
-                      <h3 className="notification-item-title">{notification.title}</h3>
-                      <div className="notification-badges">
-                        <span 
-                          className="priority-badge" 
-                          style={{ backgroundColor: priorityInfo.color }}
-                          title={priorityInfo.text}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h3 className="notification-item-title">{notification.title}</h3>
+                        <svg 
+                          width="16" 
+                          height="16" 
+                          fill="currentColor" 
+                          viewBox="0 0 24 24"
+                          className={`expand-icon ${isExpanded ? 'expanded' : ''}`}
+                          style={{ 
+                            transition: 'transform 0.3s ease',
+                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                            color: '#6c757d',
+                            flexShrink: 0
+                          }}
                         >
-                          {priorityInfo.icon}
-                        </span>
-                        <span 
-                          className="status-badge" 
-                          style={{ backgroundColor: statusInfo.color }}
-                          title={statusInfo.text}
-                        >
-                          {statusInfo.icon}
-                        </span>
+                          <path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"/>
+                        </svg>
                       </div>
                     </div>
                     <div className="notification-item-actions">
@@ -337,13 +374,14 @@ const NotificationContent = () => {
                       </button>
                     </div>
                   </div>
-                  <p className="notification-message">{notification.message}</p>
-                  <div className="notification-footer">
-                    <span className="notification-type" style={{ color: typeColor }}>
-                      {notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
-                    </span>
-                    {!notification.read && <div className="unread-indicator"></div>}
-                  </div>
+                  {isExpanded && (
+                    <div className="notification-details">
+                      <p className="notification-message">{notification.message}</p>
+                      <div className="notification-footer">
+                        {!notification.read && <div className="unread-indicator"></div>}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             );
