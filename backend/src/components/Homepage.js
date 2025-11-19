@@ -13,7 +13,7 @@ import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebas
 import { db } from '../firebase/config';
 import notificationService from '../services/notificationService';
 import { clearTabUser, isCurrentTabOwner, getTabUser } from '../utils/tabAuth';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, Cell } from 'recharts';
 // Using dynamic import for xlsx to handle potential module resolution issues
 let XLSX;
 
@@ -1137,12 +1137,22 @@ const Homepage = () => {
                             <Legend />
                             <Bar 
                               dataKey="count" 
-                              fill="#FF6B6B" 
                               name="Operations"
                               radius={[4, 4, 0, 0]}
                               isAnimationActive={!hasAnimated}
                               animationDuration={1000}
-                            />
+                            >
+                              {(analyticsData.byMonth || []).map((entry, index) => {
+                                const maxCount = Math.max(...(analyticsData.byMonth || []).map(m => m.count || 0));
+                                const isHighest = entry.count === maxCount;
+                                return (
+                                  <Cell 
+                                    key={`cell-${index}`}
+                                    fill={isHighest ? '#2F3B70' : '#6b8fc7'}
+                                  />
+                                );
+                              })}
+                            </Bar>
                           </BarChart>
                         </div>
                         {monthlyPerformanceNote && (
@@ -1190,6 +1200,7 @@ const Homepage = () => {
                               analyticsData.topServices.map((service, index) => {
                                 const maxCount = analyticsData.topServices[0].count;
                                 const percentage = maxCount > 0 ? Math.round((service.count / maxCount) * 100) : 0;
+                                const isHighest = service.count === maxCount;
                                 return (
                                   <div key={index} className="service-item">
                                     <div className="service-header">
@@ -1201,7 +1212,9 @@ const Homepage = () => {
                                         className="service-progress-fill"
                                         style={{ 
                                           width: `${percentage}%`,
-                                          background: `hsl(${index * 60}, 70%, 50%)`
+                                          background: isHighest 
+                                            ? 'linear-gradient(90deg, #2F3B70, #4a6fa5)'
+                                            : 'linear-gradient(90deg, #6b8fc7, #8fb3d9)'
                                         }}
                                       ></div>
                                     </div>
