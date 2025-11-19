@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getTabUser } from '../utils/tabAuth';
 import '../components/Payroll.css';
 
 const WorkerPayroll = () => {
@@ -10,20 +11,45 @@ const WorkerPayroll = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [isManagerView, setIsManagerView] = useState(false);
 
-  // Load user data
+  // Load user data - use tab-specific sessionStorage instead of Firebase auth
+  const userRef = React.useRef(null);
+  
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
+    const loadUserData = () => {
+      // Get user from tab-specific sessionStorage
+      const tabUser = getTabUser();
+      
+      if (tabUser) {
+        userRef.current = tabUser;
+        setUser(tabUser);
       } else {
+        userRef.current = null;
         setUser(null);
       }
       setIsLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
-  }, []);
+    // Load user data on mount
+    loadUserData();
+
+    // Set up periodic check to detect if user changes (but ignore Firebase auth changes)
+    // The interval checks sessionStorage directly and compares with ref
+    const intervalId = setInterval(() => {
+      const currentTabUser = getTabUser();
+      const currentUserId = userRef.current?.uid;
+      
+      if (currentTabUser && currentTabUser.uid !== currentUserId) {
+        // User changed in this tab, reload data
+        loadUserData();
+      } else if (!currentTabUser && currentUserId) {
+        // User logged out in this tab
+        userRef.current = null;
+        setUser(null);
+      }
+    }, 500);
+
+    return () => clearInterval(intervalId);
+  }, []); // Empty dependency array - only run on mount
 
   // Load worker's payroll data
   useEffect(() => {

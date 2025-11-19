@@ -3,6 +3,7 @@ import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, update
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import '../components/UpdatedPayroll.css';
 import notificationService from '../services/notificationService';
+import { getTabUser } from '../utils/tabAuth';
 
 // Ultra Simple Input Component for better UX
 const UltraSimpleInput = ({ initialValue, onValueChange, onBlur, className, placeholder }) => {
@@ -105,20 +106,26 @@ const UpdatedPayroll = () => {
            name.toLowerCase().includes('alice margaretha santos');
   };
 
-  // Load user data
+  // Load user data - use tab-specific sessionStorage instead of Firebase auth
+  const userRef = useRef(null);
+  
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setUserName(currentUser.displayName || '');
-        setUserFullName(currentUser.displayName || '');
-        setUserEmail(currentUser.email || '');
+    const loadUserData = async () => {
+      // Get user from tab-specific sessionStorage
+      const tabUser = getTabUser();
+      
+      if (tabUser) {
+        // Use the user from sessionStorage (tab-specific)
+        userRef.current = tabUser;
+        setUser(tabUser);
+        setUserName(tabUser.displayName || tabUser.email || '');
+        setUserFullName(tabUser.displayName || tabUser.email || '');
+        setUserEmail(tabUser.email || '');
         setUserRole('Manager');
         setUserDate(new Date().toLocaleDateString());
         
         // Generate initials
-        const name = currentUser.displayName || '';
+        const name = tabUser.displayName || tabUser.email || '';
         const nameParts = name.split(' ');
         const initials = nameParts.map(part => part.charAt(0)).join('').toUpperCase();
         setUserInitials(initials);
@@ -126,7 +133,7 @@ const UpdatedPayroll = () => {
         // Load user info from Firestore
         try {
           const db = getFirestore();
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          const userDoc = await getDoc(doc(db, 'users', tabUser.uid));
           if (userDoc.exists()) {
             setUserInfo(userDoc.data());
           }
@@ -134,14 +141,35 @@ const UpdatedPayroll = () => {
           console.error('Error loading user info:', error);
         }
       } else {
+        userRef.current = null;
         setUser(null);
         setUserInfo(null);
       }
       setIsLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
-  }, []);
+    // Load user data on mount
+    loadUserData();
+
+    // Set up periodic check to detect if user changes (but ignore Firebase auth changes)
+    // The interval checks sessionStorage directly and compares with ref
+    const intervalId = setInterval(() => {
+      const currentTabUser = getTabUser();
+      const currentUserId = userRef.current?.uid;
+      
+      if (currentTabUser && currentTabUser.uid !== currentUserId) {
+        // User changed in this tab, reload data
+        loadUserData();
+      } else if (!currentTabUser && currentUserId) {
+        // User logged out in this tab
+        userRef.current = null;
+        setUser(null);
+        setUserInfo(null);
+      }
+    }, 500);
+
+    return () => clearInterval(intervalId);
+  }, []); // Empty dependency array - only run on mount
 
   // Load workers data
   useEffect(() => {
