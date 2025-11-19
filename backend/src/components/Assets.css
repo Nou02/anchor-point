@@ -1,10 +1,10 @@
-.storage-container {
+.assets-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   padding: 2rem;
 }
 
-.storage-center-content {
+.assets-center-content {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -44,7 +44,7 @@
   margin-bottom: 1rem;
 }
 
-.storage-header {
+.assets-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -55,24 +55,13 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.storage-title-section {
+.assets-title-section {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.storage-icon {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.storage-title-section h1 {
+.assets-title-section h1 {
   font-size: 2rem;
   font-weight: 800;
   color: #1e2a5e;
@@ -80,13 +69,7 @@
   letter-spacing: -0.5px;
 }
 
-.storage-title-section p {
-  color: #64748b;
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.add-fuel-button {
+.add-asset-button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -101,13 +84,48 @@
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
 }
 
-.add-fuel-button:hover {
+.add-asset-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
 }
 
-.add-fuel-button:active {
+.add-asset-button:active {
   transform: translateY(0);
+}
+
+/* Tabs */
+.assets-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  background: white;
+  padding: 0.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  background: #f1f5f9;
+  color: #3b82f6;
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
 }
 
 .save-message {
@@ -141,7 +159,7 @@
   }
 }
 
-.storage-content {
+.assets-content {
   background: white;
   border-radius: 12px;
   padding: 2rem;
@@ -171,13 +189,13 @@
   margin-bottom: 2rem;
 }
 
-.fuel-inventory-grid {
+.assets-inventory-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
 }
 
-.fuel-card {
+.asset-card {
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -186,13 +204,13 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.fuel-card:hover {
+.asset-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border-color: #3b82f6;
 }
 
-.fuel-card-header {
+.asset-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -201,14 +219,14 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
-.fuel-type-section h3 {
+.asset-name-section h3 {
   font-size: 1.25rem;
   font-weight: 700;
   color: #1e293b;
   margin: 0 0 0.25rem 0;
 }
 
-.fuel-location {
+.asset-location {
   font-size: 0.875rem;
   color: #64748b;
   display: block;
@@ -224,7 +242,7 @@
   letter-spacing: 0.5px;
 }
 
-.fuel-stock-info {
+.asset-stock-info {
   margin-bottom: 1rem;
 }
 
@@ -271,7 +289,7 @@
   border-radius: 4px;
 }
 
-.fuel-details {
+.asset-details {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -287,14 +305,18 @@
 .detail-label {
   color: #64748b;
   font-weight: 500;
+  text-align: center;
+  flex: 1;
 }
 
 .detail-value {
   color: #1e293b;
   font-weight: 600;
+  text-align: center;
+  flex: 1;
 }
 
-.fuel-card-actions {
+.asset-card-actions {
   display: flex;
   gap: 0.75rem;
   margin-top: 1rem;
@@ -505,17 +527,27 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .storage-container {
+  .assets-container {
     padding: 1rem;
   }
 
-  .storage-header {
+  .assets-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
   }
 
-  .fuel-inventory-grid {
+  .assets-tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab-button {
+    flex: 1 1 calc(50% - 0.25rem);
+    font-size: 0.85rem;
+    padding: 0.625rem 1rem;
+  }
+
+  .assets-inventory-grid {
     grid-template-columns: 1fr;
   }
 
