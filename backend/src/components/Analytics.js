@@ -388,49 +388,18 @@ const AnalyticsContent = ({ refreshData }) => {
   }, [parsed]);
 
   const yearlyGrowthNote = useMemo(() => {
-    if (!stats || !stats.byYear) return '';
+    if (!stats || !stats.byYear) return null;
     const data = stats.byYear;
-    if (data.length === 0) return '';
-    if (data.length === 1) {
-      return `${data[0].year} recorded ${data[0].count} operations.`;
-    }
+    if (data.length === 0) return null;
 
-    const first = data[0];
-    const last = data[data.length - 1];
     const maxEntry = data.reduce((best, current) => current.count > best.count ? current : best, data[0]);
-    const minEntry = data.reduce((best, current) => current.count < best.count ? current : best, data[0]);
-    const total = data.reduce((sum, entry) => sum + entry.count, 0);
-    const average = Math.round(total / data.length);
-    const range = maxEntry.count - minEntry.count;
+    const totalYears = data.length;
 
-    const isIncreasing = data.every((entry, index) => index === 0 || entry.count >= data[index - 1].count);
-    const isDecreasing = data.every((entry, index) => index === 0 || entry.count <= data[index - 1].count);
-
-    if (isIncreasing && last.count > first.count) {
-      return `Operations climbed from ${first.year} to ${last.year}.`;
-    }
-
-    if (isDecreasing && last.count < first.count) {
-      return `Operations cooled from ${first.year} to ${last.year}.`;
-    }
-
-    if (range <= Math.max(3, Math.round(average * 0.1))) {
-      return `Operations held near ${average} per year.`;
-    }
-
-    if (maxEntry.year === last.year && last.count >= first.count) {
-      return `Operations hit a high in ${last.year}.`;
-    }
-
-    if (maxEntry.year === first.year && last.count < first.count) {
-      return `Operations have eased since ${first.year}.`;
-    }
-
-    if (maxEntry.year === last.year) {
-      return `Operations finished strong in ${last.year}.`;
-    }
-
-    return `Operations peaked in ${maxEntry.year} and eased in ${last.year}.`;
+    return {
+      peakYear: maxEntry.year,
+      peakCount: maxEntry.count,
+      totalYears: totalYears
+    };
   }, [stats]);
 
   const topVesselsNote = useMemo(() => {
@@ -484,10 +453,6 @@ const AnalyticsContent = ({ refreshData }) => {
               {availableSheets.sort().join(', ')}
             </div>
           </div>
-          <div className="analytics-kpi-item analytics-kpi-item-services">
-            <div className="analytics-kpi-value analytics-kpi-value-services">{stats.topServices.length}</div>
-            <div className="analytics-kpi-label">Service Types</div>
-          </div>
           <div className="analytics-kpi-item analytics-kpi-item-vessels">
             <div className="analytics-kpi-value analytics-kpi-value-vessels">{stats.topVessels.length}</div>
             <div className="analytics-kpi-label">Unique Vessels</div>
@@ -540,23 +505,41 @@ const AnalyticsContent = ({ refreshData }) => {
           <div className="analytics-card-title">
             Service Distribution
           </div>
-          {stats.topServices.slice(0, 5).map((service, index) => (
-            <div key={index} className="analytics-service-item">
-              <div className="analytics-service-header">
-                <span className="analytics-service-name">{service.name}</span>
-                <span className="analytics-service-count">{service.count}</span>
+          {stats.topServices.slice(0, 5).map((service, index) => {
+            const maxCount = stats.topServices[0].count;
+            const isHighest = service.count === maxCount;
+            return (
+              <div key={index} className="analytics-service-item">
+                <div className="analytics-service-header">
+                  <span className="analytics-service-name">{service.name}</span>
+                  <span className="analytics-service-count">{service.count}</span>
+                </div>
+                <div className="analytics-service-bar">
+                  <div 
+                    className="analytics-service-fill"
+                    style={{ 
+                      background: isHighest 
+                        ? 'linear-gradient(90deg, #2F3B70, #4a6fa5)'
+                        : 'linear-gradient(90deg, #6b8fc7, #8fb3d9)',
+                      width: `${(service.count / maxCount) * 100}%`
+                    }}
+                  ></div>
+                </div>
               </div>
-              <div className="analytics-service-bar">
-                <div 
-                  className="analytics-service-fill"
-                  style={{ 
-                    background: `hsl(${index * 60}, 70%, 50%)`,
-                    width: `${(service.count / stats.topServices[0].count) * 100}%`
-                  }}
-                ></div>
+            );
+          })}
+          {stats.topServices && stats.topServices.length > 0 && (
+            <div className="analytics-year-note">
+              <div className="analytics-note-item">
+                <span className="analytics-note-label">Top Service:</span>
+                <span className="analytics-note-value">{stats.topServices[0].name}</span>
+              </div>
+              <div className="analytics-note-item">
+                <span className="analytics-note-label">Services Total:</span>
+                <span className="analytics-note-value">{stats.topServices[0].count}</span>
               </div>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -567,20 +550,41 @@ const AnalyticsContent = ({ refreshData }) => {
           <div className="analytics-card-title">
             Yearly Growth
           </div>
-          {stats.byYear.map(({ year, count }, index) => (
-            <div key={year} className="analytics-year-item">
-              <div className="analytics-year-header">
-                <span className="analytics-year-label">{year}</span>
-                <span className="analytics-year-count">{count}</span>
+          {stats.byYear.map(({ year, count }, index) => {
+            const maxCount = Math.max(...stats.byYear.map(y => y.count));
+            const isHighest = count === maxCount;
+            return (
+              <div key={year} className="analytics-year-item">
+                <div className="analytics-year-header">
+                  <span className="analytics-year-label">{year}</span>
+                  <span className="analytics-year-count">{count}</span>
+                </div>
+                <div className="analytics-year-bar">
+                  <div 
+                    className="analytics-year-fill"
+                    style={{ 
+                      background: isHighest 
+                        ? 'linear-gradient(90deg, #2F3B70, #4a6fa5)'
+                        : 'linear-gradient(90deg, #6b8fc7, #8fb3d9)',
+                      width: `${(count / maxCount) * 100}%` 
+                    }}
+                  ></div>
+                </div>
               </div>
-              <div className="analytics-year-bar">
-                <div 
-                  className="analytics-year-fill"
-                  style={{ width: `${(count / Math.max(...stats.byYear.map(y => y.count))) * 100}%` }}
-                ></div>
+            );
+          })}
+          {yearlyGrowthNote && (
+            <div className="analytics-year-note">
+              <div className="analytics-note-item">
+                <span className="analytics-note-label">Peak Year:</span>
+                <span className="analytics-note-value">{yearlyGrowthNote.peakYear}</span>
+              </div>
+              <div className="analytics-note-item">
+                <span className="analytics-note-label">Total Years:</span>
+                <span className="analytics-note-value">{yearlyGrowthNote.totalYears}</span>
               </div>
             </div>
-          ))}
+          )}
         </div>
 
         {/* Top Vessels */}
@@ -588,29 +592,51 @@ const AnalyticsContent = ({ refreshData }) => {
           <div className="analytics-card-title">
             Top Vessels
           </div>
-          {stats.topVessels.slice(0, 5).map((vessel, index) => (
-            <div key={index} className="analytics-vessel-item">
-              {/* Rank Number */}
-              <div className={`analytics-vessel-rank ${index === 0 ? 'analytics-vessel-rank-first' : 'analytics-vessel-rank-other'}`}>
-                {index + 1}
-              </div>
-
-              {/* Vessel Info */}
-              <div className="analytics-vessel-info">
-                <div className="analytics-vessel-name">
-                  {vessel.name}
+          {stats.topVessels.slice(0, 5).map((vessel, index) => {
+            const maxCount = stats.topVessels[0]?.count || 0;
+            const isHighest = vessel.count === maxCount;
+            return (
+              <div key={index} className="analytics-vessel-item">
+                {/* Rank Number */}
+                <div className={`analytics-vessel-rank ${index === 0 ? 'analytics-vessel-rank-first' : 'analytics-vessel-rank-other'}`}>
+                  {index + 1}
                 </div>
-                <div className="analytics-vessel-operations">
-                  {vessel.count} operations
+
+                {/* Vessel Info */}
+                <div className="analytics-vessel-info">
+                  <div className="analytics-vessel-name">
+                    {vessel.name}
+                  </div>
+                  <div className="analytics-vessel-operations">
+                    {vessel.count} operations
+                  </div>
+                </div>
+
+                {/* Count Badge */}
+                <div 
+                  className="analytics-vessel-badge"
+                  style={{
+                    background: isHighest ? '#2F3B70' : '#f5f5f5',
+                    color: isHighest ? 'white' : '#2F3B70'
+                  }}
+                >
+                  {vessel.count}
                 </div>
               </div>
-
-              {/* Count Badge */}
-              <div className="analytics-vessel-badge">
-                {vessel.count}
+            );
+          })}
+          {stats.topVessels && stats.topVessels.length > 0 && (
+            <div className="analytics-year-note">
+              <div className="analytics-note-item">
+                <span className="analytics-note-label">Top Vessel:</span>
+                <span className="analytics-note-value">{stats.topVessels[0].name}</span>
+              </div>
+              <div className="analytics-note-item">
+                <span className="analytics-note-label">Operations:</span>
+                <span className="analytics-note-value">{stats.topVessels[0].count}</span>
               </div>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
