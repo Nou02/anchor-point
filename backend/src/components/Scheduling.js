@@ -30,8 +30,11 @@ const Scheduling = () => {
     vesselType: 'Local',
     purpose: [],
     time: '',
-    timeFinished: ''
+    timeFinished: '',
+    assignedWorkers: []
   });
+  const [showWorkerAssignmentModal, setShowWorkerAssignmentModal] = useState(false);
+  const [availableWorkers, setAvailableWorkers] = useState([]);
   
   // State for recent finished vessels
   const [recentFinishedVessels, setRecentFinishedVessels] = useState([]);
@@ -443,7 +446,8 @@ const Scheduling = () => {
                     vesselType: vesselFormData.vesselType,
                     purpose: vesselFormData.purpose,
                     time: vesselFormData.time,
-                    timeFinished: vesselFormData.timeFinished
+                    timeFinished: vesselFormData.timeFinished,
+                    assignedWorkers: vesselFormData.assignedWorkers || []
                   }
                 : vessel
             ) || []
@@ -459,6 +463,16 @@ const Scheduling = () => {
         
         // Trigger vessel update in Firestore to notify other browsers
         await triggerVesselUpdate();
+        
+        // Update payroll for assigned workers
+        if (vesselFormData.assignedWorkers && vesselFormData.assignedWorkers.length > 0) {
+          await updatePayrollForAssignedWorkers(
+            vesselFormData.assignedWorkers,
+            vesselFormData.vesselType,
+            vesselFormData.purpose,
+            clickedDate
+          );
+        }
         
         alert('Vessel entry updated successfully!');
       } else {
@@ -484,6 +498,7 @@ const Scheduling = () => {
           purpose: vesselFormData.purpose,
           time: vesselFormData.time,
           timeFinished: vesselFormData.timeFinished,
+          assignedWorkers: vesselFormData.assignedWorkers || [],
           date: clickedDate
         };
         
@@ -521,6 +536,16 @@ const Scheduling = () => {
           // Don't throw - vessel is already added locally
         }
         
+        // Update payroll for assigned workers
+        if (vesselFormData.assignedWorkers && vesselFormData.assignedWorkers.length > 0) {
+          await updatePayrollForAssignedWorkers(
+            vesselFormData.assignedWorkers,
+            vesselFormData.vesselType,
+            vesselFormData.purpose,
+            clickedDate
+          );
+        }
+        
         alert('Vessel entry added successfully!');
       }
     } catch (error) {
@@ -540,7 +565,8 @@ const Scheduling = () => {
       vesselType: 'Local',
       purpose: [],
       time: '',
-      timeFinished: ''
+      timeFinished: '',
+      assignedWorkers: []
     });
     setClickedDate(null);
     
@@ -561,9 +587,141 @@ const Scheduling = () => {
       vesselType: 'Local',
       purpose: [],
       time: '',
-      timeFinished: ''
+      timeFinished: '',
+      assignedWorkers: []
     });
     setClickedDate(null);
+  };
+
+  // Handle worker assignment toggle
+  const handleWorkerToggle = (workerName) => {
+    setVesselFormData(prev => {
+      const currentWorkers = prev.assignedWorkers || [];
+      const isSelected = currentWorkers.includes(workerName);
+      
+      return {
+        ...prev,
+        assignedWorkers: isSelected
+          ? currentWorkers.filter(w => w !== workerName)
+          : [...currentWorkers, workerName]
+      };
+    });
+  };
+
+  // Handle worker assignment modal close
+  const handleWorkerAssignmentClose = () => {
+    setShowWorkerAssignmentModal(false);
+  };
+
+  // Update payroll when workers are assigned to a vessel
+  const updatePayrollForAssignedWorkers = async (assignedWorkers, vesselType, purpose, vesselDate) => {
+    if (!assignedWorkers || assignedWorkers.length === 0) {
+      return; // No workers assigned, nothing to update
+    }
+
+    try {
+      const db = getFirestore();
+      
+      // Use the vessel date, or today's date if not provided
+      const dateToUse = vesselDate || new Date();
+      const month = dateToUse.getMonth() + 1;
+      const day = dateToUse.getDate();
+      const year = dateToUse.getFullYear();
+      
+      const workersPayrollId = `workerspayroll(${month},${day},${year})`;
+      const workersPayrollRef = doc(db, 'workerPayrolls', workersPayrollId);
+      
+      // Get existing payroll data
+      const workersPayrollDoc = await getDoc(workersPayrollRef);
+      const existingData = workersPayrollDoc.exists() ? workersPayrollDoc.data() : { workers: [] };
+      
+      // Determine which count to increment based on purpose
+      // Check if purpose array contains mooring operations (W/ MOORING BUOY or SHIFTING)
+      const hasMooring = purpose.some(p => {
+        const pUpper = p.toUpperCase().trim();
+        return pUpper === 'W/ MOORING BUOY' || 
+               pUpper.includes('W/ MOORING BUOY') ||
+               pUpper === 'SHIFTING' ||
+               pUpper.includes('SHIFTING');
+      });
+      
+      // Check if purpose array contains unmooring operations
+      const hasUnmooring = purpose.some(p => {
+        const pUpper = p.toUpperCase().trim();
+        return pUpper === 'UNMOORING' || 
+               pUpper.includes('UNMOORING');
+      });
+      
+      // Prepare updated workers data
+      const updatedWorkers = existingData.workers || [];
+      const workersMap = new Map();
+      
+      // Convert existing workers array to map for easier lookup
+      if (Array.isArray(updatedWorkers)) {
+        updatedWorkers.forEach(worker => {
+          workersMap.set(worker.workerName, { ...worker });
+        });
+      }
+      
+      // Update counts for each assigned worker
+      assignedWorkers.forEach(workerName => {
+        let workerData = workersMap.get(workerName);
+        
+        if (!workerData) {
+          // Initialize new worker data
+          workerData = {
+            workerName: workerName,
+            localMooringCount: 0,
+            localUnmooringCount: 0,
+            foreignMooringCount: 0,
+            foreignUnmooringCount: 0,
+            totalEarnings: 0,
+            sss: 0,
+            pagibig: 0,
+            philhealth: 0,
+            cashAdvance: 0,
+            netTotal: 0
+          };
+        }
+        
+        // Increment appropriate count based on vessel type and purpose
+        if (vesselType === 'Local') {
+          if (hasMooring) {
+            workerData.localMooringCount = (workerData.localMooringCount || 0) + 1;
+          }
+          if (hasUnmooring) {
+            workerData.localUnmooringCount = (workerData.localUnmooringCount || 0) + 1;
+          }
+        } else if (vesselType === 'Foreign') {
+          if (hasMooring) {
+            workerData.foreignMooringCount = (workerData.foreignMooringCount || 0) + 1;
+          }
+          if (hasUnmooring) {
+            workerData.foreignUnmooringCount = (workerData.foreignUnmooringCount || 0) + 1;
+          }
+        }
+        
+        workersMap.set(workerName, workerData);
+      });
+      
+      // Convert map back to array
+      const updatedWorkersArray = Array.from(workersMap.values());
+      
+      // Save updated payroll data
+      await setDoc(workersPayrollRef, {
+        workers: updatedWorkersArray,
+        status: existingData.status || 'pending',
+        createdBy: existingData.createdBy || '',
+        createdByName: existingData.createdByName || 'System',
+        createdAt: existingData.createdAt || new Date().toISOString(),
+        lastModified: new Date().toISOString()
+      }, { merge: true });
+      
+      console.log('Payroll updated for assigned workers');
+    } catch (error) {
+      console.error('Error updating payroll for assigned workers:', error);
+      // Don't throw - payroll update failure shouldn't block vessel saving
+    }
   };
 
   // Get vessel entries for a specific date
@@ -806,7 +964,8 @@ const Scheduling = () => {
       vesselType: vessel.vesselType,
       purpose: [...vessel.purpose],
       time: convertToTimeInputFormat(vessel.time || ''),
-      timeFinished: convertToTimeInputFormat(vessel.timeFinished || '')
+      timeFinished: convertToTimeInputFormat(vessel.timeFinished || ''),
+      assignedWorkers: vessel.assignedWorkers || []
     });
     setShowVesselModal(true);
   };
@@ -1136,6 +1295,60 @@ const Scheduling = () => {
     loadVesselEntriesFromExcel();
     loadRecentFinishedVessels();
     loadUpcomingScheduledVessels();
+  }, []);
+
+  // Fetch available workers (only Crew/Worker roles)
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      try {
+        const q = query(collection(db, 'users'));
+        const querySnapshot = await getDocs(q);
+        
+        const workers = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          
+          // Get and normalize role
+          let role = data.role || data.type || 'Crew';
+          if (role === 'Employee') role = 'Crew';
+          
+          // Filter to only include Crew/Worker roles
+          // Exclude: HR, Manager, Admin, Senior Supervisor, Scheduler
+          const excludedRoles = ['HR', 'Manager', 'Admin', 'Senior Supervisor', 'Scheduler'];
+          if (excludedRoles.includes(role)) {
+            return; // Skip this user
+          }
+          
+          const firstName = data.firstName || '';
+          const lastName = data.lastName || '';
+          
+          let name = '';
+          if (firstName && lastName) {
+            name = `${lastName}, ${firstName}`.trim();
+          } else if (data.fullName) {
+            name = data.fullName;
+          } else if (data.username) {
+            name = data.username;
+          } else {
+            name = data.name || 'Unknown';
+          }
+          
+          workers.push({
+            id: doc.id,
+            name: name,
+            email: data.email || '',
+            role: role
+          });
+        });
+        
+        workers.sort((a, b) => a.name.localeCompare(b.name));
+        setAvailableWorkers(workers);
+      } catch (error) {
+        console.error('Error fetching workers:', error);
+      }
+    };
+    
+    fetchWorkers();
   }, []);
 
   // Set up real-time listener for vessel updates
@@ -1924,6 +2137,17 @@ return (
                   </button>
                   <button 
                     type="button"
+                      className="assign-workers-btn-modern"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowWorkerAssignmentModal(true);
+                      }}
+                  >
+                    Assign Workers
+                  </button>
+                  <button 
+                    type="button"
                       className="save-btn-modern"
                       onClick={(e) => {
                         e.preventDefault();
@@ -1937,6 +2161,79 @@ return (
               </form>
               </div>
                 </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Worker Assignment Modal */}
+    {showWorkerAssignmentModal && (
+      <div className="modal-overlay-modern" onClick={handleWorkerAssignmentClose}>
+        <div className="date-modal-modern" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content-modern">
+            <div className="modal-header-modern">
+              <h2>Assign Workers to Vessel</h2>
+              <button 
+                className="close-button-modern"
+                onClick={handleWorkerAssignmentClose}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body-modern">
+              <div className="form-section-modern">
+                <p className="worker-assignment-info">
+                  Select workers to assign to <strong>{vesselFormData.vesselName || 'this vessel'}</strong>
+                </p>
+                
+                <div className="workers-list-modern">
+                  {availableWorkers.length === 0 ? (
+                    <p>No workers available</p>
+                  ) : (
+                    availableWorkers.map((worker) => {
+                      const isSelected = (vesselFormData.assignedWorkers || []).includes(worker.name);
+                      return (
+                        <label key={worker.id} className="worker-checkbox-label-modern">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleWorkerToggle(worker.name)}
+                            className="worker-checkbox-input-modern"
+                          />
+                          <span className="worker-checkbox-text-modern">
+                            {worker.name}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+
+                {vesselFormData.assignedWorkers && vesselFormData.assignedWorkers.length > 0 && (
+                  <div className="selected-workers-summary">
+                    <strong>Selected: {vesselFormData.assignedWorkers.length} worker(s)</strong>
+                    <div className="selected-workers-list">
+                      {vesselFormData.assignedWorkers.map((workerName, index) => (
+                        <span key={index} className="selected-worker-tag">
+                          {workerName}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="modal-actions-modern">
+                  <button 
+                    type="button"
+                    className="save-btn-modern"
+                    onClick={handleWorkerAssignmentClose}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
