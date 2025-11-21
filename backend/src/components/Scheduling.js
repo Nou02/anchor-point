@@ -907,17 +907,71 @@ const Scheduling = () => {
         workersMap.set(workerName, workerData);
       });
       
+      // Load pricing configuration to calculate totalEarnings
+      let pricingConfig = {
+        localMooringPrice: 500,
+        localUnmooringPrice: 500,
+        foreignMooringPrice: 1000,
+        foreignUnmooringPrice: 1000
+      };
+      
+      try {
+        const pricingDoc = await getDoc(doc(db, 'pricing', 'vesselPricing'));
+        if (pricingDoc.exists()) {
+          const pricingData = pricingDoc.data();
+          pricingConfig = {
+            localMooringPrice: pricingData.localMooringPrice || 500,
+            localUnmooringPrice: pricingData.localUnmooringPrice || 500,
+            foreignMooringPrice: pricingData.foreignMooringPrice || 1000,
+            foreignUnmooringPrice: pricingData.foreignUnmooringPrice || 1000
+          };
+        }
+      } catch (pricingError) {
+        console.warn('Error loading pricing config, using defaults:', pricingError);
+      }
+      
+      // Recalculate totalEarnings and netTotal for all workers after updating counts
+      workersMap.forEach((workerData, workerName) => {
+        const localMooringCount = workerData.localMooringCount || 0;
+        const localUnmooringCount = workerData.localUnmooringCount || 0;
+        const foreignMooringCount = workerData.foreignMooringCount || 0;
+        const foreignUnmooringCount = workerData.foreignUnmooringCount || 0;
+        
+        // Calculate total earnings based on counts and pricing
+        const totalEarnings = 
+          (localMooringCount * pricingConfig.localMooringPrice) +
+          (localUnmooringCount * pricingConfig.localUnmooringPrice) +
+          (foreignMooringCount * pricingConfig.foreignMooringPrice) +
+          (foreignUnmooringCount * pricingConfig.foreignUnmooringPrice);
+        
+        // Calculate net total (earnings minus deductions)
+        const sss = workerData.sss || 0;
+        const pagibig = workerData.pagibig || 0;
+        const philhealth = workerData.philhealth || 0;
+        const cashAdvance = workerData.cashAdvance || 0;
+        const netTotal = totalEarnings - sss - pagibig - philhealth - cashAdvance;
+        
+        // Update worker data with calculated values
+        workerData.totalEarnings = totalEarnings;
+        workerData.netTotal = netTotal;
+        
+        workersMap.set(workerName, workerData);
+      });
+      
       // Convert map back to array
       const updatedWorkersArray = Array.from(workersMap.values());
       
       console.log('Final workers array before saving:', {
         totalWorkers: updatedWorkersArray.length,
+        pricingConfig: pricingConfig,
         workers: updatedWorkersArray.map(w => ({
           name: w.workerName,
           localMooring: w.localMooringCount || 0,
           localUnmooring: w.localUnmooringCount || 0,
           foreignMooring: w.foreignMooringCount || 0,
-          foreignUnmooring: w.foreignUnmooringCount || 0
+          foreignUnmooring: w.foreignUnmooringCount || 0,
+          totalEarnings: w.totalEarnings || 0,
+          netTotal: w.netTotal || 0
         }))
       });
       
