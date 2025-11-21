@@ -756,18 +756,46 @@ const UpdatedPayroll = () => {
         lastModified: new Date().toISOString()
       }, { merge: false }); // Use merge: false to overwrite, ensuring status is set to pending
       
-      // Save workers payroll document
+      // Clear the workerPayrolls document to start fresh for new schedules
+      // The saved data is already in the 'payrolls' collection above
       const workersPayrollRef = doc(db, 'workerPayrolls', workersPayrollId);
-      const workersPayrollDoc = await getDoc(workersPayrollRef);
+      
+      // Create empty workers data to reset the tracking document
+      const emptyWorkersData = workers.map(worker => ({
+        workerName: worker.name,
+        localMooringCount: 0,
+        localUnmooringCount: 0,
+        foreignMooringCount: 0,
+        foreignUnmooringCount: 0,
+        totalEarnings: 0,
+        sss: 0,
+        pagibig: 0,
+        philhealth: 0,
+        cashAdvance: 0,
+        netTotal: 0
+      }));
+      
+      // Clear the document with empty data to start fresh
       await setDoc(workersPayrollRef, {
-        workers: workersData,
-        totals: calculateTotals,
+        workers: emptyWorkersData,
+        totals: {
+          localMooringCount: 0,
+          localUnmooringCount: 0,
+          foreignMooringCount: 0,
+          foreignUnmooringCount: 0,
+          totalEarnings: 0,
+          sss: 0,
+          pagibig: 0,
+          philhealth: 0,
+          cashAdvance: 0,
+          netTotal: 0
+        },
         status: 'pending',
         createdBy: user.email,
         createdByName: user.displayName || user.email,
-        createdAt: workersPayrollDoc.exists() ? workersPayrollDoc.data().createdAt : new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         lastModified: new Date().toISOString()
-      }, { merge: false }); // Use merge: false to overwrite, ensuring status is set to pending
+      }, { merge: false });
       
       // Create notification for admin (Alice) that payroll needs approval
       // Always notify Alice, even if it's the same day - this ensures real-time notifications
@@ -784,7 +812,25 @@ const UpdatedPayroll = () => {
         isUpdate // Pass isUpdate flag to handle updates properly
       );
       
-      setSaveMessage('Payroll data saved successfully!');
+      // Clear the table after successful save to wait for more schedules
+      const clearedData = {};
+      workers.forEach(worker => {
+        clearedData[worker.id] = {
+          localMooringCount: 0,
+          localUnmooringCount: 0,
+          foreignMooringCount: 0,
+          foreignUnmooringCount: 0,
+          totalEarnings: 0,
+          sss: 0,
+          pagibig: 0,
+          philhealth: 0,
+          cashAdvance: 0,
+          netTotal: 0
+        };
+      });
+      setWorkerPayrollData(clearedData);
+      
+      setSaveMessage('Payroll data saved successfully! Table cleared for new schedules.');
       setTimeout(() => setSaveMessage(''), 5000);
       
     } catch (error) {
