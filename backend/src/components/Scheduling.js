@@ -464,13 +464,14 @@ const Scheduling = () => {
         // Trigger vessel update in Firestore to notify other browsers
         await triggerVesselUpdate();
         
-        // Update payroll for assigned workers
+        // Update payroll for assigned workers (only if date has passed)
         if (vesselFormData.assignedWorkers && vesselFormData.assignedWorkers.length > 0) {
           await updatePayrollForAssignedWorkers(
             vesselFormData.assignedWorkers,
             vesselFormData.vesselType,
             vesselFormData.purpose,
-            clickedDate
+            clickedDate,
+            vesselFormData.timeFinished
           );
         }
         
@@ -536,13 +537,14 @@ const Scheduling = () => {
           // Don't throw - vessel is already added locally
         }
         
-        // Update payroll for assigned workers
+        // Update payroll for assigned workers (only if date has passed)
         if (vesselFormData.assignedWorkers && vesselFormData.assignedWorkers.length > 0) {
           await updatePayrollForAssignedWorkers(
             vesselFormData.assignedWorkers,
             vesselFormData.vesselType,
             vesselFormData.purpose,
-            clickedDate
+            clickedDate,
+            vesselFormData.timeFinished
           );
         }
         
@@ -614,7 +616,7 @@ const Scheduling = () => {
   };
 
   // Update payroll when workers are assigned to a vessel
-  const updatePayrollForAssignedWorkers = async (assignedWorkers, vesselType, purpose, vesselDate) => {
+  const updatePayrollForAssignedWorkers = async (assignedWorkers, vesselType, purpose, vesselDate, timeFinished) => {
     if (!assignedWorkers || assignedWorkers.length === 0) {
       return; // No workers assigned, nothing to update
     }
@@ -624,6 +626,53 @@ const Scheduling = () => {
       
       // Use the vessel date, or today's date if not provided
       const dateToUse = vesselDate || new Date();
+      
+      // Check if the vessel date has passed (only update payroll after the date has finished)
+      const now = new Date();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+      
+      const vesselDateOnly = new Date(dateToUse);
+      vesselDateOnly.setHours(0, 0, 0, 0);
+      
+      // If vessel date is in the future, don't update payroll yet
+      if (vesselDateOnly > today) {
+        console.log('Vessel date is in the future, payroll will be updated after the date passes');
+        return;
+      }
+      
+      // For today's date, only update if timeFinished is provided
+      if (vesselDateOnly.getTime() === today.getTime()) {
+        if (!timeFinished || timeFinished.trim() === '') {
+          console.log('Vessel date is today but timeFinished is not provided, payroll will not be updated yet');
+          return;
+        }
+        // If timeFinished is provided, check if the work is actually finished
+        const [hours, minutes] = timeFinished.split(':');
+        const finishedDateTime = new Date(dateToUse);
+        finishedDateTime.setHours(parseInt(hours) || 23, parseInt(minutes) || 59, 59, 999);
+        
+        // Only update if the finished time has passed
+        if (finishedDateTime > now) {
+          console.log('Vessel work is not finished yet, payroll will be updated after timeFinished');
+          return;
+        }
+      } else {
+        // For past dates, if timeFinished is provided, check if it has passed
+        if (timeFinished && timeFinished.trim() !== '') {
+          const [hours, minutes] = timeFinished.split(':');
+          const finishedDateTime = new Date(dateToUse);
+          finishedDateTime.setHours(parseInt(hours) || 23, parseInt(minutes) || 59, 59, 999);
+          
+          // Only update if the finished time has passed
+          if (finishedDateTime > now) {
+            console.log('Vessel work is not finished yet, payroll will be updated after timeFinished');
+            return;
+          }
+        }
+        // For past dates without timeFinished, proceed with update
+      }
+      
       const month = dateToUse.getMonth() + 1;
       const day = dateToUse.getDate();
       const year = dateToUse.getFullYear();
