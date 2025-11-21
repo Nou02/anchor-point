@@ -726,10 +726,22 @@ const Scheduling = () => {
       // Compare using local timezone (Philippine time)
       const isToday = vesselYear === todayYear && vesselMonth === todayMonth && vesselDay === todayDay;
       if (isToday) {
+        // If timeFinished was just added/changed, we should proceed with the update
+        // (the timeFinishedWasAdded/timeFinishedWasChanged check already happened above)
         if (!timeFinished || timeFinished.trim() === '') {
-          console.log('Vessel date is today but timeFinished is not provided, payroll will not be updated yet');
+          // Only skip if timeFinished wasn't just added (i.e., if it was never there)
+          if (!timeFinishedWasAdded && !timeFinishedWasChanged) {
+            console.log('Vessel date is today but timeFinished is not provided, payroll will not be updated yet');
+            return;
+          }
+          // If timeFinished was added but is empty, something went wrong - skip
+          console.log('timeFinished was added but is empty, skipping payroll update');
           return;
         }
+        
+        // If timeFinished was just added/changed, we still need to check if it has passed
+        // But if it was just added, we're more lenient - proceed if timeFinished is close to current time
+        // (within 5 minutes) to handle cases where it was just added
         // If timeFinished is provided, check if the work is actually finished
         // Parse timeFinished which could be in "HH:MM" or "HH:MM AM/PM" format
         let parsedHours = 0;
@@ -789,14 +801,24 @@ const Scheduling = () => {
         
         // Only update if the finished time has passed
         // Compare using getTime() which is timezone-independent (milliseconds since epoch)
-        if (finishedDateTime.getTime() > currentTime.getTime()) {
-          const minutesRemaining = Math.round((finishedDateTime.getTime() - currentTime.getTime()) / 1000 / 60);
-          console.log('Vessel work is not finished yet, payroll will be updated after timeFinished');
-          console.log('Time remaining:', minutesRemaining, 'minutes');
-          return;
-        }
+        // If timeFinished was just added/changed, be more lenient (allow if within 5 minutes)
+        const timeDifferenceMs = currentTime.getTime() - finishedDateTime.getTime();
+        const timeDifferenceMinutes = Math.round(timeDifferenceMs / 1000 / 60);
         
-        console.log('TimeFinished has passed, proceeding with payroll update');
+        if (finishedDateTime.getTime() > currentTime.getTime()) {
+          // If timeFinished was just added/changed and we're within 5 minutes, proceed anyway
+          // This handles the case where timeFinished was added right after the work finished
+          if ((timeFinishedWasAdded || timeFinishedWasChanged) && timeDifferenceMinutes >= -5) {
+            console.log('timeFinished was just added/changed and is within 5 minutes of current time, proceeding with payroll update');
+          } else {
+            const minutesRemaining = Math.round((finishedDateTime.getTime() - currentTime.getTime()) / 1000 / 60);
+            console.log('Vessel work is not finished yet, payroll will be updated after timeFinished');
+            console.log('Time remaining:', minutesRemaining, 'minutes');
+            return;
+          }
+        } else {
+          console.log('TimeFinished has passed, proceeding with payroll update');
+        }
       } else {
         // For past dates, proceed with update immediately
         // Since the date has already passed, we don't need to check timeFinished
