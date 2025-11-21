@@ -617,6 +617,15 @@ const Scheduling = () => {
 
   // Update payroll when workers are assigned to a vessel
   const updatePayrollForAssignedWorkers = async (assignedWorkers, vesselType, purpose, vesselDate, timeFinished) => {
+    console.log('=== PAYROLL UPDATE FUNCTION CALLED ===');
+    console.log('Parameters:', {
+      assignedWorkers,
+      vesselType,
+      purpose,
+      vesselDate: vesselDate ? vesselDate.toISOString() : 'null',
+      timeFinished
+    });
+    
     if (!assignedWorkers || assignedWorkers.length === 0) {
       console.log('No workers assigned, skipping payroll update');
       return; // No workers assigned, nothing to update
@@ -694,16 +703,23 @@ const Scheduling = () => {
         );
         
         console.log('Time comparison for today:', {
+          timeFinished: timeFinished,
+          parsedHours: parsedHours,
+          parsedMinutes: parsedMinutes,
           finishedDateTime: finishedDateTime.toISOString(),
           now: now.toISOString(),
-          isFinished: finishedDateTime <= now
+          isFinished: finishedDateTime <= now,
+          timeDifference: now.getTime() - finishedDateTime.getTime()
         });
         
         // Only update if the finished time has passed
         if (finishedDateTime > now) {
           console.log('Vessel work is not finished yet, payroll will be updated after timeFinished');
+          console.log('Time remaining:', Math.round((finishedDateTime.getTime() - now.getTime()) / 1000 / 60), 'minutes');
           return;
         }
+        
+        console.log('TimeFinished has passed, proceeding with payroll update');
       } else {
         // For past dates, if timeFinished is provided, check if it has passed
         if (timeFinished && timeFinished.trim() !== '') {
@@ -744,16 +760,23 @@ const Scheduling = () => {
           );
           
           console.log('Time comparison for past date:', {
+            timeFinished: timeFinished,
+            parsedHours: parsedHours,
+            parsedMinutes: parsedMinutes,
             finishedDateTime: finishedDateTime.toISOString(),
             now: now.toISOString(),
-            isFinished: finishedDateTime <= now
+            isFinished: finishedDateTime <= now,
+            timeDifference: now.getTime() - finishedDateTime.getTime()
           });
           
           // Only update if the finished time has passed
           if (finishedDateTime > now) {
             console.log('Vessel work is not finished yet, payroll will be updated after timeFinished');
+            console.log('Time remaining:', Math.round((finishedDateTime.getTime() - now.getTime()) / 1000 / 60), 'minutes');
             return;
           }
+          
+          console.log('TimeFinished has passed, proceeding with payroll update');
         }
         // For past dates without timeFinished, proceed with update
       }

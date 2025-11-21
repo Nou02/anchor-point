@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import '../components/UpdatedPayroll.css';
 import notificationService from '../services/notificationService';
@@ -237,6 +237,50 @@ const UpdatedPayroll = () => {
             netTotal: 0
           };
         });
+        
+        // Load existing payroll data for today if it exists
+        if (isCarlaUser(user)) {
+          try {
+            const today = new Date();
+            const month = today.getMonth() + 1;
+            const day = today.getDate();
+            const year = today.getFullYear();
+            const workersPayrollId = `workerspayroll(${month},${day},${year})`;
+            const workersPayrollRef = doc(db, 'workerPayrolls', workersPayrollId);
+            const workersPayrollDoc = await getDoc(workersPayrollRef);
+            
+            if (workersPayrollDoc.exists()) {
+              const payrollData = workersPayrollDoc.data();
+              if (payrollData.workers && Array.isArray(payrollData.workers)) {
+                // Match workers from payroll data with workers list by name
+                payrollData.workers.forEach(payrollWorker => {
+                  const matchingWorker = allWorkers.find(w => 
+                    w.name.toLowerCase().trim() === (payrollWorker.workerName || '').toLowerCase().trim()
+                  );
+                  
+                  if (matchingWorker) {
+                    initialPayrollData[matchingWorker.id] = {
+                      localMooringCount: payrollWorker.localMooringCount || 0,
+                      localUnmooringCount: payrollWorker.localUnmooringCount || 0,
+                      foreignMooringCount: payrollWorker.foreignMooringCount || 0,
+                      foreignUnmooringCount: payrollWorker.foreignUnmooringCount || 0,
+                      totalEarnings: payrollWorker.totalEarnings || 0,
+                      sss: payrollWorker.sss || 0,
+                      pagibig: payrollWorker.pagibig || 0,
+                      philhealth: payrollWorker.philhealth || 0,
+                      cashAdvance: payrollWorker.cashAdvance || 0,
+                      netTotal: payrollWorker.netTotal || 0
+                    };
+                  }
+                });
+                console.log('Loaded existing payroll data for today:', initialPayrollData);
+              }
+            }
+          } catch (error) {
+            console.error('Error loading existing payroll data:', error);
+          }
+        }
+        
         setWorkerPayrollData(initialPayrollData);
       } catch (error) {
         console.error('Error loading workers:', error);
@@ -247,6 +291,69 @@ const UpdatedPayroll = () => {
       loadWorkers();
     }
   }, [user]);
+
+  // Set up real-time listener for today's payroll data (for Carla)
+  useEffect(() => {
+    if (!user || !isCarlaUser(user) || workers.length === 0) return;
+    
+    const db = getFirestore();
+    const today = new Date();
+    const month = today.getMonth() + 1;
+    const day = today.getDate();
+    const year = today.getFullYear();
+    const workersPayrollId = `workerspayroll(${month},${day},${year})`;
+    const workersPayrollRef = doc(db, 'workerPayrolls', workersPayrollId);
+    
+    console.log('Setting up real-time listener for payroll:', workersPayrollId);
+    
+    // Listen for changes to today's payroll
+    const unsubscribe = onSnapshot(workersPayrollRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const payrollData = docSnapshot.data();
+        console.log('Payroll data updated from Firestore:', payrollData);
+        
+        if (payrollData.workers && Array.isArray(payrollData.workers)) {
+          // Update workerPayrollData with latest data
+          setWorkerPayrollData(prevData => {
+            const updatedData = { ...prevData };
+            
+            // Match workers from payroll data with workers list by name
+            payrollData.workers.forEach(payrollWorker => {
+              const matchingWorker = workers.find(w => 
+                w.name.toLowerCase().trim() === (payrollWorker.workerName || '').toLowerCase().trim()
+              );
+              
+              if (matchingWorker) {
+                updatedData[matchingWorker.id] = {
+                  localMooringCount: payrollWorker.localMooringCount || 0,
+                  localUnmooringCount: payrollWorker.localUnmooringCount || 0,
+                  foreignMooringCount: payrollWorker.foreignMooringCount || 0,
+                  foreignUnmooringCount: payrollWorker.foreignUnmooringCount || 0,
+                  totalEarnings: payrollWorker.totalEarnings || 0,
+                  sss: payrollWorker.sss || 0,
+                  pagibig: payrollWorker.pagibig || 0,
+                  philhealth: payrollWorker.philhealth || 0,
+                  cashAdvance: payrollWorker.cashAdvance || 0,
+                  netTotal: payrollWorker.netTotal || 0
+                };
+                console.log(`Updated payroll for ${matchingWorker.name}:`, updatedData[matchingWorker.id]);
+              }
+            });
+            
+            return updatedData;
+          });
+        }
+      }
+    }, (error) => {
+      console.error('Error listening to payroll updates:', error);
+    });
+    
+    // Return cleanup function
+    return () => {
+      console.log('Cleaning up payroll listener');
+      unsubscribe();
+    };
+  }, [user, workers]);
 
   // Load pricing configuration
   useEffect(() => {
