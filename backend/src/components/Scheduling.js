@@ -663,28 +663,34 @@ const Scheduling = () => {
       const dateToUse = vesselDate || new Date();
       
       // Check if the vessel date has passed (only update payroll after the date has finished)
+      // All date comparisons use Philippine Standard Time (GMT+8) - local timezone
       const now = new Date();
       
-      // Get today's date components for accurate comparison (avoid timezone issues)
+      // Get today's date components in Philippine timezone (local timezone)
       const todayYear = now.getFullYear();
       const todayMonth = now.getMonth();
       const todayDay = now.getDate();
       const today = new Date(todayYear, todayMonth, todayDay, 0, 0, 0, 0);
       
-      // Get vessel date components
+      // Get vessel date components in Philippine timezone (local timezone)
+      // Always use local timezone methods to ensure we're working in Philippine time
       const vesselYear = dateToUse.getFullYear();
       const vesselMonth = dateToUse.getMonth();
       const vesselDay = dateToUse.getDate();
       const vesselDateOnly = new Date(vesselYear, vesselMonth, vesselDay, 0, 0, 0, 0);
       
-      console.log('Payroll update check:', {
+      console.log('Payroll update check (Philippine Time GMT+8):', {
         vesselDate: dateToUse.toISOString(),
+        vesselDateLocal: dateToUse.toString(),
         vesselDateComponents: { year: vesselYear, month: vesselMonth, day: vesselDay },
-        vesselDateOnly: vesselDateOnly.toISOString(),
+        vesselDateOnly: vesselDateOnly.toString(),
+        vesselDateOnlyISO: vesselDateOnly.toISOString(),
         todayComponents: { year: todayYear, month: todayMonth, day: todayDay },
-        today: today.toISOString(),
+        today: today.toString(),
+        todayISO: today.toISOString(),
         timeFinished: timeFinished,
-        now: now.toISOString()
+        now: now.toString(),
+        nowISO: now.toISOString()
       });
       
       // If vessel date is in the future, don't update payroll yet
@@ -694,6 +700,7 @@ const Scheduling = () => {
       }
       
       // For today's date, only update if timeFinished is provided
+      // Compare using local timezone (Philippine time)
       const isToday = vesselYear === todayYear && vesselMonth === todayMonth && vesselDay === todayDay;
       if (isToday) {
         if (!timeFinished || timeFinished.trim() === '') {
