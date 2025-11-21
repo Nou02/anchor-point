@@ -618,6 +618,7 @@ const Scheduling = () => {
   // Update payroll when workers are assigned to a vessel
   const updatePayrollForAssignedWorkers = async (assignedWorkers, vesselType, purpose, vesselDate, timeFinished) => {
     if (!assignedWorkers || assignedWorkers.length === 0) {
+      console.log('No workers assigned, skipping payroll update');
       return; // No workers assigned, nothing to update
     }
 
@@ -635,6 +636,14 @@ const Scheduling = () => {
       const vesselDateOnly = new Date(dateToUse);
       vesselDateOnly.setHours(0, 0, 0, 0);
       
+      console.log('Payroll update check:', {
+        vesselDate: dateToUse.toISOString(),
+        vesselDateOnly: vesselDateOnly.toISOString(),
+        today: today.toISOString(),
+        timeFinished: timeFinished,
+        now: now.toISOString()
+      });
+      
       // If vessel date is in the future, don't update payroll yet
       if (vesselDateOnly > today) {
         console.log('Vessel date is in the future, payroll will be updated after the date passes');
@@ -649,8 +658,21 @@ const Scheduling = () => {
         }
         // If timeFinished is provided, check if the work is actually finished
         const [hours, minutes] = timeFinished.split(':');
+        const parsedHours = parseInt(hours, 10);
+        const parsedMinutes = parseInt(minutes, 10);
         const finishedDateTime = new Date(dateToUse);
-        finishedDateTime.setHours(parseInt(hours) || 23, parseInt(minutes) || 59, 59, 999);
+        finishedDateTime.setHours(
+          isNaN(parsedHours) ? 23 : parsedHours, 
+          isNaN(parsedMinutes) ? 59 : parsedMinutes, 
+          59, 
+          999
+        );
+        
+        console.log('Time comparison for today:', {
+          finishedDateTime: finishedDateTime.toISOString(),
+          now: now.toISOString(),
+          isFinished: finishedDateTime <= now
+        });
         
         // Only update if the finished time has passed
         if (finishedDateTime > now) {
@@ -661,8 +683,21 @@ const Scheduling = () => {
         // For past dates, if timeFinished is provided, check if it has passed
         if (timeFinished && timeFinished.trim() !== '') {
           const [hours, minutes] = timeFinished.split(':');
+          const parsedHours = parseInt(hours, 10);
+          const parsedMinutes = parseInt(minutes, 10);
           const finishedDateTime = new Date(dateToUse);
-          finishedDateTime.setHours(parseInt(hours) || 23, parseInt(minutes) || 59, 59, 999);
+          finishedDateTime.setHours(
+            isNaN(parsedHours) ? 23 : parsedHours, 
+            isNaN(parsedMinutes) ? 59 : parsedMinutes, 
+            59, 
+            999
+          );
+          
+          console.log('Time comparison for past date:', {
+            finishedDateTime: finishedDateTime.toISOString(),
+            now: now.toISOString(),
+            isFinished: finishedDateTime <= now
+          });
           
           // Only update if the finished time has passed
           if (finishedDateTime > now) {
@@ -672,6 +707,8 @@ const Scheduling = () => {
         }
         // For past dates without timeFinished, proceed with update
       }
+      
+      console.log('Proceeding with payroll update...');
       
       const month = dateToUse.getMonth() + 1;
       const day = dateToUse.getDate();
@@ -766,7 +803,17 @@ const Scheduling = () => {
         lastModified: new Date().toISOString()
       }, { merge: true });
       
-      console.log('Payroll updated for assigned workers');
+      console.log('Payroll updated successfully for assigned workers:', {
+        workersPayrollId: workersPayrollId,
+        assignedWorkers: assignedWorkers,
+        updatedCounts: updatedWorkersArray.map(w => ({
+          name: w.workerName,
+          localMooring: w.localMooringCount,
+          localUnmooring: w.localUnmooringCount,
+          foreignMooring: w.foreignMooringCount,
+          foreignUnmooring: w.foreignUnmooringCount
+        }))
+      });
     } catch (error) {
       console.error('Error updating payroll for assigned workers:', error);
       // Don't throw - payroll update failure shouldn't block vessel saving
@@ -873,38 +920,49 @@ const Scheduling = () => {
       const response = await excelAPI.getVesselsData();
       
       if (response.success && response.vessels) {
-        // Convert Excel data to vessel entries format
-        const entries = {};
-        
-        response.vessels.forEach((vessel, index) => {
-          const dateKey = vessel.date;
+        // Use functional update to get current state and preserve assignedWorkers
+        setVesselEntries(prevEntries => {
+          // Convert Excel data to vessel entries format
+          const entries = {};
           
-          if (!dateKey || dateKey === 'N/A') {
-            return;
-          }
+          response.vessels.forEach((vessel, index) => {
+            const dateKey = vessel.date;
+            
+            if (!dateKey || dateKey === 'N/A') {
+              return;
+            }
+            
+            if (!entries[dateKey]) {
+              entries[dateKey] = [];
+            }
+            
+            // Try to find existing vessel entry to preserve assignedWorkers
+            const existingVessel = prevEntries[dateKey]?.find(existing => 
+              existing.vesselName === (vessel.vessel || '') &&
+              existing.voyageId === (vessel.voyage || '') &&
+              existing.controlId === (vessel.controlId || '')
+            );
+            
+            const vesselEntry = {
+              id: existingVessel?.id || `excel_${index}_${Date.now()}`,
+              vesselName: vessel.vessel || '',
+              voyageId: vessel.voyage || '',
+              controlId: vessel.controlId || '',
+              vesselType: vessel.vesselType || 'Local',
+              purpose: vessel.purpose ? vessel.purpose.split(', ').filter(p => p.trim()) : [],
+              time: vessel.time || '',
+              timeFinished: vessel.timeFinished || '',
+              assignedWorkers: existingVessel?.assignedWorkers || [],
+              date: new Date(dateKey)
+            };
+            
+            entries[dateKey].push(vesselEntry);
+          });
           
-          if (!entries[dateKey]) {
-            entries[dateKey] = [];
-          }
-          
-          const vesselEntry = {
-            id: `excel_${index}_${Date.now()}`,
-            vesselName: vessel.vessel || '',
-            voyageId: vessel.voyage || '',
-            controlId: vessel.controlId || '',
-            vesselType: vessel.vesselType || 'Local',
-            purpose: vessel.purpose ? vessel.purpose.split(', ').filter(p => p.trim()) : [],
-            time: vessel.time || '',
-            timeFinished: vessel.timeFinished || '',
-            date: new Date(dateKey)
-          };
-          
-          entries[dateKey].push(vesselEntry);
+          // Save to local storage as backup
+          saveVesselEntriesToLocalStorage(entries);
+          return entries;
         });
-        
-        setVesselEntries(entries);
-        // Also save to local storage as backup
-        saveVesselEntriesToLocalStorage(entries);
       } else {
         // Try to load from local storage as fallback
         loadVesselEntriesFromLocalStorage();
@@ -1341,6 +1399,8 @@ const Scheduling = () => {
 
   // Load vessel entries on component mount
   useEffect(() => {
+    // First load from localStorage to preserve assignedWorkers, then merge with Excel data
+    loadVesselEntriesFromLocalStorage();
     loadVesselEntriesFromExcel();
     loadRecentFinishedVessels();
     loadUpcomingScheduledVessels();
