@@ -844,7 +844,14 @@ const Scheduling = () => {
       
       console.log('Existing payroll data:', {
         exists: workersPayrollDoc.exists(),
-        workersCount: existingData.workers?.length || 0
+        workersCount: existingData.workers?.length || 0,
+        existingWorkers: existingData.workers?.map(w => ({
+          name: w.workerName,
+          localMooring: w.localMooringCount || 0,
+          localUnmooring: w.localUnmooringCount || 0,
+          foreignMooring: w.foreignMooringCount || 0,
+          foreignUnmooring: w.foreignUnmooringCount || 0
+        })) || []
       });
       
       // Prepare updated workers data
@@ -857,6 +864,12 @@ const Scheduling = () => {
           workersMap.set(worker.workerName, { ...worker });
         });
       }
+      
+      console.log('Workers map after loading existing data:', {
+        mapSize: workersMap.size,
+        mapKeys: Array.from(workersMap.keys()),
+        workersToUpdate: workersToUpdate
+      });
       
       // Update counts for each newly assigned worker only
       workersToUpdate.forEach(workerName => {
@@ -884,31 +897,40 @@ const Scheduling = () => {
         
         // Normalize vessel type for comparison (handle case variations)
         const normalizedVesselType = (vesselType || '').trim();
+        const normalizedLower = normalizedVesselType.toLowerCase();
         
-        if (normalizedVesselType.toLowerCase() === 'local') {
+        console.log(`Vessel type comparison for ${workerName}:`, {
+          original: vesselType,
+          normalized: normalizedVesselType,
+          normalizedLower: normalizedLower,
+          isLocal: normalizedLower === 'local',
+          isForeign: normalizedLower === 'foreign'
+        });
+        
+        if (normalizedLower === 'local') {
           if (hasMooring) {
             const oldCount = workerData.localMooringCount || 0;
             workerData.localMooringCount = oldCount + 1;
-            console.log(`Incremented localMooringCount for ${workerName}: ${oldCount} -> ${workerData.localMooringCount}`);
+            console.log(`✓ Incremented localMooringCount for ${workerName}: ${oldCount} -> ${workerData.localMooringCount}`);
           }
           if (hasUnmooring) {
             const oldCount = workerData.localUnmooringCount || 0;
             workerData.localUnmooringCount = oldCount + 1;
-            console.log(`Incremented localUnmooringCount for ${workerName}: ${oldCount} -> ${workerData.localUnmooringCount}`);
+            console.log(`✓ Incremented localUnmooringCount for ${workerName}: ${oldCount} -> ${workerData.localUnmooringCount}`);
           }
-        } else if (normalizedVesselType.toLowerCase() === 'foreign') {
+        } else if (normalizedLower === 'foreign') {
           if (hasMooring) {
             const oldCount = workerData.foreignMooringCount || 0;
             workerData.foreignMooringCount = oldCount + 1;
-            console.log(`Incremented foreignMooringCount for ${workerName}: ${oldCount} -> ${workerData.foreignMooringCount}`);
+            console.log(`✓ Incremented foreignMooringCount for ${workerName}: ${oldCount} -> ${workerData.foreignMooringCount}`);
           }
           if (hasUnmooring) {
             const oldCount = workerData.foreignUnmooringCount || 0;
             workerData.foreignUnmooringCount = oldCount + 1;
-            console.log(`Incremented foreignUnmooringCount for ${workerName}: ${oldCount} -> ${workerData.foreignUnmooringCount}`);
+            console.log(`✓ Incremented foreignUnmooringCount for ${workerName}: ${oldCount} -> ${workerData.foreignUnmooringCount}`);
           }
         } else {
-          console.warn(`Unknown vessel type: "${vesselType}" for worker ${workerName}`);
+          console.warn(`⚠ Unknown vessel type: "${vesselType}" (normalized: "${normalizedLower}") for worker ${workerName}`);
         }
         
         workersMap.set(workerName, workerData);
@@ -917,7 +939,19 @@ const Scheduling = () => {
       // Convert map back to array
       const updatedWorkersArray = Array.from(workersMap.values());
       
+      console.log('Final workers array before saving:', {
+        totalWorkers: updatedWorkersArray.length,
+        workers: updatedWorkersArray.map(w => ({
+          name: w.workerName,
+          localMooring: w.localMooringCount || 0,
+          localUnmooring: w.localUnmooringCount || 0,
+          foreignMooring: w.foreignMooringCount || 0,
+          foreignUnmooring: w.foreignUnmooringCount || 0
+        }))
+      });
+      
       // Save updated payroll data
+      // Use merge: false to completely replace the document and ensure all workers are preserved
       await setDoc(workersPayrollRef, {
         workers: updatedWorkersArray,
         status: existingData.status || 'pending',
@@ -925,7 +959,7 @@ const Scheduling = () => {
         createdByName: existingData.createdByName || 'System',
         createdAt: existingData.createdAt || new Date().toISOString(),
         lastModified: new Date().toISOString()
-      }, { merge: true });
+      }, { merge: false });
       
       console.log('Payroll updated successfully for newly assigned workers:', {
         workersPayrollId: workersPayrollId,
