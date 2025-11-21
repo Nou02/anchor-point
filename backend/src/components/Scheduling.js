@@ -464,14 +464,17 @@ const Scheduling = () => {
         // Trigger vessel update in Firestore to notify other browsers
         await triggerVesselUpdate();
         
-        // Update payroll for assigned workers (only if date has passed)
+        // Update payroll for newly assigned workers only (only if date has passed)
+        // Get previously assigned workers from original vessel data to avoid duplicate counts
+        const previouslyAssignedWorkers = originalVesselData?.assignedWorkers || [];
         if (vesselFormData.assignedWorkers && vesselFormData.assignedWorkers.length > 0) {
           await updatePayrollForAssignedWorkers(
             vesselFormData.assignedWorkers,
             vesselFormData.vesselType,
             vesselFormData.purpose,
             clickedDate,
-            vesselFormData.timeFinished
+            vesselFormData.timeFinished,
+            previouslyAssignedWorkers // Pass previously assigned workers to avoid duplicates
           );
         }
         
@@ -616,10 +619,11 @@ const Scheduling = () => {
   };
 
   // Update payroll when workers are assigned to a vessel
-  const updatePayrollForAssignedWorkers = async (assignedWorkers, vesselType, purpose, vesselDate, timeFinished) => {
+  const updatePayrollForAssignedWorkers = async (assignedWorkers, vesselType, purpose, vesselDate, timeFinished, previouslyAssignedWorkers = []) => {
     console.log('=== PAYROLL UPDATE FUNCTION CALLED ===');
     console.log('Parameters:', {
       assignedWorkers,
+      previouslyAssignedWorkers,
       vesselType,
       purpose,
       vesselDate: vesselDate ? vesselDate.toISOString() : 'null',
@@ -630,6 +634,27 @@ const Scheduling = () => {
       console.log('No workers assigned, skipping payroll update');
       return; // No workers assigned, nothing to update
     }
+    
+    // Find newly added workers (workers in assignedWorkers but not in previouslyAssignedWorkers)
+    const previousWorkersSet = new Set((previouslyAssignedWorkers || []).map(w => w.toLowerCase().trim()));
+    const newlyAssignedWorkers = (assignedWorkers || []).filter(worker => 
+      !previousWorkersSet.has(worker.toLowerCase().trim())
+    );
+    
+    console.log('Worker comparison:', {
+      previouslyAssigned: previouslyAssignedWorkers,
+      currentlyAssigned: assignedWorkers,
+      newlyAssigned: newlyAssignedWorkers
+    });
+    
+    // If no new workers were added, skip payroll update
+    if (newlyAssignedWorkers.length === 0) {
+      console.log('No new workers added, skipping payroll update to avoid duplicates');
+      return;
+    }
+    
+    // Use only newly assigned workers for payroll update
+    const workersToUpdate = newlyAssignedWorkers;
 
     try {
       const db = getFirestore();
@@ -833,8 +858,8 @@ const Scheduling = () => {
         });
       }
       
-      // Update counts for each assigned worker
-      assignedWorkers.forEach(workerName => {
+      // Update counts for each newly assigned worker only
+      workersToUpdate.forEach(workerName => {
         let workerData = workersMap.get(workerName);
         
         if (!workerData) {
@@ -902,9 +927,11 @@ const Scheduling = () => {
         lastModified: new Date().toISOString()
       }, { merge: true });
       
-      console.log('Payroll updated successfully for assigned workers:', {
+      console.log('Payroll updated successfully for newly assigned workers:', {
         workersPayrollId: workersPayrollId,
-        assignedWorkers: assignedWorkers,
+        newlyAssignedWorkers: workersToUpdate,
+        allAssignedWorkers: assignedWorkers,
+        previouslyAssignedWorkers: previouslyAssignedWorkers,
         updatedCounts: updatedWorkersArray.map(w => ({
           name: w.workerName,
           localMooring: w.localMooringCount,
