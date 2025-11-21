@@ -664,15 +664,24 @@ const Scheduling = () => {
       
       // Check if the vessel date has passed (only update payroll after the date has finished)
       const now = new Date();
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
       
-      const vesselDateOnly = new Date(dateToUse);
-      vesselDateOnly.setHours(0, 0, 0, 0);
+      // Get today's date components for accurate comparison (avoid timezone issues)
+      const todayYear = now.getFullYear();
+      const todayMonth = now.getMonth();
+      const todayDay = now.getDate();
+      const today = new Date(todayYear, todayMonth, todayDay, 0, 0, 0, 0);
+      
+      // Get vessel date components
+      const vesselYear = dateToUse.getFullYear();
+      const vesselMonth = dateToUse.getMonth();
+      const vesselDay = dateToUse.getDate();
+      const vesselDateOnly = new Date(vesselYear, vesselMonth, vesselDay, 0, 0, 0, 0);
       
       console.log('Payroll update check:', {
         vesselDate: dateToUse.toISOString(),
+        vesselDateComponents: { year: vesselYear, month: vesselMonth, day: vesselDay },
         vesselDateOnly: vesselDateOnly.toISOString(),
+        todayComponents: { year: todayYear, month: todayMonth, day: todayDay },
         today: today.toISOString(),
         timeFinished: timeFinished,
         now: now.toISOString()
@@ -685,7 +694,8 @@ const Scheduling = () => {
       }
       
       // For today's date, only update if timeFinished is provided
-      if (vesselDateOnly.getTime() === today.getTime()) {
+      const isToday = vesselYear === todayYear && vesselMonth === todayMonth && vesselDay === todayDay;
+      if (isToday) {
         if (!timeFinished || timeFinished.trim() === '') {
           console.log('Vessel date is today but timeFinished is not provided, payroll will not be updated yet');
           return;
@@ -719,7 +729,8 @@ const Scheduling = () => {
           parsedMinutes = parseInt(minutes, 10);
         }
         
-        const finishedDateTime = new Date(dateToUse);
+        // Use today's date for the finished time comparison (use current date components directly)
+        const finishedDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         finishedDateTime.setHours(
           isNaN(parsedHours) ? 23 : parsedHours, 
           isNaN(parsedMinutes) ? 59 : parsedMinutes, 
@@ -746,64 +757,10 @@ const Scheduling = () => {
         
         console.log('TimeFinished has passed, proceeding with payroll update');
       } else {
-        // For past dates, if timeFinished is provided, check if it has passed
-        if (timeFinished && timeFinished.trim() !== '') {
-          // Parse timeFinished which could be in "HH:MM" or "HH:MM AM/PM" format
-          let parsedHours = 0;
-          let parsedMinutes = 0;
-          
-          if (timeFinished.includes('AM') || timeFinished.includes('PM')) {
-            // Handle AM/PM format (e.g., "10:09 am" or "2:30 PM")
-            const timeMatch = timeFinished.match(/(\d+):(\d+)\s*(AM|PM)/i);
-            if (timeMatch) {
-              let hours = parseInt(timeMatch[1], 10);
-              const minutes = parseInt(timeMatch[2], 10);
-              const ampm = timeMatch[3].toUpperCase();
-              
-              if (ampm === 'PM' && hours !== 12) {
-                hours += 12;
-              } else if (ampm === 'AM' && hours === 12) {
-                hours = 0;
-              }
-              
-              parsedHours = hours;
-              parsedMinutes = minutes;
-            }
-          } else {
-            // Handle 24-hour format (e.g., "10:09" or "14:30")
-            const [hours, minutes] = timeFinished.split(':');
-            parsedHours = parseInt(hours, 10);
-            parsedMinutes = parseInt(minutes, 10);
-          }
-          
-          const finishedDateTime = new Date(dateToUse);
-          finishedDateTime.setHours(
-            isNaN(parsedHours) ? 23 : parsedHours, 
-            isNaN(parsedMinutes) ? 59 : parsedMinutes, 
-            59, 
-            999
-          );
-          
-          console.log('Time comparison for past date:', {
-            timeFinished: timeFinished,
-            parsedHours: parsedHours,
-            parsedMinutes: parsedMinutes,
-            finishedDateTime: finishedDateTime.toISOString(),
-            now: now.toISOString(),
-            isFinished: finishedDateTime <= now,
-            timeDifference: now.getTime() - finishedDateTime.getTime()
-          });
-          
-          // Only update if the finished time has passed
-          if (finishedDateTime > now) {
-            console.log('Vessel work is not finished yet, payroll will be updated after timeFinished');
-            console.log('Time remaining:', Math.round((finishedDateTime.getTime() - now.getTime()) / 1000 / 60), 'minutes');
-            return;
-          }
-          
-          console.log('TimeFinished has passed, proceeding with payroll update');
-        }
-        // For past dates without timeFinished, proceed with update
+        // For past dates, proceed with update immediately
+        // Since the date has already passed, we don't need to check timeFinished
+        // The vessel work is considered finished
+        console.log('Vessel date is in the past, proceeding with payroll update immediately');
       }
       
       // Determine which count to increment based on purpose
