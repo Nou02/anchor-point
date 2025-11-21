@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './Analytics.css';
+import { geminiService } from '../services/geminiService';
 // Using dynamic import for xlsx to handle potential module resolution issues
 let XLSX;
 
@@ -183,6 +184,30 @@ const useExcelData = () => {
 
 const AnalyticsContent = ({ refreshData }) => {
   const { rows, loading, error, availableSheets } = useExcelData();
+  
+  // AI Insights state
+  const [aiInsights, setAiInsights] = useState({
+    vesselOperationsOverview: null,
+    serviceDistribution: null,
+    yearlyGrowth: null,
+    topVessels: null,
+    nextQuarterForecast: null,
+    peakPeriodPrediction: null,
+    serviceDemandForecast: null,
+    capacityPlanning: null,
+    operationalInsights: null
+  });
+  const [loadingInsights, setLoadingInsights] = useState({
+    vesselOperationsOverview: false,
+    serviceDistribution: false,
+    yearlyGrowth: false,
+    topVessels: false,
+    nextQuarterForecast: false,
+    peakPeriodPrediction: false,
+    serviceDemandForecast: false,
+    capacityPlanning: false,
+    operationalInsights: false
+  });
 
   const parsed = useMemo(() => {
     // Attempt to infer date column and normalize rows
@@ -423,6 +448,170 @@ const AnalyticsContent = ({ refreshData }) => {
     return `${top3[0].name} leads with ${top3[0].count} operations, ${top3[1].name} has ${top3[1].count} scheduled operations, and ${top3[2].name} follows with ${top3[2].count} operations. Together, they account for ${percentage}% of total operations.`;
   }, [stats]);
 
+  // AI Insights generation functions
+  const generateVesselOperationsOverviewInsights = async () => {
+    if (loadingInsights.vesselOperationsOverview) return;
+    setLoadingInsights(prev => ({ ...prev, vesselOperationsOverview: true }));
+    try {
+      const peakQuarter = Object.keys(stats.byQuarter).reduce((a, b) => stats.byQuarter[a] > stats.byQuarter[b] ? a : b);
+      const insights = await geminiService.generateInsights(
+        {
+          peakQuarter: peakQuarter,
+          peakQuarterCount: stats.byQuarter[peakQuarter],
+          bestMonth: stats.bestMonth,
+          byQuarter: stats.byQuarter
+        },
+        'vesselOperationsOverview'
+      );
+      setAiInsights(prev => ({ ...prev, vesselOperationsOverview: insights }));
+    } catch (error) {
+      console.error('Error generating vessel operations overview insights:', error);
+      setAiInsights(prev => ({ ...prev, vesselOperationsOverview: 'Unable to generate insights at this time. Please try again later.' }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, vesselOperationsOverview: false }));
+    }
+  };
+
+  const generateServiceDistributionInsights = async () => {
+    if (loadingInsights.serviceDistribution) return;
+    setLoadingInsights(prev => ({ ...prev, serviceDistribution: true }));
+    try {
+      const insights = await geminiService.generateInsights(
+        { topServices: stats.topServices, totalOperations: stats.total },
+        'serviceDistribution'
+      );
+      setAiInsights(prev => ({ ...prev, serviceDistribution: insights }));
+    } catch (error) {
+      console.error('Error generating service distribution insights:', error);
+      setAiInsights(prev => ({ ...prev, serviceDistribution: 'Unable to generate insights at this time. Please try again later.' }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, serviceDistribution: false }));
+    }
+  };
+
+  const generateYearlyGrowthInsights = async () => {
+    if (loadingInsights.yearlyGrowth) return;
+    setLoadingInsights(prev => ({ ...prev, yearlyGrowth: true }));
+    try {
+      const insights = await geminiService.generateInsights(
+        { byYear: stats.byYear, totalOperations: stats.total, peakYear: yearlyGrowthNote?.peakYear },
+        'yearlyGrowth'
+      );
+      setAiInsights(prev => ({ ...prev, yearlyGrowth: insights }));
+    } catch (error) {
+      console.error('Error generating yearly growth insights:', error);
+      setAiInsights(prev => ({ ...prev, yearlyGrowth: 'Unable to generate insights at this time. Please try again later.' }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, yearlyGrowth: false }));
+    }
+  };
+
+  const generateTopVesselsInsights = async () => {
+    if (loadingInsights.topVessels) return;
+    setLoadingInsights(prev => ({ ...prev, topVessels: true }));
+    try {
+      const insights = await geminiService.generateInsights(
+        { topVessels: stats.topVessels.slice(0, 5), totalOperations: stats.total, totalVessels: stats.topVessels.length },
+        'topVessels'
+      );
+      setAiInsights(prev => ({ ...prev, topVessels: insights }));
+    } catch (error) {
+      console.error('Error generating top vessels insights:', error);
+      setAiInsights(prev => ({ ...prev, topVessels: 'Unable to generate insights at this time. Please try again later.' }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, topVessels: false }));
+    }
+  };
+
+  const generateNextQuarterForecastInsights = async () => {
+    if (loadingInsights.nextQuarterForecast) return;
+    setLoadingInsights(prev => ({ ...prev, nextQuarterForecast: true }));
+    try {
+      const expectedVessels = Math.round(stats.total / stats.byYear.length * 1.1);
+      const insights = await geminiService.generateInsights(
+        { expectedVessels, totalOperations: stats.total, byYear: stats.byYear },
+        'nextQuarterForecast'
+      );
+      setAiInsights(prev => ({ ...prev, nextQuarterForecast: insights }));
+    } catch (error) {
+      console.error('Error generating next quarter forecast insights:', error);
+      setAiInsights(prev => ({ ...prev, nextQuarterForecast: 'Unable to generate insights at this time. Please try again later.' }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, nextQuarterForecast: false }));
+    }
+  };
+
+  const generatePeakPeriodPredictionInsights = async () => {
+    if (loadingInsights.peakPeriodPrediction) return;
+    setLoadingInsights(prev => ({ ...prev, peakPeriodPrediction: true }));
+    try {
+      const insights = await geminiService.generateInsights(
+        { bestMonth: stats.bestMonth, byMonth: stats.byMonth },
+        'peakPeriodPrediction'
+      );
+      setAiInsights(prev => ({ ...prev, peakPeriodPrediction: insights }));
+    } catch (error) {
+      console.error('Error generating peak period prediction insights:', error);
+      setAiInsights(prev => ({ ...prev, peakPeriodPrediction: 'Unable to generate insights at this time. Please try again later.' }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, peakPeriodPrediction: false }));
+    }
+  };
+
+  const generateServiceDemandForecastInsights = async () => {
+    if (loadingInsights.serviceDemandForecast) return;
+    setLoadingInsights(prev => ({ ...prev, serviceDemandForecast: true }));
+    try {
+      const insights = await geminiService.generateInsights(
+        { topServices: stats.topServices, totalOperations: stats.total },
+        'serviceDemandForecast'
+      );
+      setAiInsights(prev => ({ ...prev, serviceDemandForecast: insights }));
+    } catch (error) {
+      console.error('Error generating service demand forecast insights:', error);
+      setAiInsights(prev => ({ ...prev, serviceDemandForecast: 'Unable to generate insights at this time. Please try again later.' }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, serviceDemandForecast: false }));
+    }
+  };
+
+  const generateCapacityPlanningInsights = async () => {
+    if (loadingInsights.capacityPlanning) return;
+    setLoadingInsights(prev => ({ ...prev, capacityPlanning: true }));
+    try {
+      const recommendedCapacity = Math.round(stats.total / stats.byYear.length * 1.2);
+      const insights = await geminiService.generateInsights(
+        { recommendedCapacity, totalOperations: stats.total, byYear: stats.byYear },
+        'capacityPlanning'
+      );
+      setAiInsights(prev => ({ ...prev, capacityPlanning: insights }));
+    } catch (error) {
+      console.error('Error generating capacity planning insights:', error);
+      setAiInsights(prev => ({ ...prev, capacityPlanning: 'Unable to generate insights at this time. Please try again later.' }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, capacityPlanning: false }));
+    }
+  };
+
+  const generateOperationalInsights = async () => {
+    if (loadingInsights.operationalInsights) return;
+    setLoadingInsights(prev => ({ ...prev, operationalInsights: true }));
+    try {
+      const peakDayIndex = stats.byWeekday.indexOf(Math.max(...stats.byWeekday));
+      const peakDay = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][peakDayIndex];
+      const insights = await geminiService.generateInsights(
+        { peakDay, peakDayCount: Math.max(...stats.byWeekday), topVessels: stats.topVessels, topServices: stats.topServices },
+        'operationalInsights'
+      );
+      setAiInsights(prev => ({ ...prev, operationalInsights: insights }));
+    } catch (error) {
+      console.error('Error generating operational insights:', error);
+      setAiInsights(prev => ({ ...prev, operationalInsights: 'Unable to generate insights at this time. Please try again later.' }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, operationalInsights: false }));
+    }
+  };
+
   if (loading) return <div className="analytics-loading">Loading analytics…</div>;
   if (error) return <div className="analytics-error">Error: {error}</div>;
   if (!stats.total) return (
@@ -464,8 +653,28 @@ const AnalyticsContent = ({ refreshData }) => {
       <div className="analytics-two-column">
         {/* Vessel Operations Overview */}
         <div className="analytics-card">
-          <div className="analytics-card-title">
-            Vessel Operations Overview
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div className="analytics-card-title">
+              Vessel Operations Overview
+            </div>
+            <button
+              onClick={generateVesselOperationsOverviewInsights}
+              disabled={loadingInsights.vesselOperationsOverview}
+              className="ai-insights-btn"
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.85rem',
+                backgroundColor: '#2F3B70',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: loadingInsights.vesselOperationsOverview ? 'not-allowed' : 'pointer',
+                opacity: loadingInsights.vesselOperationsOverview ? 0.6 : 1,
+                fontWeight: '500'
+              }}
+            >
+              {loadingInsights.vesselOperationsOverview ? 'Generating...' : 'AI Insights'}
+            </button>
           </div>
           <div style={{ marginBottom: '20px' }}>
             <h4 className="analytics-section-header">Peak Quarter</h4>
@@ -498,12 +707,37 @@ const AnalyticsContent = ({ refreshData }) => {
               <div className="analytics-progress-value analytics-progress-value-month">{stats.bestMonth?.count || 0} vessels</div>
             </div>
           </div>
+          {aiInsights.vesselOperationsOverview && (
+            <div className="service-distribution-info">
+              <p>{aiInsights.vesselOperationsOverview}</p>
+            </div>
+          )}
         </div>
 
         {/* Service Distribution */}
         <div className="analytics-card">
-          <div className="analytics-card-title">
-            Service Distribution
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div className="analytics-card-title">
+              Service Distribution
+            </div>
+            <button
+              onClick={generateServiceDistributionInsights}
+              disabled={loadingInsights.serviceDistribution}
+              className="ai-insights-btn"
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.85rem',
+                backgroundColor: '#2F3B70',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: loadingInsights.serviceDistribution ? 'not-allowed' : 'pointer',
+                opacity: loadingInsights.serviceDistribution ? 0.6 : 1,
+                fontWeight: '500'
+              }}
+            >
+              {loadingInsights.serviceDistribution ? 'Generating...' : 'AI Insights'}
+            </button>
           </div>
           {stats.topServices.slice(0, 5).map((service, index) => {
             const maxCount = stats.topServices[0].count;
@@ -528,16 +762,9 @@ const AnalyticsContent = ({ refreshData }) => {
               </div>
             );
           })}
-          {stats.topServices && stats.topServices.length > 0 && (
-            <div className="analytics-year-note">
-              <div className="analytics-note-item">
-                <span className="analytics-note-label">Top:</span>
-                <span className="analytics-note-value">{stats.topServices[0].name}</span>
-              </div>
-              <div className="analytics-note-item">
-                <span className="analytics-note-label">Total:</span>
-                <span className="analytics-note-value">{stats.topServices[0].count}</span>
-              </div>
+          {aiInsights.serviceDistribution && (
+            <div className="service-distribution-info">
+              <p>{aiInsights.serviceDistribution}</p>
             </div>
           )}
         </div>
@@ -547,8 +774,28 @@ const AnalyticsContent = ({ refreshData }) => {
       <div className="analytics-two-column">
         {/* Yearly Growth */}
         <div className="analytics-card">
-          <div className="analytics-card-title">
-            Yearly Growth
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div className="analytics-card-title">
+              Yearly Growth
+            </div>
+            <button
+              onClick={generateYearlyGrowthInsights}
+              disabled={loadingInsights.yearlyGrowth}
+              className="ai-insights-btn"
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.85rem',
+                backgroundColor: '#2F3B70',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: loadingInsights.yearlyGrowth ? 'not-allowed' : 'pointer',
+                opacity: loadingInsights.yearlyGrowth ? 0.6 : 1,
+                fontWeight: '500'
+              }}
+            >
+              {loadingInsights.yearlyGrowth ? 'Generating...' : 'AI Insights'}
+            </button>
           </div>
           {stats.byYear.map(({ year, count }, index) => {
             const maxCount = Math.max(...stats.byYear.map(y => y.count));
@@ -573,24 +820,37 @@ const AnalyticsContent = ({ refreshData }) => {
               </div>
             );
           })}
-          {yearlyGrowthNote && (
-            <div className="analytics-year-note">
-              <div className="analytics-note-item">
-                <span className="analytics-note-label">Peak Year:</span>
-                <span className="analytics-note-value">{yearlyGrowthNote.peakYear}</span>
-              </div>
-              <div className="analytics-note-item">
-                <span className="analytics-note-label">Total Years:</span>
-                <span className="analytics-note-value">{yearlyGrowthNote.totalYears}</span>
-              </div>
+          {aiInsights.yearlyGrowth && (
+            <div className="service-distribution-info">
+              <p>{aiInsights.yearlyGrowth}</p>
             </div>
           )}
         </div>
 
         {/* Top Vessels */}
         <div className="analytics-card">
-          <div className="analytics-card-title">
-            Top Vessels
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div className="analytics-card-title">
+              Top Vessels
+            </div>
+            <button
+              onClick={generateTopVesselsInsights}
+              disabled={loadingInsights.topVessels}
+              className="ai-insights-btn"
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.85rem',
+                backgroundColor: '#2F3B70',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: loadingInsights.topVessels ? 'not-allowed' : 'pointer',
+                opacity: loadingInsights.topVessels ? 0.6 : 1,
+                fontWeight: '500'
+              }}
+            >
+              {loadingInsights.topVessels ? 'Generating...' : 'AI Insights'}
+            </button>
           </div>
           {stats.topVessels.slice(0, 5).map((vessel, index) => {
             const maxCount = stats.topVessels[0]?.count || 0;
@@ -625,16 +885,9 @@ const AnalyticsContent = ({ refreshData }) => {
               </div>
             );
           })}
-          {stats.topVessels && stats.topVessels.length > 0 && (
-            <div className="analytics-year-note">
-              <div className="analytics-note-item">
-                <span className="analytics-note-label">Top Vessel:</span>
-                <span className="analytics-note-value">{stats.topVessels[0].name}</span>
-              </div>
-              <div className="analytics-note-item">
-                <span className="analytics-note-label">Operations:</span>
-                <span className="analytics-note-value">{stats.topVessels[0].count}</span>
-              </div>
+          {aiInsights.topVessels && (
+            <div className="service-distribution-info">
+              <p>{aiInsights.topVessels}</p>
             </div>
           )}
         </div>
@@ -648,7 +901,27 @@ const AnalyticsContent = ({ refreshData }) => {
         <div className="analytics-predictive-grid">
           {/* Next Quarter Forecast */}
           <div className="analytics-predictive-section">
-            <h4 className="analytics-section-header">Next Quarter Forecast</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <h4 className="analytics-section-header">Next Quarter Forecast</h4>
+              <button
+                onClick={generateNextQuarterForecastInsights}
+                disabled={loadingInsights.nextQuarterForecast}
+                className="ai-insights-btn"
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  backgroundColor: '#2F3B70',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: loadingInsights.nextQuarterForecast ? 'not-allowed' : 'pointer',
+                  opacity: loadingInsights.nextQuarterForecast ? 0.6 : 1,
+                  fontWeight: '500'
+                }}
+              >
+                {loadingInsights.nextQuarterForecast ? '...' : 'AI'}
+              </button>
+            </div>
             <div className="analytics-predictive-card analytics-predictive-card-forecast">
               <div className="analytics-predictive-header">
                 <span className="analytics-predictive-label">Expected Vessels</span>
@@ -663,11 +936,36 @@ const AnalyticsContent = ({ refreshData }) => {
                 +10% growth projection
               </div>
             </div>
+            {aiInsights.nextQuarterForecast && (
+              <div className="service-distribution-info" style={{ marginTop: '10px' }}>
+                <p>{aiInsights.nextQuarterForecast}</p>
+              </div>
+            )}
           </div>
 
           {/* Peak Period Prediction */}
           <div className="analytics-predictive-section">
-            <h4 className="analytics-section-header">Peak Period Prediction</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <h4 className="analytics-section-header">Peak Period Prediction</h4>
+              <button
+                onClick={generatePeakPeriodPredictionInsights}
+                disabled={loadingInsights.peakPeriodPrediction}
+                className="ai-insights-btn"
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  backgroundColor: '#2F3B70',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: loadingInsights.peakPeriodPrediction ? 'not-allowed' : 'pointer',
+                  opacity: loadingInsights.peakPeriodPrediction ? 0.6 : 1,
+                  fontWeight: '500'
+                }}
+              >
+                {loadingInsights.peakPeriodPrediction ? '...' : 'AI'}
+              </button>
+            </div>
             <div className="analytics-predictive-card analytics-predictive-card-peak">
               <div className="analytics-predictive-header">
                 <span className="analytics-predictive-label">Predicted Peak Month</span>
@@ -679,11 +977,36 @@ const AnalyticsContent = ({ refreshData }) => {
                 Based on historical patterns
               </div>
             </div>
+            {aiInsights.peakPeriodPrediction && (
+              <div className="service-distribution-info" style={{ marginTop: '10px' }}>
+                <p>{aiInsights.peakPeriodPrediction}</p>
+              </div>
+            )}
           </div>
 
           {/* Service Demand Forecast */}
           <div className="analytics-predictive-section">
-            <h4 className="analytics-section-header">Service Demand Forecast</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <h4 className="analytics-section-header">Service Demand Forecast</h4>
+              <button
+                onClick={generateServiceDemandForecastInsights}
+                disabled={loadingInsights.serviceDemandForecast}
+                className="ai-insights-btn"
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  backgroundColor: '#2F3B70',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: loadingInsights.serviceDemandForecast ? 'not-allowed' : 'pointer',
+                  opacity: loadingInsights.serviceDemandForecast ? 0.6 : 1,
+                  fontWeight: '500'
+                }}
+              >
+                {loadingInsights.serviceDemandForecast ? '...' : 'AI'}
+              </button>
+            </div>
             <div className="analytics-predictive-card analytics-predictive-card-service">
               <div className="analytics-predictive-header">
                 <span className="analytics-predictive-label">Top Service Demand</span>
@@ -695,11 +1018,36 @@ const AnalyticsContent = ({ refreshData }) => {
                 Expected to remain dominant
               </div>
             </div>
+            {aiInsights.serviceDemandForecast && (
+              <div className="service-distribution-info" style={{ marginTop: '10px' }}>
+                <p>{aiInsights.serviceDemandForecast}</p>
+              </div>
+            )}
           </div>
 
           {/* Capacity Planning */}
           <div className="analytics-predictive-section">
-            <h4 className="analytics-section-header">Capacity Planning</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <h4 className="analytics-section-header">Capacity Planning</h4>
+              <button
+                onClick={generateCapacityPlanningInsights}
+                disabled={loadingInsights.capacityPlanning}
+                className="ai-insights-btn"
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  backgroundColor: '#2F3B70',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: loadingInsights.capacityPlanning ? 'not-allowed' : 'pointer',
+                  opacity: loadingInsights.capacityPlanning ? 0.6 : 1,
+                  fontWeight: '500'
+                }}
+              >
+                {loadingInsights.capacityPlanning ? '...' : 'AI'}
+              </button>
+            </div>
             <div className="analytics-predictive-card analytics-predictive-card-capacity">
               <div className="analytics-predictive-header">
                 <span className="analytics-predictive-label">Recommended Capacity</span>
@@ -711,14 +1059,39 @@ const AnalyticsContent = ({ refreshData }) => {
                 +20% buffer for peak periods
               </div>
             </div>
+            {aiInsights.capacityPlanning && (
+              <div className="service-distribution-info" style={{ marginTop: '10px' }}>
+                <p>{aiInsights.capacityPlanning}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Operational Insights - Full Width */}
       <div className="analytics-card">
-        <div className="analytics-card-title">
-          Operational Insights
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div className="analytics-card-title">
+            Operational Insights
+          </div>
+          <button
+            onClick={generateOperationalInsights}
+            disabled={loadingInsights.operationalInsights}
+            className="ai-insights-btn"
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.85rem',
+              backgroundColor: '#2F3B70',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: loadingInsights.operationalInsights ? 'not-allowed' : 'pointer',
+              opacity: loadingInsights.operationalInsights ? 0.6 : 1,
+              fontWeight: '500'
+            }}
+          >
+            {loadingInsights.operationalInsights ? 'Generating...' : 'AI Insights'}
+          </button>
         </div>
         <div className="analytics-insights-grid">
             {/* Peak Day Card */}
@@ -761,6 +1134,11 @@ const AnalyticsContent = ({ refreshData }) => {
             </div>
           </div>
         </div>
+        {aiInsights.operationalInsights && (
+          <div className="service-distribution-info">
+            <p>{aiInsights.operationalInsights}</p>
+          </div>
+        )}
       </div>
   );
 };
@@ -805,5 +1183,6 @@ const List = ({ data }) => (
     ))}
   </div>
 );
+
 
 

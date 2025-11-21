@@ -716,3 +716,26 @@
 .analytics-list-empty {
   color: #6c757d;
 }
+
+/* AI Insights Styling - Same as Homepage */
+.service-distribution-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  min-height: 60px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.service-distribution-info p {
+  margin: 0;
+  color: #2F3B70;
+  font-weight: 600;
+  font-size: 0.95rem;
+}

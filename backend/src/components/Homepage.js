@@ -14,6 +14,7 @@ import { db } from '../firebase/config';
 import notificationService from '../services/notificationService';
 import { clearTabUser, isCurrentTabOwner, getTabUser } from '../utils/tabAuth';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, Cell, ResponsiveContainer } from 'recharts';
+import { geminiService } from '../services/geminiService';
 // Using dynamic import for xlsx to handle potential module resolution issues
 let XLSX;
 
@@ -55,6 +56,24 @@ const Homepage = () => {
   const [error, setError] = useState(null);
   const [registeredUsers, setRegisteredUsers] = useState([]);
   const [hasAnimated, setHasAnimated] = useState(false);
+  
+  // AI Insights state
+  const [aiInsights, setAiInsights] = useState({
+    yearlyGrowth: null,
+    topVessels: null,
+    nextQuarterForecast: null,
+    monthlyPerformance: null,
+    peakPerformance: null,
+    serviceDistribution: null
+  });
+  const [loadingInsights, setLoadingInsights] = useState({
+    yearlyGrowth: false,
+    topVessels: false,
+    nextQuarterForecast: false,
+    monthlyPerformance: false,
+    peakPerformance: false,
+    serviceDistribution: false
+  });
 
   useEffect(() => {
     localStorage.setItem('activeMenu', activeMenu);
@@ -739,6 +758,170 @@ const Homepage = () => {
     return `Next quarter (${nextQuarter}) is projected to reach ${projectedOps} operations, a 15% increase from current performance.`;
   }, [analyticsData]);
 
+  // AI Insights handlers
+  const generateYearlyGrowthInsights = async () => {
+    if (loadingInsights.yearlyGrowth) return;
+    
+    setLoadingInsights(prev => ({ ...prev, yearlyGrowth: true }));
+    try {
+      const insights = await geminiService.generateInsights(
+        {
+          byYear: analyticsData.byYear,
+          totalOperations: analyticsData.totalOperations,
+          peakYear: analyticsData.byYear.reduce((best, current) => 
+            current.count > best.count ? current : best, analyticsData.byYear[0]
+          )
+        },
+        'yearlyGrowth'
+      );
+      setAiInsights(prev => ({ ...prev, yearlyGrowth: insights }));
+    } catch (error) {
+      console.error('Error generating yearly growth insights:', error);
+      setAiInsights(prev => ({ 
+        ...prev, 
+        yearlyGrowth: 'Unable to generate insights at this time. Please try again later.' 
+      }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, yearlyGrowth: false }));
+    }
+  };
+
+  const generateTopVesselsInsights = async () => {
+    if (loadingInsights.topVessels) return;
+    
+    setLoadingInsights(prev => ({ ...prev, topVessels: true }));
+    try {
+      const insights = await geminiService.generateInsights(
+        {
+          topVessels: analyticsData.topVessels.slice(0, 3),
+          totalOperations: analyticsData.totalOperations,
+          totalVessels: analyticsData.totalVessels
+        },
+        'topVessels'
+      );
+      setAiInsights(prev => ({ ...prev, topVessels: insights }));
+    } catch (error) {
+      console.error('Error generating top vessels insights:', error);
+      setAiInsights(prev => ({ 
+        ...prev, 
+        topVessels: 'Unable to generate insights at this time. Please try again later.' 
+      }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, topVessels: false }));
+    }
+  };
+
+  const generateNextQuarterForecastInsights = async () => {
+    if (loadingInsights.nextQuarterForecast) return;
+    
+    setLoadingInsights(prev => ({ ...prev, nextQuarterForecast: true }));
+    try {
+      const currentQuarterOps = analyticsData.byQuarter[analyticsData.peakQuarter] || 122;
+      const projectedOps = Math.round(currentQuarterOps * 1.15);
+      const nextQuarter = analyticsData.peakQuarter === 'Q1' ? 'Q2' : 
+                         analyticsData.peakQuarter === 'Q2' ? 'Q3' :
+                         analyticsData.peakQuarter === 'Q3' ? 'Q4' : 'Q1';
+      
+      const insights = await geminiService.generateInsights(
+        {
+          currentQuarter: analyticsData.peakQuarter,
+          currentQuarterOps: currentQuarterOps,
+          nextQuarter: nextQuarter,
+          projectedOps: projectedOps,
+          byQuarter: analyticsData.byQuarter,
+          bestMonth: analyticsData.bestMonth,
+          efficiencyRate: analyticsData.efficiencyRate
+        },
+        'nextQuarterForecast'
+      );
+      setAiInsights(prev => ({ ...prev, nextQuarterForecast: insights }));
+    } catch (error) {
+      console.error('Error generating next quarter forecast insights:', error);
+      setAiInsights(prev => ({ 
+        ...prev, 
+        nextQuarterForecast: 'Unable to generate insights at this time. Please try again later.' 
+      }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, nextQuarterForecast: false }));
+    }
+  };
+
+  const generateMonthlyPerformanceInsights = async () => {
+    if (loadingInsights.monthlyPerformance) return;
+    
+    setLoadingInsights(prev => ({ ...prev, monthlyPerformance: true }));
+    try {
+      const insights = await geminiService.generateInsights(
+        {
+          byMonth: analyticsData.byMonth,
+          bestMonth: analyticsData.bestMonth,
+          totalOperations: analyticsData.totalOperations
+        },
+        'monthlyPerformance'
+      );
+      setAiInsights(prev => ({ ...prev, monthlyPerformance: insights }));
+    } catch (error) {
+      console.error('Error generating monthly performance insights:', error);
+      setAiInsights(prev => ({ 
+        ...prev, 
+        monthlyPerformance: 'Unable to generate insights at this time. Please try again later.' 
+      }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, monthlyPerformance: false }));
+    }
+  };
+
+  const generatePeakPerformanceInsights = async () => {
+    if (loadingInsights.peakPerformance) return;
+    
+    setLoadingInsights(prev => ({ ...prev, peakPerformance: true }));
+    try {
+      const insights = await geminiService.generateInsights(
+        {
+          bestMonth: analyticsData.bestMonth,
+          peakDay: 'Thursday',
+          peakDayOperations: analyticsData.peakDayOperations || 53,
+          peakQuarter: analyticsData.peakQuarter,
+          byQuarter: analyticsData.byQuarter
+        },
+        'peakPerformance'
+      );
+      setAiInsights(prev => ({ ...prev, peakPerformance: insights }));
+    } catch (error) {
+      console.error('Error generating peak performance insights:', error);
+      setAiInsights(prev => ({ 
+        ...prev, 
+        peakPerformance: 'Unable to generate insights at this time. Please try again later.' 
+      }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, peakPerformance: false }));
+    }
+  };
+
+  const generateServiceDistributionInsights = async () => {
+    if (loadingInsights.serviceDistribution) return;
+    
+    setLoadingInsights(prev => ({ ...prev, serviceDistribution: true }));
+    try {
+      const insights = await geminiService.generateInsights(
+        {
+          topServices: analyticsData.topServices,
+          totalOperations: analyticsData.totalOperations
+        },
+        'serviceDistribution'
+      );
+      setAiInsights(prev => ({ ...prev, serviceDistribution: insights }));
+    } catch (error) {
+      console.error('Error generating service distribution insights:', error);
+      setAiInsights(prev => ({ 
+        ...prev, 
+        serviceDistribution: 'Unable to generate insights at this time. Please try again later.' 
+      }));
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, serviceDistribution: false }));
+    }
+  };
+
   // Fetch upcoming events from appointments
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
@@ -1010,7 +1193,27 @@ const Homepage = () => {
                       <div className="chart-row">
                         {/* Yearly Growth - 2D Line Chart */}
                         <div className="dashboard-section">
-                        <h3 className="section-title">Yearly Growth</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <h3 className="section-title">Yearly Growth</h3>
+                          <button
+                            onClick={generateYearlyGrowthInsights}
+                            disabled={loadingInsights.yearlyGrowth}
+                            className="ai-insights-btn"
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.85rem',
+                              backgroundColor: '#2F3B70',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: loadingInsights.yearlyGrowth ? 'not-allowed' : 'pointer',
+                              opacity: loadingInsights.yearlyGrowth ? 0.6 : 1,
+                              fontWeight: '500'
+                            }}
+                          >
+                            {loadingInsights.yearlyGrowth ? 'Generating...' : 'AI Insights'}
+                          </button>
+                        </div>
                         <div className="chart-container" style={{ width: '100%', height: '150px', minHeight: '150px' }}>
                           <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={analyticsData.byYear} isAnimationActive={!hasAnimated}>
@@ -1047,16 +1250,36 @@ const Homepage = () => {
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
-                        {yearlyGrowthNote && (
+                        {aiInsights.yearlyGrowth && (
                           <div className="service-distribution-info">
-                            <p>{yearlyGrowthNote}</p>
+                            <p>{aiInsights.yearlyGrowth}</p>
                           </div>
                         )}
                       </div>
 
                       {/* Top Vessels List */}
                       <div className="dashboard-section">
-                        <h3 className="section-title">Top Vessels</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <h3 className="section-title">Top Vessels</h3>
+                          <button
+                            onClick={generateTopVesselsInsights}
+                            disabled={loadingInsights.topVessels}
+                            className="ai-insights-btn"
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.85rem',
+                              backgroundColor: '#2F3B70',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: loadingInsights.topVessels ? 'not-allowed' : 'pointer',
+                              opacity: loadingInsights.topVessels ? 0.6 : 1,
+                              fontWeight: '500'
+                            }}
+                          >
+                            {loadingInsights.topVessels ? 'Generating...' : 'AI Insights'}
+                          </button>
+                        </div>
                         <div className="vessels-list">
                           {analyticsData.topVessels.slice(0, 3).map((vessel, index) => (
                             <div key={index} className="vessel-item">
@@ -1075,16 +1298,36 @@ const Homepage = () => {
                             </div>
                           ))}
                         </div>
-                        {topVesselsNote && (
+                        {aiInsights.topVessels && (
                           <div className="service-distribution-info">
-                            <p>{topVesselsNote}</p>
+                            <p>{aiInsights.topVessels}</p>
                           </div>
                         )}
                       </div>
 
                       {/* Next Quarter Forecast */}
                       <div className="dashboard-section">
-                        <h3 className="section-title">Next Quarter Forecast</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <h3 className="section-title">Next Quarter Forecast</h3>
+                          <button
+                            onClick={generateNextQuarterForecastInsights}
+                            disabled={loadingInsights.nextQuarterForecast}
+                            className="ai-insights-btn"
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.85rem',
+                              backgroundColor: '#2F3B70',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: loadingInsights.nextQuarterForecast ? 'not-allowed' : 'pointer',
+                              opacity: loadingInsights.nextQuarterForecast ? 0.6 : 1,
+                              fontWeight: '500'
+                            }}
+                          >
+                            {loadingInsights.nextQuarterForecast ? 'Generating...' : 'AI Insights'}
+                          </button>
+                        </div>
                         {/* Removed subtitle per request */}
                         <div className="forecast-content">
                           <div className="forecast-metrics">
@@ -1105,9 +1348,9 @@ const Homepage = () => {
                             </div>
                           </div>
                         </div>
-                        {nextQuarterForecastNote && (
+                        {aiInsights.nextQuarterForecast && (
                           <div className="service-distribution-info">
-                            <p>{nextQuarterForecastNote}</p>
+                            <p>{aiInsights.nextQuarterForecast}</p>
                           </div>
                         )}
                       </div>
@@ -1117,7 +1360,27 @@ const Homepage = () => {
                       <div className="chart-row">
                         {/* Monthly Performance */}
                       <div className="dashboard-section">
-                        <h3 className="section-title">Monthly Performance</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <h3 className="section-title">Monthly Performance</h3>
+                          <button
+                            onClick={generateMonthlyPerformanceInsights}
+                            disabled={loadingInsights.monthlyPerformance}
+                            className="ai-insights-btn"
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.85rem',
+                              backgroundColor: '#2F3B70',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: loadingInsights.monthlyPerformance ? 'not-allowed' : 'pointer',
+                              opacity: loadingInsights.monthlyPerformance ? 0.6 : 1,
+                              fontWeight: '500'
+                            }}
+                          >
+                            {loadingInsights.monthlyPerformance ? 'Generating...' : 'AI Insights'}
+                          </button>
+                        </div>
                         <div className="chart-container" style={{ width: '100%', height: '150px', minHeight: '150px' }}>
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={analyticsData.byMonth || []} isAnimationActive={!hasAnimated}>
@@ -1161,16 +1424,36 @@ const Homepage = () => {
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
-                        {monthlyPerformanceNote && (
+                        {aiInsights.monthlyPerformance && (
                           <div className="service-distribution-info">
-                            <p>{monthlyPerformanceNote}</p>
+                            <p>{aiInsights.monthlyPerformance}</p>
                           </div>
                         )}
                       </div>
 
                       {/* Peak Performance */}
                       <div className="dashboard-section">
-                        <h3 className="section-title">Peak Performance</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <h3 className="section-title">Peak Performance</h3>
+                          <button
+                            onClick={generatePeakPerformanceInsights}
+                            disabled={loadingInsights.peakPerformance}
+                            className="ai-insights-btn"
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.85rem',
+                              backgroundColor: '#2F3B70',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: loadingInsights.peakPerformance ? 'not-allowed' : 'pointer',
+                              opacity: loadingInsights.peakPerformance ? 0.6 : 1,
+                              fontWeight: '500'
+                            }}
+                          >
+                            {loadingInsights.peakPerformance ? 'Generating...' : 'AI Insights'}
+                          </button>
+                        </div>
                         {/* Removed subtitle per request */}
                         <div className="peak-performance-metrics">
                           <div className="performance-item">
@@ -1195,11 +1478,36 @@ const Homepage = () => {
                             </div>
                           </div>
                         </div>
+                        {aiInsights.peakPerformance && (
+                          <div className="service-distribution-info">
+                            <p>{aiInsights.peakPerformance}</p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Service Distribution */}
                       <div className="dashboard-section">
-                        <h3 className="section-title">Service Distribution</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <h3 className="section-title">Service Distribution</h3>
+                          <button
+                            onClick={generateServiceDistributionInsights}
+                            disabled={loadingInsights.serviceDistribution}
+                            className="ai-insights-btn"
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.85rem',
+                              backgroundColor: '#2F3B70',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: loadingInsights.serviceDistribution ? 'not-allowed' : 'pointer',
+                              opacity: loadingInsights.serviceDistribution ? 0.6 : 1,
+                              fontWeight: '500'
+                            }}
+                          >
+                            {loadingInsights.serviceDistribution ? 'Generating...' : 'AI Insights'}
+                          </button>
+                        </div>
                         <div className="chart-container">
                           <div className="service-distribution-list">
                             {analyticsData.topServices && analyticsData.topServices.length > 0 ? (
@@ -1237,10 +1545,11 @@ const Homepage = () => {
                             )}
                           </div>
                         </div>
-                        <div className="service-distribution-info">
-                          <p><strong>Top Service:</strong> {analyticsData.topServices && analyticsData.topServices.length > 0 ? analyticsData.topServices[0].name : 'N/A'}</p>
-                          <p><strong>Total Services:</strong> {analyticsData.topServices ? analyticsData.topServices.length : 0}</p>
-                        </div>
+                        {aiInsights.serviceDistribution && (
+                          <div className="service-distribution-info">
+                            <p>{aiInsights.serviceDistribution}</p>
+                          </div>
+                        )}
                       </div>
                       </div>
                     </div>

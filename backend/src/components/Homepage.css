@@ -819,6 +819,20 @@ body, html {
   font-size: 0.95rem;
 }
 
+.ai-insights-btn {
+  transition: all 0.2s ease;
+}
+
+.ai-insights-btn:hover:not(:disabled) {
+  background-color: #1e2a5e !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(47, 59, 112, 0.3);
+}
+
+.ai-insights-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .vessels-list {
   display: flex;
   flex-direction: column;

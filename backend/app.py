@@ -3,6 +3,22 @@ from flask_cors import CORS
 import os
 from datetime import datetime
 from openpyxl import load_workbook
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+# Get the directory where app.py is located
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+env_path = os.path.join(backend_dir, '.env')
+print(f"Loading .env file from: {env_path}")
+print(f".env file exists: {os.path.exists(env_path)}")
+
+# Load with explicit path and override existing env vars
+load_dotenv(dotenv_path=env_path, override=True)
+
+# Debug: Check if GEMINI_API_KEY is loaded
+gemini_key = os.environ.get('GEMINI_API_KEY')
+print(f"GEMINI_API_KEY loaded after dotenv: {bool(gemini_key)}")
 
 app = Flask(__name__)
 CORS(app)
@@ -1022,6 +1038,259 @@ def get_dashboard_analytics():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/gemini/list-models', methods=['GET'])
+def list_gemini_models():
+    """List available Gemini models for debugging"""
+    try:
+        gemini_api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('REACT_APP_GEMINI_API_KEY')
+        
+        if not gemini_api_key:
+            return jsonify({"success": False, "error": "API key not configured"}), 500
+        
+        # Try both v1 and v1beta endpoints
+        versions_to_try = ['v1', 'v1beta']
+        all_models = []
+        
+        for version in versions_to_try:
+            try:
+                list_url = f'https://generativelanguage.googleapis.com/{version}/models?key={gemini_api_key}'
+                response = requests.get(list_url, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    models = data.get('models', [])
+                    for model in models:
+                        model_name = model.get('name', '')
+                        supported_methods = model.get('supportedGenerationMethods', [])
+                        if 'generateContent' in supported_methods:
+                            all_models.append({
+                                'name': model_name,
+                                'version': version,
+                                'displayName': model.get('displayName', ''),
+                                'methods': supported_methods
+                            })
+            except Exception as e:
+                print(f"Error listing models for {version}: {str(e)}")
+        
+        return jsonify({
+            "success": True,
+            "models": all_models
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/gemini/insights', methods=['POST'])
+def generate_gemini_insights():
+    """Generate AI insights using Gemini API"""
+    try:
+        data = request.get_json()
+        chart_data = data.get('data')
+        chart_type = data.get('chartType')
+        
+        if not chart_data or not chart_type:
+            return jsonify({"success": False, "error": "Missing data or chartType"}), 400
+        
+        # Get Gemini API key from environment
+        gemini_api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('REACT_APP_GEMINI_API_KEY')
+        
+        # Debug: Print if API key is loaded (without exposing the full key)
+        print(f"Gemini API Key loaded: {bool(gemini_api_key)}")
+        if gemini_api_key:
+            print(f"API Key starts with: {gemini_api_key[:10]}...")
+        
+        if not gemini_api_key:
+            return jsonify({
+                "success": False, 
+                "error": "Gemini API key not configured. Please set GEMINI_API_KEY environment variable in your .env file."
+            }), 500
+        
+        # First, try to list available models to find the right one
+        print("Attempting to discover available models...")
+        available_models = []
+        versions_to_try = ['v1', 'v1beta']
+        
+        for version in versions_to_try:
+            try:
+                list_url = f'https://generativelanguage.googleapis.com/{version}/models?key={gemini_api_key}'
+                response = requests.get(list_url, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    models = data.get('models', [])
+                    for model in models:
+                        model_name = model.get('name', '')
+                        supported_methods = model.get('supportedGenerationMethods', [])
+                        if 'generateContent' in supported_methods:
+                            # Extract just the model identifier (e.g., "gemini-pro" from "models/gemini-pro")
+                            if '/' in model_name:
+                                model_id = model_name.split('/')[-1]
+                            else:
+                                model_id = model_name
+                            available_models.append((version, model_id))
+                            print(f"Found available model: {version}/{model_id}")
+            except Exception as e:
+                print(f"Error listing models for {version}: {str(e)}")
+        
+        # If we found models, use them; otherwise fall back to common names
+        if available_models:
+            models_to_try = available_models
+            print(f"Using discovered models: {models_to_try}")
+        else:
+            # Fallback to common model names
+            models_to_try = [
+                ('v1beta', 'gemini-1.5-flash'),
+                ('v1beta', 'gemini-1.5-pro'),
+                ('v1', 'gemini-pro'),
+            ]
+            print(f"No models discovered, using fallback: {models_to_try}")
+        
+        # Build prompt based on chart type
+        prompts = {
+            'yearlyGrowth': f"""Analyze this yearly vessel operations data and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on the most important trend or pattern.
+
+Data: {chart_data}
+
+Keep it short and actionable.""",
+            
+            'topVessels': f"""Analyze this top vessels data and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on the key performance highlight.
+
+Data: {chart_data}
+
+Keep it short and actionable.""",
+            
+            'nextQuarterForecast': f"""Analyze this next quarter forecast data and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on the main projection or recommendation.
+
+Data: {chart_data}
+
+Keep it short and actionable.""",
+            
+            'monthlyPerformance': f"""Analyze this monthly performance data and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on the peak month or seasonal pattern.
+
+Data: {chart_data}
+
+Keep it short and actionable.""",
+            
+            'peakPerformance': f"""Analyze this peak performance data (busiest month, peak day, peak quarter) and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on the key performance metrics.
+
+Data: {chart_data}
+
+Keep it short and actionable.""",
+            
+            'serviceDistribution': f"""Analyze this service distribution data and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on the dominant service type or distribution pattern.
+
+Data: {chart_data}
+
+Keep it short and actionable.""",
+            
+            'vesselOperationsOverview': f"""Analyze this vessel operations overview data (peak quarter, busiest month) and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on operational patterns.
+
+Data: {chart_data}
+
+Keep it short and actionable.""",
+            
+            'peakPeriodPrediction': f"""Analyze this peak period prediction data and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on peak timing patterns.
+
+Data: {chart_data}
+
+Keep it short and actionable.""",
+            
+            'serviceDemandForecast': f"""Analyze this service demand forecast data and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on demand trends.
+
+Data: {chart_data}
+
+Keep it short and actionable.""",
+            
+            'capacityPlanning': f"""Analyze this capacity planning data and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on capacity recommendations.
+
+Data: {chart_data}
+
+Keep it short and actionable.""",
+            
+            'operationalInsights': f"""Analyze this operational insights data (peak day, top vessels, service efficiency) and provide 1-2 brief insights in 2-3 sentences (max 50 words). Focus on key operational highlights.
+
+Data: {chart_data}
+
+Keep it short and actionable."""
+        }
+        
+        prompt = prompts.get(chart_type, prompts['yearlyGrowth'])
+        
+        # Try the discovered models or fallback models
+        response = None
+        last_error = None
+        successful_model = None
+        
+        for api_version, model_name in models_to_try:
+            try:
+                gemini_url = f'https://generativelanguage.googleapis.com/{api_version}/models/{model_name}:generateContent?key={gemini_api_key}'
+                print(f"Trying Gemini API: {api_version}/{model_name}")
+                
+                response = requests.post(
+                    gemini_url,
+                    json={
+                        "contents": [{
+                            "parts": [{
+                                "text": prompt
+                            }]
+                        }]
+                    },
+                    headers={
+                        'Content-Type': 'application/json'
+                    },
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    successful_model = f"{api_version}/{model_name}"
+                    print(f"✓ Successfully using model: {successful_model}")
+                    break
+                else:
+                    error_data = response.json() if response.text else {}
+                    error_message = error_data.get('error', {}).get('message', f'HTTP {response.status_code}')
+                    last_error = error_message
+                    print(f"✗ Model {api_version}/{model_name} failed: {error_message}")
+                    
+            except Exception as e:
+                print(f"✗ Exception trying {api_version}/{model_name}: {str(e)}")
+                last_error = str(e)
+                continue
+        
+        if not response or response.status_code != 200:
+            return jsonify({
+                "success": False,
+                "error": f"All Gemini models failed. Last error: {last_error or 'Unknown error'}. Please check your API key and ensure it's valid for the free tier."
+            }), 500
+        
+        result = response.json()
+        
+        if result.get('candidates') and result['candidates'][0].get('content'):
+            insights = result['candidates'][0]['content']['parts'][0]['text'].strip()
+            return jsonify({
+                "success": True,
+                "insights": insights
+            })
+        
+        return jsonify({
+            "success": False,
+            "error": "Invalid response format from Gemini API"
+        }), 500
+        
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "success": False,
+            "error": "Request timeout. Please try again."
+        }), 504
+    except requests.exceptions.RequestException as e:
+        return jsonify({
+            "success": False,
+            "error": f"Network error: {str(e)}"
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 if __name__ == '__main__':
     print("AnchorPoint API Server Starting...")
     print("Health Check: http://localhost:5000/api/health")
@@ -1033,5 +1302,6 @@ if __name__ == '__main__':
     print("   - PUT  /api/users/<user_id>")
     print("   - GET  /api/ships")
     print("   - GET  /api/crew")
+    print("   - POST /api/gemini/insights (NEW - AI Insights)")
     print("\n Server will be available at: http://localhost:5000")
     app.run(debug=True, host='0.0.0.0', port=5000) 
