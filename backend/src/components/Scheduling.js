@@ -464,9 +464,10 @@ const Scheduling = () => {
         // Trigger vessel update in Firestore to notify other browsers
         await triggerVesselUpdate();
         
-        // Update payroll for newly assigned workers only (only if date has passed)
+        // Update payroll for newly assigned workers or when timeFinished is added/changed
         // Get previously assigned workers from original vessel data to avoid duplicate counts
         const previouslyAssignedWorkers = originalVesselData?.assignedWorkers || [];
+        const originalTimeFinished = originalVesselData?.timeFinished || '';
         if (vesselFormData.assignedWorkers && vesselFormData.assignedWorkers.length > 0) {
           await updatePayrollForAssignedWorkers(
             vesselFormData.assignedWorkers,
@@ -474,7 +475,8 @@ const Scheduling = () => {
             vesselFormData.purpose,
             clickedDate,
             vesselFormData.timeFinished,
-            previouslyAssignedWorkers // Pass previously assigned workers to avoid duplicates
+            previouslyAssignedWorkers, // Pass previously assigned workers to avoid duplicates
+            originalTimeFinished // Pass original timeFinished to detect if it was added/changed
           );
         }
         
@@ -619,7 +621,7 @@ const Scheduling = () => {
   };
 
   // Update payroll when workers are assigned to a vessel
-  const updatePayrollForAssignedWorkers = async (assignedWorkers, vesselType, purpose, vesselDate, timeFinished, previouslyAssignedWorkers = []) => {
+  const updatePayrollForAssignedWorkers = async (assignedWorkers, vesselType, purpose, vesselDate, timeFinished, previouslyAssignedWorkers = [], originalTimeFinished = '') => {
     console.log('=== PAYROLL UPDATE FUNCTION CALLED ===');
     console.log('Parameters:', {
       assignedWorkers,
@@ -627,7 +629,8 @@ const Scheduling = () => {
       vesselType,
       purpose,
       vesselDate: vesselDate ? vesselDate.toISOString() : 'null',
-      timeFinished
+      timeFinished,
+      originalTimeFinished
     });
     
     if (!assignedWorkers || assignedWorkers.length === 0) {
@@ -641,20 +644,40 @@ const Scheduling = () => {
       !previousWorkersSet.has(worker.toLowerCase().trim())
     );
     
-    console.log('Worker comparison:', {
+    // Check if timeFinished was added or changed
+    const originalTimeFinishedTrimmed = (originalTimeFinished || '').trim();
+    const currentTimeFinishedTrimmed = (timeFinished || '').trim();
+    const timeFinishedWasAdded = !originalTimeFinishedTrimmed && currentTimeFinishedTrimmed;
+    const timeFinishedWasChanged = originalTimeFinishedTrimmed && currentTimeFinishedTrimmed && originalTimeFinishedTrimmed !== currentTimeFinishedTrimmed;
+    
+    console.log('Worker and timeFinished comparison:', {
       previouslyAssigned: previouslyAssignedWorkers,
       currentlyAssigned: assignedWorkers,
-      newlyAssigned: newlyAssignedWorkers
+      newlyAssigned: newlyAssignedWorkers,
+      originalTimeFinished: originalTimeFinishedTrimmed,
+      currentTimeFinished: currentTimeFinishedTrimmed,
+      timeFinishedWasAdded: timeFinishedWasAdded,
+      timeFinishedWasChanged: timeFinishedWasChanged
     });
     
-    // If no new workers were added, skip payroll update
-    if (newlyAssignedWorkers.length === 0) {
-      console.log('No new workers added, skipping payroll update to avoid duplicates');
+    // Determine which workers to update:
+    // 1. If new workers were added, update only those new workers
+    // 2. If timeFinished was added/changed, update all assigned workers (to handle the case where
+    //    a vessel was created without timeFinished and then timeFinished is added later)
+    let workersToUpdate = [];
+    if (newlyAssignedWorkers.length > 0) {
+      // New workers were added - update only those
+      workersToUpdate = newlyAssignedWorkers;
+      console.log('New workers added, updating payroll for new workers only');
+    } else if (timeFinishedWasAdded || timeFinishedWasChanged) {
+      // timeFinished was added or changed - update all assigned workers
+      workersToUpdate = assignedWorkers;
+      console.log('timeFinished was added or changed, updating payroll for all assigned workers');
+    } else {
+      // No new workers and no timeFinished change - skip to avoid duplicates
+      console.log('No new workers added and timeFinished unchanged, skipping payroll update to avoid duplicates');
       return;
     }
-    
-    // Use only newly assigned workers for payroll update
-    const workersToUpdate = newlyAssignedWorkers;
 
     try {
       const db = getFirestore();
