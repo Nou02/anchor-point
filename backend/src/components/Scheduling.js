@@ -855,20 +855,35 @@ const Scheduling = () => {
         }
         
         // Increment appropriate count based on vessel type and purpose
-        if (vesselType === 'Local') {
+        console.log(`Processing worker ${workerName}, vesselType: "${vesselType}", hasMooring: ${hasMooring}, hasUnmooring: ${hasUnmooring}`);
+        
+        // Normalize vessel type for comparison (handle case variations)
+        const normalizedVesselType = (vesselType || '').trim();
+        
+        if (normalizedVesselType.toLowerCase() === 'local') {
           if (hasMooring) {
-            workerData.localMooringCount = (workerData.localMooringCount || 0) + 1;
+            const oldCount = workerData.localMooringCount || 0;
+            workerData.localMooringCount = oldCount + 1;
+            console.log(`Incremented localMooringCount for ${workerName}: ${oldCount} -> ${workerData.localMooringCount}`);
           }
           if (hasUnmooring) {
-            workerData.localUnmooringCount = (workerData.localUnmooringCount || 0) + 1;
+            const oldCount = workerData.localUnmooringCount || 0;
+            workerData.localUnmooringCount = oldCount + 1;
+            console.log(`Incremented localUnmooringCount for ${workerName}: ${oldCount} -> ${workerData.localUnmooringCount}`);
           }
-        } else if (vesselType === 'Foreign') {
+        } else if (normalizedVesselType.toLowerCase() === 'foreign') {
           if (hasMooring) {
-            workerData.foreignMooringCount = (workerData.foreignMooringCount || 0) + 1;
+            const oldCount = workerData.foreignMooringCount || 0;
+            workerData.foreignMooringCount = oldCount + 1;
+            console.log(`Incremented foreignMooringCount for ${workerName}: ${oldCount} -> ${workerData.foreignMooringCount}`);
           }
           if (hasUnmooring) {
-            workerData.foreignUnmooringCount = (workerData.foreignUnmooringCount || 0) + 1;
+            const oldCount = workerData.foreignUnmooringCount || 0;
+            workerData.foreignUnmooringCount = oldCount + 1;
+            console.log(`Incremented foreignUnmooringCount for ${workerName}: ${oldCount} -> ${workerData.foreignUnmooringCount}`);
           }
+        } else {
+          console.warn(`Unknown vessel type: "${vesselType}" for worker ${workerName}`);
         }
         
         workersMap.set(workerName, workerData);
