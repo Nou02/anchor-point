@@ -657,9 +657,34 @@ const Scheduling = () => {
           return;
         }
         // If timeFinished is provided, check if the work is actually finished
-        const [hours, minutes] = timeFinished.split(':');
-        const parsedHours = parseInt(hours, 10);
-        const parsedMinutes = parseInt(minutes, 10);
+        // Parse timeFinished which could be in "HH:MM" or "HH:MM AM/PM" format
+        let parsedHours = 0;
+        let parsedMinutes = 0;
+        
+        if (timeFinished.includes('AM') || timeFinished.includes('PM')) {
+          // Handle AM/PM format (e.g., "10:09 am" or "2:30 PM")
+          const timeMatch = timeFinished.match(/(\d+):(\d+)\s*(AM|PM)/i);
+          if (timeMatch) {
+            let hours = parseInt(timeMatch[1], 10);
+            const minutes = parseInt(timeMatch[2], 10);
+            const ampm = timeMatch[3].toUpperCase();
+            
+            if (ampm === 'PM' && hours !== 12) {
+              hours += 12;
+            } else if (ampm === 'AM' && hours === 12) {
+              hours = 0;
+            }
+            
+            parsedHours = hours;
+            parsedMinutes = minutes;
+          }
+        } else {
+          // Handle 24-hour format (e.g., "10:09" or "14:30")
+          const [hours, minutes] = timeFinished.split(':');
+          parsedHours = parseInt(hours, 10);
+          parsedMinutes = parseInt(minutes, 10);
+        }
+        
         const finishedDateTime = new Date(dateToUse);
         finishedDateTime.setHours(
           isNaN(parsedHours) ? 23 : parsedHours, 
@@ -682,9 +707,34 @@ const Scheduling = () => {
       } else {
         // For past dates, if timeFinished is provided, check if it has passed
         if (timeFinished && timeFinished.trim() !== '') {
-          const [hours, minutes] = timeFinished.split(':');
-          const parsedHours = parseInt(hours, 10);
-          const parsedMinutes = parseInt(minutes, 10);
+          // Parse timeFinished which could be in "HH:MM" or "HH:MM AM/PM" format
+          let parsedHours = 0;
+          let parsedMinutes = 0;
+          
+          if (timeFinished.includes('AM') || timeFinished.includes('PM')) {
+            // Handle AM/PM format (e.g., "10:09 am" or "2:30 PM")
+            const timeMatch = timeFinished.match(/(\d+):(\d+)\s*(AM|PM)/i);
+            if (timeMatch) {
+              let hours = parseInt(timeMatch[1], 10);
+              const minutes = parseInt(timeMatch[2], 10);
+              const ampm = timeMatch[3].toUpperCase();
+              
+              if (ampm === 'PM' && hours !== 12) {
+                hours += 12;
+              } else if (ampm === 'AM' && hours === 12) {
+                hours = 0;
+              }
+              
+              parsedHours = hours;
+              parsedMinutes = minutes;
+            }
+          } else {
+            // Handle 24-hour format (e.g., "10:09" or "14:30")
+            const [hours, minutes] = timeFinished.split(':');
+            parsedHours = parseInt(hours, 10);
+            parsedMinutes = parseInt(minutes, 10);
+          }
+          
           const finishedDateTime = new Date(dateToUse);
           finishedDateTime.setHours(
             isNaN(parsedHours) ? 23 : parsedHours, 
@@ -708,7 +758,28 @@ const Scheduling = () => {
         // For past dates without timeFinished, proceed with update
       }
       
-      console.log('Proceeding with payroll update...');
+      // Determine which count to increment based on purpose
+      // Check if purpose array contains mooring operations (MOORING)
+      const hasMooring = purpose.some(p => {
+        const pUpper = p.toUpperCase().trim();
+        return pUpper === 'MOORING' || 
+               pUpper.includes('MOORING');
+      });
+      
+      // Check if purpose array contains unmooring operations
+      const hasUnmooring = purpose.some(p => {
+        const pUpper = p.toUpperCase().trim();
+        return pUpper === 'UNMOORING' || 
+               pUpper.includes('UNMOORING');
+      });
+      
+      console.log('Proceeding with payroll update...', {
+        assignedWorkers,
+        vesselType,
+        purpose,
+        hasMooring,
+        hasUnmooring
+      });
       
       const month = dateToUse.getMonth() + 1;
       const day = dateToUse.getDate();
@@ -717,25 +788,15 @@ const Scheduling = () => {
       const workersPayrollId = `workerspayroll(${month},${day},${year})`;
       const workersPayrollRef = doc(db, 'workerPayrolls', workersPayrollId);
       
+      console.log('Payroll document ID:', workersPayrollId);
+      
       // Get existing payroll data
       const workersPayrollDoc = await getDoc(workersPayrollRef);
       const existingData = workersPayrollDoc.exists() ? workersPayrollDoc.data() : { workers: [] };
       
-      // Determine which count to increment based on purpose
-      // Check if purpose array contains mooring operations (W/ MOORING BUOY or SHIFTING)
-      const hasMooring = purpose.some(p => {
-        const pUpper = p.toUpperCase().trim();
-        return pUpper === 'W/ MOORING BUOY' || 
-               pUpper.includes('W/ MOORING BUOY') ||
-               pUpper === 'SHIFTING' ||
-               pUpper.includes('SHIFTING');
-      });
-      
-      // Check if purpose array contains unmooring operations
-      const hasUnmooring = purpose.some(p => {
-        const pUpper = p.toUpperCase().trim();
-        return pUpper === 'UNMOORING' || 
-               pUpper.includes('UNMOORING');
+      console.log('Existing payroll data:', {
+        exists: workersPayrollDoc.exists(),
+        workersCount: existingData.workers?.length || 0
       });
       
       // Prepare updated workers data
@@ -2222,7 +2283,7 @@ return (
                     Select all applicable operations
                   </p>
                     <div className="checkbox-group-modern">
-                      {['W/ MOORING BUOY', 'SHIFTING', 'UNMOORING'].map(purpose => (
+                      {['MOORING', 'UNMOORING'].map(purpose => (
                         <label key={purpose} className="checkbox-label-modern">
                         <input
                           type="checkbox"
