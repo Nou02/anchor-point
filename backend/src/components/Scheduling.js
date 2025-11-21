@@ -736,8 +736,12 @@ const Scheduling = () => {
           parsedMinutes = parseInt(minutes, 10);
         }
         
+        // Refresh now right before comparison to ensure we use current time
+        // (async operations may have taken time)
+        const currentTime = new Date();
+        
         // Use today's date for the finished time comparison (use current date components directly)
-        const finishedDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const finishedDateTime = new Date(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate());
         finishedDateTime.setHours(
           isNaN(parsedHours) ? 23 : parsedHours, 
           isNaN(parsedMinutes) ? 59 : parsedMinutes, 
@@ -751,19 +755,19 @@ const Scheduling = () => {
           parsedMinutes: parsedMinutes,
           finishedDateTimeLocal: finishedDateTime.toString(),
           finishedDateTimeUTC: finishedDateTime.toISOString(),
-          nowLocal: now.toString(),
-          nowUTC: now.toISOString(),
+          currentTimeLocal: currentTime.toString(),
+          currentTimeUTC: currentTime.toISOString(),
           finishedTimeMs: finishedDateTime.getTime(),
-          nowTimeMs: now.getTime(),
-          isFinished: finishedDateTime.getTime() <= now.getTime(),
-          timeDifferenceMs: now.getTime() - finishedDateTime.getTime(),
-          timeDifferenceMinutes: Math.round((now.getTime() - finishedDateTime.getTime()) / 1000 / 60)
+          currentTimeMs: currentTime.getTime(),
+          isFinished: finishedDateTime.getTime() <= currentTime.getTime(),
+          timeDifferenceMs: currentTime.getTime() - finishedDateTime.getTime(),
+          timeDifferenceMinutes: Math.round((currentTime.getTime() - finishedDateTime.getTime()) / 1000 / 60)
         });
         
         // Only update if the finished time has passed
         // Compare using getTime() which is timezone-independent (milliseconds since epoch)
-        if (finishedDateTime.getTime() > now.getTime()) {
-          const minutesRemaining = Math.round((finishedDateTime.getTime() - now.getTime()) / 1000 / 60);
+        if (finishedDateTime.getTime() > currentTime.getTime()) {
+          const minutesRemaining = Math.round((finishedDateTime.getTime() - currentTime.getTime()) / 1000 / 60);
           console.log('Vessel work is not finished yet, payroll will be updated after timeFinished');
           console.log('Time remaining:', minutesRemaining, 'minutes');
           return;
