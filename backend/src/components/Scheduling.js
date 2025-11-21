@@ -734,24 +734,31 @@ const Scheduling = () => {
         finishedDateTime.setHours(
           isNaN(parsedHours) ? 23 : parsedHours, 
           isNaN(parsedMinutes) ? 59 : parsedMinutes, 
-          59, 
-          999
+          0, 
+          0  // Set seconds and milliseconds to 0 for cleaner comparison
         );
         
         console.log('Time comparison for today:', {
           timeFinished: timeFinished,
           parsedHours: parsedHours,
           parsedMinutes: parsedMinutes,
-          finishedDateTime: finishedDateTime.toISOString(),
-          now: now.toISOString(),
-          isFinished: finishedDateTime <= now,
-          timeDifference: now.getTime() - finishedDateTime.getTime()
+          finishedDateTimeLocal: finishedDateTime.toString(),
+          finishedDateTimeUTC: finishedDateTime.toISOString(),
+          nowLocal: now.toString(),
+          nowUTC: now.toISOString(),
+          finishedTimeMs: finishedDateTime.getTime(),
+          nowTimeMs: now.getTime(),
+          isFinished: finishedDateTime.getTime() <= now.getTime(),
+          timeDifferenceMs: now.getTime() - finishedDateTime.getTime(),
+          timeDifferenceMinutes: Math.round((now.getTime() - finishedDateTime.getTime()) / 1000 / 60)
         });
         
         // Only update if the finished time has passed
-        if (finishedDateTime > now) {
+        // Compare using getTime() which is timezone-independent (milliseconds since epoch)
+        if (finishedDateTime.getTime() > now.getTime()) {
+          const minutesRemaining = Math.round((finishedDateTime.getTime() - now.getTime()) / 1000 / 60);
           console.log('Vessel work is not finished yet, payroll will be updated after timeFinished');
-          console.log('Time remaining:', Math.round((finishedDateTime.getTime() - now.getTime()) / 1000 / 60), 'minutes');
+          console.log('Time remaining:', minutesRemaining, 'minutes');
           return;
         }
         
