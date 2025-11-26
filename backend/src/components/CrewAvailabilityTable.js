@@ -20,6 +20,30 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
   // Initialize Firestore database
   const db = getFirestore();
 
+  // Convert 24-hour format to AM/PM format
+  const convertToAMPM = (time24) => {
+    if (!time24) return '';
+    
+    // Handle already formatted times (if it contains AM/PM, return as is)
+    if (time24.includes('AM') || time24.includes('PM')) {
+      return time24;
+    }
+    
+    // Parse 24-hour format (HH:MM)
+    const [hours, minutes] = time24.split(':');
+    const hour24 = parseInt(hours, 10);
+    const minute = minutes || '00';
+    
+    if (isNaN(hour24)) return time24;
+    
+    // Convert to 12-hour format
+    let hour12 = hour24 % 12;
+    if (hour12 === 0) hour12 = 12;
+    
+    const ampm = hour24 >= 12 ? 'PM' : 'AM';
+    return `${hour12}:${minute} ${ampm}`;
+  };
+
   // Check if current user is Alice
   const isAlice = () => {
     const auth = getAuth();
@@ -774,7 +798,7 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
                             <div className="unavailable-times-list">
                               {unavailableTimes.slice(0, 2).map((time, idx) => (
                                 <div key={idx} className="time-range-display">
-                                  {time.startTime} - {time.endTime}
+                                  {convertToAMPM(time.startTime)} - {convertToAMPM(time.endTime)}
                                 </div>
                               ))}
                               {unavailableTimes.length > 2 && (
@@ -1010,7 +1034,7 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
                                     // Calculate available times (complement of unavailable times)
                                     const calculateAvailableTimes = () => {
                                       if (!stat.unavailableTimes || stat.unavailableTimes.length === 0) {
-                                        return stat.isAvailable ? [{ start: '00:00', end: '23:59', label: '00:00 - 23:59' }] : [];
+                                        return stat.isAvailable ? [{ start: '00:00', end: '23:59', label: `${convertToAMPM('00:00')} - ${convertToAMPM('23:59')}` }] : [];
                                       }
                                       
                                       const unavailable = stat.unavailableTimes
@@ -1025,7 +1049,7 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
                                           available.push({
                                             start: currentTime,
                                             end: block.start,
-                                            label: `${currentTime} - ${block.start}`
+                                            label: `${convertToAMPM(currentTime)} - ${convertToAMPM(block.start)}`
                                           });
                                         }
                                         currentTime = block.end > currentTime ? block.end : currentTime;
@@ -1035,7 +1059,7 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
                                         available.push({
                                           start: currentTime,
                                           end: '23:59',
-                                          label: `${currentTime} - 23:59`
+                                          label: `${convertToAMPM(currentTime)} - ${convertToAMPM('23:59')}`
                                         });
                                       }
                                       
@@ -1072,7 +1096,7 @@ const CrewAvailabilityTable = ({ crewAvailability, setCrewAvailability }) => {
                                                   <div className="calendar-time-list">
                                                     {stat.unavailableTimes.map((time, timeIdx) => (
                                                       <div key={timeIdx} className="calendar-time-item unavailable-time">
-                                                        {time.startTime} - {time.endTime}
+                                                        {convertToAMPM(time.startTime)} - {convertToAMPM(time.endTime)}
                                                       </div>
                                                     ))}
                                                   </div>

@@ -230,6 +230,10 @@ EXCEL_FILENAME = 'Vessels Log.xlsx'
 # Use the relocated public folder inside backend for Excel file access
 EXCEL_PATH = os.path.join(os.path.dirname(__file__), 'public', EXCEL_FILENAME)
 
+def _get_excel_path():
+    """Get Excel file path, allowing override via app.config for testing."""
+    return app.config.get('EXCEL_PATH', EXCEL_PATH)
+
 def format_time_with_am_pm(time_str):
     """Convert 24-hour time format (HH:MM) to 12-hour format with AM/PM.
     
@@ -271,7 +275,10 @@ def format_time_with_am_pm(time_str):
         # If parsing fails, return original string
         return time_str
 
-def _load_workbook_or_404(path):
+def _load_workbook_or_404(path=None):
+    """Load workbook from path, or use default Excel path if not provided."""
+    if path is None:
+        path = _get_excel_path()
     print(f"Checking Excel file at: {path}")
     print(f"File exists: {os.path.exists(path)}")
     if not os.path.exists(path):
@@ -288,17 +295,18 @@ def _load_workbook_or_404(path):
 def debug_excel_file():
     """Debug endpoint to check Excel file status."""
     try:
+        excel_path = _get_excel_path()
         file_info = {
-            "excel_path": EXCEL_PATH,
-            "file_exists": os.path.exists(EXCEL_PATH),
-            "file_size": os.path.getsize(EXCEL_PATH) if os.path.exists(EXCEL_PATH) else 0,
+            "excel_path": excel_path,
+            "file_exists": os.path.exists(excel_path),
+            "file_size": os.path.getsize(excel_path) if os.path.exists(excel_path) else 0,
             "current_directory": os.getcwd(),
             "backend_directory": os.path.dirname(__file__)
         }
         
-        if os.path.exists(EXCEL_PATH):
+        if os.path.exists(excel_path):
             try:
-                wb = load_workbook(filename=EXCEL_PATH)
+                wb = load_workbook(filename=excel_path)
                 file_info.update({
                     "sheets": wb.sheetnames,
                     "active_sheet": wb.active.title,
@@ -321,7 +329,7 @@ def debug_excel_file():
 def read_excel_as_json():
     """Read first worksheet into JSON rows using header row."""
     try:
-        wb = _load_workbook_or_404(EXCEL_PATH)
+        wb = _load_workbook_or_404()
         ws = wb.active
 
         rows = list(ws.iter_rows(values_only=True))
@@ -355,8 +363,9 @@ def append_excel_row():
         if not payload:
             return jsonify({"success": False, "error": "Missing JSON body"}), 400
 
-        print(f"Loading workbook from: {EXCEL_PATH}")
-        wb = _load_workbook_or_404(EXCEL_PATH)
+        excel_path = _get_excel_path()
+        print(f"Loading workbook from: {excel_path}")
+        wb = _load_workbook_or_404()
         ws = wb.active
         print(f"Active worksheet: {ws.title}")
         print(f"Worksheet max row: {ws.max_row}")
@@ -395,13 +404,15 @@ def append_excel_row():
         print(f"Appending values: {values}")
         ws.append(values)
         
-        print(f"Saving workbook to: {EXCEL_PATH}")
-        wb.save(EXCEL_PATH)
+        excel_path = _get_excel_path()
+        print(f"Saving workbook to: {excel_path}")
+        wb.save(excel_path)
         print(f"Successfully saved. New max row: {ws.max_row}")
 
         return jsonify({"success": True, "appended": values, "totalRows": ws.max_row})
     except FileNotFoundError as e:
-        error_msg = f"Excel file not found at {EXCEL_PATH}: {str(e)}"
+        excel_path = _get_excel_path()
+        error_msg = f"Excel file not found at {excel_path}: {str(e)}"
         print(error_msg)
         return jsonify({"success": False, "error": error_msg}), 404
     except Exception as e:
@@ -452,7 +463,7 @@ def update_excel_entry():
             return jsonify({"success": False, "error": "Invalid date format. Use YYYY-MM-DD"}), 400
 
         print(f"Loading workbook for update...")
-        wb = _load_workbook_or_404(EXCEL_PATH)
+        wb = _load_workbook_or_404()
         
         if sheet_name not in wb.sheetnames:
             return jsonify({"success": False, "error": f"Sheet {sheet_name} not found"}), 404
@@ -520,7 +531,8 @@ def update_excel_entry():
             })
 
         # Save the workbook
-        wb.save(EXCEL_PATH)
+        excel_path = _get_excel_path()
+        wb.save(excel_path)
         print(f"Successfully updated {len(updated_rows)} row(s)")
 
         return jsonify({
@@ -643,7 +655,8 @@ def save_report_to_excel():
         ws.append(row_data)
         
         # Save the workbook to public location
-        wb.save(EXCEL_PATH)
+        excel_path = _get_excel_path()
+        wb.save(excel_path)
 
         return jsonify({
             "success": True, 
@@ -706,7 +719,7 @@ def delete_report_from_excel():
         sheet_name = str(year)
 
         # Load workbook
-        wb = _load_workbook_or_404(EXCEL_PATH)
+        wb = _load_workbook_or_404()
         
         # Check if sheet exists
         if sheet_name not in wb.sheetnames:
@@ -779,7 +792,8 @@ def delete_report_from_excel():
             })
 
         # Save the workbook to public location
-        wb.save(EXCEL_PATH)
+        excel_path = _get_excel_path()
+        wb.save(excel_path)
 
         message = f"Deleted {len(deleted_rows)} row(s) from {sheet_name} sheet"
         if vessel_name:
@@ -804,7 +818,7 @@ def get_vessels_log_data():
     Returns data from all sheets in a format suitable for the reports table.
     """
     try:
-        wb = _load_workbook_or_404(EXCEL_PATH)
+        wb = _load_workbook_or_404()
         all_vessels_data = []
         
         # Process each sheet (year)
@@ -866,7 +880,7 @@ def get_vessels_log_data():
 def get_dashboard_analytics():
     """Get analytics data for dashboard based on Excel vessel log data."""
     try:
-        wb = _load_workbook_or_404(EXCEL_PATH)
+        wb = _load_workbook_or_404()
         
         # Initialize analytics data based on actual Excel data
         analytics = {

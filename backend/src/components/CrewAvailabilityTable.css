@@ -2005,6 +2005,8 @@
   padding: 6px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.6);
+  min-width: 0;
+  width: 100%;
 }
 
 .calendar-time-block.unavailable-block {
@@ -2035,18 +2037,22 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  width: 100%;
+  min-width: 0;
 }
 
 .calendar-time-item {
-  padding: 4px 6px;
+  padding: 4px 4px;
   border-radius: 3px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 600;
   font-family: 'Courier New', monospace;
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow: visible;
+  line-height: 1.3;
+  min-height: auto;
 }
 
 .calendar-time-item.unavailable-time {

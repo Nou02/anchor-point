@@ -144,12 +144,89 @@ const Scheduling = () => {
     );
   };
 
-  // Build availability document ID
+  // Build availability document ID (for Firestore availability collection)
   const buildAvailabilityDocId = (date) => {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `availabilityId(${month}, ${day}, ${year})`;
+  };
+
+  // Check if a worker has conflicting unavailable times
+  const hasConflictingUnavailableTime = (workerName, vesselDate, vesselTime, vesselTimeFinished) => {
+    if (!vesselDate || !vesselTime) {
+      return false; // If no date or time specified, don't filter
+    }
+
+    // Get the day of week (0 = Sunday, 1 = Monday, etc.)
+    const dayOfWeek = vesselDate.getDay();
+    const dayNames = ['sun', 'mon', 'tues', 'wed', 'thurs', 'fri', 'sat'];
+    const dayKey = dayNames[dayOfWeek];
+
+    // Get worker key (normalize name)
+    const workerKey = workerName.toLowerCase().replace(/[\s,]+/g, '_');
+    
+    // Get worker's availability for this day
+    const workerAvailability = crewAvailability[workerKey] || {};
+    const dayAvailability = workerAvailability[dayKey] || {};
+    const unavailableTimes = dayAvailability.unavailableTimes || [];
+
+    if (unavailableTimes.length === 0) {
+      return false; // No unavailable times, worker is available
+    }
+
+    // Convert vessel time to minutes for comparison
+    const parseTimeToMinutes = (timeStr) => {
+      if (!timeStr) return null;
+      
+      // Handle AM/PM format
+      if (timeStr.includes('AM') || timeStr.includes('PM')) {
+        const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (timeMatch) {
+          let hours = parseInt(timeMatch[1], 10);
+          const minutes = parseInt(timeMatch[2], 10);
+          const ampm = timeMatch[3].toUpperCase();
+          
+          if (ampm === 'PM' && hours !== 12) {
+            hours += 12;
+          } else if (ampm === 'AM' && hours === 12) {
+            hours = 0;
+          }
+          
+          return hours * 60 + minutes;
+        }
+      } else {
+        // Handle 24-hour format
+        const [hours, minutes] = timeStr.split(':');
+        return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
+      }
+      return null;
+    };
+
+    const vesselStartMinutes = parseTimeToMinutes(vesselTime);
+    const vesselEndMinutes = vesselTimeFinished ? parseTimeToMinutes(vesselTimeFinished) : (vesselStartMinutes + 60); // Default 1 hour if no end time
+
+    if (vesselStartMinutes === null) {
+      return false; // Can't parse time, don't filter
+    }
+
+    // Check if vessel time conflicts with any unavailable time range
+    for (const unavailableTime of unavailableTimes) {
+      const unavailableStart = parseTimeToMinutes(unavailableTime.startTime);
+      const unavailableEnd = parseTimeToMinutes(unavailableTime.endTime);
+
+      if (unavailableStart === null || unavailableEnd === null) {
+        continue; // Skip invalid time ranges
+      }
+
+      // Check for overlap: vessel time overlaps with unavailable time if:
+      // - vessel starts before unavailable ends AND vessel ends after unavailable starts
+      if (vesselStartMinutes < unavailableEnd && vesselEndMinutes > unavailableStart) {
+        return true; // Conflict found
+      }
+    }
+
+    return false; // No conflicts found
   };
 
   // Check if a day is in the past
@@ -1640,6 +1717,25 @@ const Scheduling = () => {
     loadUpcomingScheduledVessels();
   }, []);
 
+  // Load crew availability from Firestore
+  useEffect(() => {
+    const fetchCrewAvailability = async () => {
+      try {
+        const today = new Date();
+        const availabilityDocName = buildAvailabilityDocId(today);
+        const docRef = doc(db, 'availability', availabilityDocName);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          setCrewAvailability(data);
+        }
+      } catch (err) {
+        console.log('Error fetching crew availability:', err);
+      }
+    };
+    fetchCrewAvailability();
+  }, []);
+
   // Fetch available workers (only Crew/Worker roles)
   useEffect(() => {
     const fetchWorkers = async () => {
@@ -2531,10 +2627,32 @@ return (
                 </p>
                 
                 <div className="workers-list-modern">
-                  {availableWorkers.length === 0 ? (
-                    <p>No workers available</p>
-                  ) : (
-                    availableWorkers.map((worker) => {
+                  {(() => {
+                    // Filter workers based on unavailable times
+                    const filteredWorkers = availableWorkers.filter(worker => {
+                      // If worker is already selected, always show them (allow keeping selection)
+                      const isSelected = (vesselFormData.assignedWorkers || []).includes(worker.name);
+                      if (isSelected) {
+                        return true;
+                      }
+                      
+                      // Check if worker has conflicting unavailable time
+                      const hasConflict = hasConflictingUnavailableTime(
+                        worker.name,
+                        clickedDate,
+                        vesselFormData.time,
+                        vesselFormData.timeFinished
+                      );
+                      
+                      // Show worker only if no conflict
+                      return !hasConflict;
+                    });
+
+                    if (filteredWorkers.length === 0) {
+                      return <p>No workers available</p>;
+                    }
+
+                    return filteredWorkers.map((worker) => {
                       const isSelected = (vesselFormData.assignedWorkers || []).includes(worker.name);
                       return (
                         <label key={worker.id} className="worker-checkbox-label-modern">
@@ -2549,8 +2667,8 @@ return (
                           </span>
                         </label>
                       );
-                    })
-                  )}
+                    });
+                  })()}
                 </div>
 
                 {vesselFormData.assignedWorkers && vesselFormData.assignedWorkers.length > 0 && (
