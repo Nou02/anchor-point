@@ -1,0 +1,182 @@
+.landing-page {
+  width: 100vw;
+  height: 100vh;
+  background-image: url('../assets/lnding.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+
+.landing-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: white;
+  max-width: 600px;
+  padding: 2rem;
+  animation: fadeInUp 1s ease-out;
+  transition: opacity 0.5s ease-in-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logo-section {
+  margin-bottom: 2rem;
+}
+
+.anchor-icon {
+  font-size: 8rem;
+  color: #ff4444;
+  margin-bottom: 1rem;
+  filter: none;
+  box-shadow: none;
+  background: none;
+}
+
+.logo-text {
+  font-size: 3rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo-letter {
+  font-family: inherit;
+}
+
+.logo-red {
+  color: #ff4444;
+  font-weight: 900;
+}
+
+.logo-white {
+  color: #fff;
+  font-weight: 700;
+}
+
+.anchor-text {
+  color: #ff4444;
+}
+
+.point-text {
+  color: white;
+}
+
+.taglines {
+  margin-bottom: 3rem;
+}
+
+.tagline-1 {
+  font-size: 1.5rem;
+  font-weight: 300;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+.tagline-2 {
+  font-size: 1.2rem;
+  font-weight: 300;
+  opacity: 0.8;
+  line-height: 1.4;
+}
+
+.click-hint {
+  margin-top: 2rem;
+  text-align: center;
+  opacity: 0.6;
+  font-size: 0.9rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Hover effects */
+.landing-page:hover {
+  background-image: url('../assets/lnding.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.landing-page:hover .landing-content {
+  opacity: 1;
+}
+
+.landing-page:not(:hover) .landing-content {
+  opacity: 0;
+}
+
+.landing-page:hover .anchor-icon {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+
+.landing-page:hover .click-hint {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .landing-content {
+    padding: 1rem;
+    max-width: 90%;
+  }
+  
+  .logo-text {
+    font-size: 2rem;
+  }
+  
+  .anchor-icon {
+    font-size: 6rem;
+  }
+  
+  .tagline-1 {
+    font-size: 1.3rem;
+  }
+  
+  .tagline-2 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-text {
+    font-size: 1.8rem;
+  }
+  
+  .anchor-icon {
+    font-size: 5rem;
+  }
+  
+  .tagline-1 {
+    font-size: 1.1rem;
+  }
+  
+}

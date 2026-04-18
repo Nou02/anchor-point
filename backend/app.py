@@ -226,9 +226,9 @@ def get_crew():
 # ========================
 # Excel utilities & routes
 # ========================
-EXCEL_FILENAME = 'Vessels Log.xlsx'
-# Use the relocated public folder inside backend for Excel file access
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), 'public', EXCEL_FILENAME)
+EXCEL_FILENAME = 'vessels_log.xlsx'
+# Use the backend directory directly for Excel file access
+EXCEL_PATH = os.path.join(os.path.dirname(__file__), EXCEL_FILENAME)
 
 def _get_excel_path():
     """Get Excel file path, allowing override via app.config for testing."""
@@ -1256,16 +1256,16 @@ Keep it short and actionable."""
                 
                 if response.status_code == 200:
                     successful_model = f"{api_version}/{model_name}"
-                    print(f"✓ Successfully using model: {successful_model}")
+                    print(f" Successfully using model: {successful_model}")
                     break
                 else:
                     error_data = response.json() if response.text else {}
                     error_message = error_data.get('error', {}).get('message', f'HTTP {response.status_code}')
                     last_error = error_message
-                    print(f"✗ Model {api_version}/{model_name} failed: {error_message}")
+                    print(f" Model {api_version}/{model_name} failed: {error_message}")
                     
             except Exception as e:
-                print(f"✗ Exception trying {api_version}/{model_name}: {str(e)}")
+                print(f" Exception trying {api_version}/{model_name}: {str(e)}")
                 last_error = str(e)
                 continue
         
